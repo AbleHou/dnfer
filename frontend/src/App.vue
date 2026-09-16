@@ -11,5 +11,5 @@ const auth = useAuthStore()
     <span style="margin-left:auto">{{ auth.user.nickname }}</span>
     <a href="#" @click.prevent="auth.logout">退出</a>
   </nav>
-  <router-view />
+  <router-view :key="$route.fullPath" />
 </template>

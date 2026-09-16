@@ -43,4 +43,35 @@ describe('raid store', () => {
     applyEvent(store, { type: 'slot:removed', slot_id: 1 })
     expect(store.raid!.waves[0].slots[0].character_id).toBeNull()
   })
+
+  it('applies slot:duty_changed', () => {
+    setActivePinia(createPinia())
+    const store = useRaidStore()
+    store.raid = makeRaid()
+    applyEvent(store, { type: 'slot:filled', slot: {
+      id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
+      character_class: '输出', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null,
+      owner_id: 9, owner_nickname: '甲', duty: '主C', version: 1 } })
+    applyEvent(store, { type: 'slot:duty_changed', slot: {
+      id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
+      character_class: '输出', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null,
+      owner_id: 9, owner_nickname: '甲', duty: '辅C', version: 2 } })
+    expect(store.raid!.waves[0].slots[0].duty).toBe('辅C')
+  })
+
+  it('ignores stale events with lower version', () => {
+    setActivePinia(createPinia())
+    const store = useRaidStore()
+    store.raid = makeRaid()
+    applyEvent(store, { type: 'slot:filled', slot: {
+      id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
+      character_class: '输出', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null,
+      owner_id: 9, owner_nickname: '甲', duty: '主C', version: 2 } })
+    // stale v1 event must NOT overwrite v2
+    applyEvent(store, { type: 'slot:duty_changed', slot: {
+      id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
+      character_class: '输出', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null,
+      owner_id: 9, owner_nickname: '甲', duty: '主奶', version: 1 } })
+    expect(store.raid!.waves[0].slots[0].duty).toBe('主C')
+  })
 })

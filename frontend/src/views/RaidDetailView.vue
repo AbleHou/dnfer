@@ -47,7 +47,8 @@ async function onSelectCharacter(c: Character, duty: Duty) {
 }
 async function onDuty(slot: Slot, duty: string) {
   try { await api.put(`/api/raids/${rid}/slots/${slot.id}/duty`, { duty }) }
-  catch (e: any) { alert(e.message); await load() }
+  catch (e: any) { alert(e.message) }
+  await load()
 }
 async function onRemove(slot: Slot) {
   try { await api.del(`/api/raids/${rid}/slots/${slot.id}`) }
