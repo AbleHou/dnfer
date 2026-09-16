@@ -1,10 +1,12 @@
 from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 class CharacterIn(BaseModel):
     name: str = Field(min_length=1, max_length=64)
-    class_type: str  # "输出" | "辅助"
-    fame: int = 0
+    class_type: Literal["输出", "辅助"]
+    fame: int = Field(default=0, ge=0)
     simulated_damage: int | None = None
     sustained_dps: int | None = None
     buff_amount: int | None = None

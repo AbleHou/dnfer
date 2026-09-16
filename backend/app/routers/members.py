@@ -11,7 +11,9 @@ router = APIRouter(prefix="/api/me/characters", tags=["members"])
 
 @router.get("", response_model=list[CharacterOut])
 def list_characters(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.scalars(select(Character).where(Character.user_id == user.id)).all()
+    return db.scalars(
+        select(Character).where(Character.user_id == user.id).order_by(Character.id)
+    ).all()
 
 @router.post("", response_model=CharacterOut)
 def create_character(body: CharacterIn, user: User = Depends(get_current_user),
