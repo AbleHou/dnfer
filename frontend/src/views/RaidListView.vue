@@ -10,14 +10,20 @@ const showCreate = ref(false)
 const name = ref('')
 const dungeon = ref('')
 const size = ref(12)
+const error = ref('')
+const creating = ref(false)
 
 async function load() { raids.value = await api.get<RaidListItem[]>('/api/raids') }
 onMounted(load)
 
 async function create() {
-  await api.post('/api/raids', { name: name.value, dungeon: dungeon.value, size: size.value })
-  showCreate.value = false; name.value = ''; dungeon.value = ''
-  await load()
+  creating.value = true; error.value = ''
+  try {
+    await api.post('/api/raids', { name: name.value, dungeon: dungeon.value, size: size.value })
+    showCreate.value = false; name.value = ''; dungeon.value = ''
+    await load()
+  } catch (e: any) { error.value = e.message }
+  finally { creating.value = false }
 }
 </script>
 
@@ -34,7 +40,8 @@ async function create() {
       <select v-model.number="size">
         <option v-for="s in [4,8,12,16,20]" :key="s" :value="s">{{ s }} 人</option>
       </select>
-      <button @click="create">创建</button>
+      <p v-if="error" style="color:#c62828">{{ error }}</p>
+      <button :disabled="creating" @click="create">{{ creating ? '创建中…' : '创建' }}</button>
     </div>
 
     <div v-for="r in raids" :key="r.id" style="border:1px solid #eee;padding:12px;margin:8px 0;
