@@ -9,11 +9,11 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async login(username: string, password: string) {
       const r = await api.post<{ token: string; user: User }>('/api/auth/login', { username, password })
-      setToken(r.token); this.user = r.user
+      setToken(r.token); this.user = r.user; this.loaded = true
     },
     async register(body: { username: string; password: string; nickname: string; code: string }) {
       const r = await api.post<{ token: string; user: User }>('/api/auth/register', body)
-      setToken(r.token); this.user = r.user
+      setToken(r.token); this.user = r.user; this.loaded = true
     },
     async load() {
       if (!getToken()) { this.loaded = true; return }
