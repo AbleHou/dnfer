@@ -2921,7 +2921,7 @@ git commit -m "feat: admin panel for codes and users"
 FROM node:20-alpine AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci   # 有 lockfile，用 npm ci 保证可复现
 COPY frontend/ .
 RUN npm run build
 
@@ -2937,15 +2937,15 @@ EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-`backend/requirements.txt`（由 pyproject 依赖导出，供 Docker 使用）：
+`backend/requirements.txt`（**锁定版本**，供 Docker 使用；用 `pip freeze` 从已验证的 venv 导出关键依赖的准确版本）：
 
 ```
-fastapi
-uvicorn[standard]
-sqlalchemy
-pydantic-settings
-bcrypt
-PyJWT
+fastapi==0.141.0
+uvicorn[standard]==0.40.0
+sqlalchemy==2.0.54
+pydantic-settings==2.13.0
+bcrypt==5.0.0
+PyJWT==2.14.0
 ```
 
 > **注意**：`main.py` 中静态目录改为从配置读 `settings.static_dir`（默认 `../frontend/dist`），Docker 环境变量 `DNFER_STATIC_DIR=/app/static` 覆盖。
@@ -2956,14 +2956,29 @@ PyJWT
 static_dir: str = "../frontend/dist"
 ```
 
-`main.py` 静态挂载改为：
+`main.py` 静态挂载改为 **SPA 兜底**（history 模式深链如 `/raids/5` 刷新时返回 `index.html`，否则 StaticFiles `html=True` 对任意未匹配路径返回 404）：
 
 ```python
+from pathlib import Path
+
+from starlette.responses import FileResponse
+
+class SpaStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 404:
+            index_path = Path(self.directory) / "index.html"
+            if index_path.exists():
+                return FileResponse(index_path)
+        return response
+
 try:
-    app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="static")
+    app.mount("/", SpaStaticFiles(directory=settings.static_dir, html=True), name="static")
 except RuntimeError:
     pass
 ```
+
+> 说明：SPA 兜底只作用于静态挂载内 404 的路径；`/api/*` 与 `/ws/*` 由排在挂载之前的 API/WS 路由处理，不受影响。
 
 `docker-compose.yml`：
 
@@ -2974,11 +2989,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DNFER_SECRET_KEY: ${DNFER_SECRET_KEY}
+      DNFER_SECRET_KEY: ${DNFER_SECRET_KEY:?DNFER_SECRET_KEY 必须设置}
       DNFER_ADMIN_USERNAME: ${DNFER_ADMIN_USERNAME:-admin}
-      DNFER_ADMIN_PASSWORD: ${DNFER_ADMIN_PASSWORD}
+      DNFER_ADMIN_PASSWORD: ${DNFER_ADMIN_PASSWORD:?DNFER_ADMIN_PASSWORD 必须设置}
       DNFER_ADMIN_NICKNAME: ${DNFER_ADMIN_NICKNAME:-群主}
-      DNFER_API_TOKEN: ${DNFER_API_TOKEN}
+      DNFER_API_TOKEN: ${DNFER_API_TOKEN:?DNFER_API_TOKEN 必须设置}
       DNFER_DATABASE_URL: sqlite:////data/dnfer.db
     volumes:
       - dnfer-data:/data
