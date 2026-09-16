@@ -1,8 +1,12 @@
+import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException
+from starlette.responses import FileResponse
 
 from .auth import hash_password
 from .config import settings
@@ -10,6 +14,8 @@ from .db import SessionLocal, init_db
 from .models import User
 from .routers import auth, members, public, raids
 from .ws import router as ws_router
+
+logger = logging.getLogger("dnfer")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,7 +41,23 @@ app.include_router(raids.router)
 app.include_router(public.router)
 app.include_router(ws_router)
 
+class SpaStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        try:
+            response = await super().get_response(path, scope)
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                index_path = Path(self.directory) / "index.html"
+                if index_path.exists():
+                    return FileResponse(index_path)
+            raise
+        if response.status_code == 404:
+            index_path = Path(self.directory) / "index.html"
+            if index_path.exists():
+                return FileResponse(index_path)
+        return response
+
 try:
-    app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="static")
+    app.mount("/", SpaStaticFiles(directory=settings.static_dir, html=True), name="static")
 except RuntimeError:
-    pass  # 前端未构建时忽略
+    logger.warning("前端静态目录 %s 不存在，跳过静态托管", settings.static_dir)
