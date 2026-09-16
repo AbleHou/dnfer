@@ -39,8 +39,8 @@ async function genCode() {
         <tr><th style="text-align:left">注册码</th><th>状态</th><th>过期</th></tr>
         <tr v-for="c in codes" :key="c.id">
           <td><code>{{ c.code }}</code></td>
-          <td>{{ c.used_by ? '已使用' : '未使用' }}</td>
-          <td>{{ c.expires_at ? new Date(c.expires_at).toLocaleString() : '不限' }}</td>
+          <td>{{ c.single_use ? (c.used_by ? '已使用' : '未使用') : '多用户' }}</td>
+          <td>{{ c.expires_at ? new Date(c.expires_at + 'Z').toLocaleString() : '不限' }}</td>
         </tr>
       </table>
     </section>
