@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { api } from '../api/client'
 import type { Character, ClassType } from '../types'
 
@@ -9,6 +9,13 @@ const editing = ref<Character | null>(null)
 const form = ref({ name: '', class_type: '输出' as ClassType, fame: 0,
   simulated_damage: null as number | null, sustained_dps: null as number | null,
   buff_amount: null as number | null })
+const error = ref('')
+const saving = ref(false)
+
+watch(() => form.value.class_type, (t) => {
+  if (t === '输出') form.value.buff_amount = null
+  else { form.value.simulated_damage = null; form.value.sustained_dps = null }
+})
 
 async function load() { list.value = await api.get<Character[]>('/api/me/characters') }
 onMounted(load)
@@ -21,9 +28,13 @@ function startEdit(c: Character) {
     simulated_damage: c.simulated_damage, sustained_dps: c.sustained_dps, buff_amount: c.buff_amount }
 }
 async function save() {
-  if (editing.value) await api.put(`/api/me/characters/${editing.value.id}`, form.value)
-  else await api.post('/api/me/characters', form.value)
-  editing.value = null; showForm.value = false; await load()
+  saving.value = true; error.value = ''
+  try {
+    if (editing.value) await api.put(`/api/me/characters/${editing.value.id}`, form.value)
+    else await api.post('/api/me/characters', form.value)
+    editing.value = null; showForm.value = false; await load()
+  } catch (e: any) { error.value = e.message }
+  finally { saving.value = false }
 }
 async function remove(c: Character) {
   if (!confirm(`删除角色 ${c.name}？`)) return
@@ -73,7 +84,8 @@ const isDps = computed(() => form.value.class_type === '输出')
       <template v-else>
         <div><input v-model.number="form.buff_amount" type="number" placeholder="增益量" /></div>
       </template>
-      <button @click="save">保存</button>
+      <p v-if="error" style="color:#c62828">{{ error }}</p>
+      <button :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
       <button @click="showForm = false">取消</button>
     </div>
   </div>
