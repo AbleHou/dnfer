@@ -8,7 +8,7 @@ from .auth import hash_password
 from .config import settings
 from .db import SessionLocal, init_db
 from .models import User
-from .routers import auth, members
+from .routers import auth, members, raids
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,6 +30,7 @@ app.add_middleware(CORSMiddleware,
 
 app.include_router(auth.router)
 app.include_router(members.router)
+app.include_router(raids.router)
 
 FRONTEND_DIST = "../frontend/dist"
 try:
