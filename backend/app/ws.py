@@ -1,13 +1,23 @@
 import asyncio
 from collections import defaultdict
 
-from fastapi import WebSocket
+import jwt
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
 
-router = None  # Task 6 替换为 APIRouter 并注册端点
+from .config import settings
+from .db import get_db
+from .models import Raid, User
+
+router = APIRouter()
 
 class ConnectionManager:
     """每个攻坚一个房间，向房间内所有 WS 广播事件。
-    记录每个 ws 所属 loop，跨 loop 用 run_coroutine_threadsafe 发送（TestClient 场景）。"""
+
+    生产环境单 uvicorn 单事件循环，广播即直接 await；
+    TestClient 下 HTTP 与 WS 跑在不同事件循环，故记录每个 ws 所属 loop，
+    用 run_coroutine_threadsafe 跨 loop 发送，保证可测试。
+    """
     def __init__(self) -> None:
         self.rooms: dict[int, set[WebSocket]] = defaultdict(set)
         self._loops: dict[WebSocket, asyncio.AbstractEventLoop] = {}
@@ -38,3 +48,31 @@ class ConnectionManager:
             await self.disconnect(raid_id, ws)
 
 manager = ConnectionManager()
+
+def _auth_ws(ws: WebSocket, db: Session) -> User | None:
+    token = ws.query_params.get("token")
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        return None
+    return db.get(User, int(payload["sub"]))
+
+@router.websocket("/ws/raids/{raid_id}")
+async def ws_endpoint(ws: WebSocket, raid_id: int, db: Session = Depends(get_db)):
+    user = _auth_ws(ws, db)
+    if user is None:
+        await ws.close(code=4401)
+        return
+    if db.get(Raid, raid_id) is None:
+        await ws.close(code=4404)
+        return
+    await manager.connect(raid_id, ws)
+    try:
+        while True:
+            await ws.receive_text()  # 仅维持连接，客户端不发消息
+    except WebSocketDisconnect:
+        await manager.disconnect(raid_id, ws)
+    except Exception:
+        await manager.disconnect(raid_id, ws)

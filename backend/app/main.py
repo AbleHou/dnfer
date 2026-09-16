@@ -9,6 +9,7 @@ from .config import settings
 from .db import SessionLocal, init_db
 from .models import User
 from .routers import auth, members, public, raids
+from .ws import router as ws_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +33,7 @@ app.include_router(auth.router)
 app.include_router(members.router)
 app.include_router(raids.router)
 app.include_router(public.router)
+app.include_router(ws_router)
 
 FRONTEND_DIST = "../frontend/dist"
 try:
