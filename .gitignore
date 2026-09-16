@@ -7,3 +7,4 @@ backend/data/
 .superpowers/
 node_modules/
 dist/
+*.tsbuildinfo
