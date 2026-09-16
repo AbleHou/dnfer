@@ -21,8 +21,9 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
                 nickname=body.nickname, is_admin=False)
     db.add(user)
     db.flush()
-    rc.used_by = user.id
-    rc.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    if rc.single_use:
+        rc.used_by = user.id
+        rc.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return {"token": create_access_token(user.id), "user": UserOut.model_validate(user)}
 

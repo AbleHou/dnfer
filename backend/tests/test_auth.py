@@ -37,3 +37,21 @@ def test_admin_only_codes(client, admin_headers):
     assert r.status_code == 401
     r = client.get("/api/admin/codes", headers=admin_headers)
     assert r.status_code == 200
+
+def test_multi_use_code_allows_multiple_registrations(client, admin_headers):
+    r = client.post("/api/admin/codes", headers=admin_headers, json={"single_use": False})
+    code = r.json()["code"]
+    for i in range(2):
+        r = client.post("/api/auth/register", json={
+            "username": f"player_mu_{i}", "password": "secret1",
+            "nickname": f"n{i}", "code": code})
+        assert r.status_code == 200
+
+def test_admin_endpoint_forbids_member(client, admin_headers):
+    code = client.post("/api/admin/codes", headers=admin_headers,
+                       json={"single_use": True}).json()["code"]
+    r = client.post("/api/auth/register", json={
+        "username": "member1", "password": "secret1", "nickname": "成员甲", "code": code})
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    assert client.post("/api/admin/codes", headers=h, json={"single_use": True}).status_code == 403
+    assert client.get("/api/admin/users", headers=h).status_code == 403
