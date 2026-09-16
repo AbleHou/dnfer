@@ -1,0 +1,18 @@
+services:
+  dnfer:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DNFER_SECRET_KEY: ${DNFER_SECRET_KEY}
+      DNFER_ADMIN_USERNAME: ${DNFER_ADMIN_USERNAME:-admin}
+      DNFER_ADMIN_PASSWORD: ${DNFER_ADMIN_PASSWORD}
+      DNFER_ADMIN_NICKNAME: ${DNFER_ADMIN_NICKNAME:-群主}
+      DNFER_API_TOKEN: ${DNFER_API_TOKEN}
+      DNFER_DATABASE_URL: sqlite:////data/dnfer.db
+    volumes:
+      - dnfer-data:/data
+    restart: unless-stopped
+
+volumes:
+  dnfer-data:

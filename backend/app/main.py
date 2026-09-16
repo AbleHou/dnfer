@@ -35,8 +35,7 @@ app.include_router(raids.router)
 app.include_router(public.router)
 app.include_router(ws_router)
 
-FRONTEND_DIST = "../frontend/dist"
 try:
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="static")
+    app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="static")
 except RuntimeError:
     pass  # 前端未构建时忽略
