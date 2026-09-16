@@ -526,6 +526,24 @@ def test_admin_only_codes(client, admin_headers):
     assert r.status_code == 401
     r = client.get("/api/admin/codes", headers=admin_headers)
     assert r.status_code == 200
+
+def test_multi_use_code_allows_multiple_registrations(client, admin_headers):
+    r = client.post("/api/admin/codes", headers=admin_headers, json={"single_use": False})
+    code = r.json()["code"]
+    for i in range(2):
+        r = client.post("/api/auth/register", json={
+            "username": f"player_mu_{i}", "password": "secret1",
+            "nickname": f"n{i}", "code": code})
+        assert r.status_code == 200
+
+def test_admin_endpoint_forbids_member(client, admin_headers):
+    code = client.post("/api/admin/codes", headers=admin_headers,
+                       json={"single_use": True}).json()["code"]
+    r = client.post("/api/auth/register", json={
+        "username": "member1", "password": "secret1", "nickname": "成员甲", "code": code})
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    assert client.post("/api/admin/codes", headers=h, json={"single_use": True}).status_code == 403
+    assert client.get("/api/admin/users", headers=h).status_code == 403
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -569,9 +587,10 @@ def get_current_user(creds: HTTPAuthorizationCredentials | None = Depends(_beare
         raise HTTPException(401, "未登录")
     try:
         payload = jwt.decode(creds.credentials, settings.secret_key, algorithms=["HS256"])
-    except jwt.PyJWTError:
+        user_id = int(payload.get("sub", ""))
+    except (jwt.PyJWTError, TypeError, ValueError):
         raise HTTPException(401, "登录已过期，请重新登录")
-    user = db.get(User, int(payload["sub"]))
+    user = db.get(User, user_id)
     if user is None:
         raise HTTPException(401, "用户不存在")
     return user
@@ -636,8 +655,9 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
                 nickname=body.nickname, is_admin=False)
     db.add(user)
     db.flush()
-    rc.used_by = user.id
-    rc.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    if rc.single_use:
+        rc.used_by = user.id
+        rc.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return {"token": create_access_token(user.id), "user": UserOut.model_validate(user)}
 
