@@ -46,6 +46,7 @@ def test_member_fill_remove_duty(client):
     assert r.json()["slot"]["duty"] == "主C"
     assert r.json()["slot"]["owner_nickname"] == "乙"
     assert r.json()["slot"]["character_name"] == "剑魂"
+    assert "缺少辅助" in r.json()["warnings"]
 
     # change duty
     r = client.put(f"/api/raids/{rid}/slots/{slot0['id']}/duty", headers=h, json={"duty": "辅C"})

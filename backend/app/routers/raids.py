@@ -182,6 +182,7 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
     duty = body.duty or default_duty(char.class_type)
     if not duty_valid_for_class(duty, char.class_type):
         raise HTTPException(400, "职责与职业不匹配")
+    slot.character = char   # 显式赋值 relationship，保证 identity map 一致（autoflush=False 下校验读的是内存态）
     slot.character_id = char.id
     slot.duty = duty
     # 先在校验器上校验（读取的是 session 内存态，未 commit 也生效）；违规则回滚并 400
