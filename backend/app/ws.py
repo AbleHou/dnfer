@@ -55,9 +55,10 @@ def _auth_ws(ws: WebSocket, db: Session) -> User | None:
         return None
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
-    except jwt.PyJWTError:
+        user_id = int(payload.get("sub", ""))
+    except (jwt.PyJWTError, TypeError, ValueError):
         return None
-    return db.get(User, int(payload["sub"]))
+    return db.get(User, user_id)
 
 @router.websocket("/ws/raids/{raid_id}")
 async def ws_endpoint(ws: WebSocket, raid_id: int, db: Session = Depends(get_db)):
@@ -73,6 +74,6 @@ async def ws_endpoint(ws: WebSocket, raid_id: int, db: Session = Depends(get_db)
         while True:
             await ws.receive_text()  # 仅维持连接，客户端不发消息
     except WebSocketDisconnect:
-        await manager.disconnect(raid_id, ws)
-    except Exception:
+        pass  # 客户端主动断开属正常情况
+    finally:
         await manager.disconnect(raid_id, ws)
