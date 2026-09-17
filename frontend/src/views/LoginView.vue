@@ -22,7 +22,7 @@ async function submit() {
   <div style="max-width:320px;margin:80px auto">
     <h2>登录</h2>
     <form @submit.prevent="submit">
-      <div style="margin:8px 0"><input v-model="username" placeholder="用户名" /></div>
+      <div style="margin:8px 0"><input v-model="username" placeholder="账号" /></div>
       <div style="margin:8px 0"><input v-model="password" type="password" placeholder="密码" /></div>
       <p v-if="error" style="color:#c62828">{{ error }}</p>
       <button :disabled="loading">{{ loading ? '登录中…' : '登录' }}</button>

@@ -27,7 +27,7 @@ async function submit() {
   <div style="max-width:320px;margin:80px auto">
     <h2>注册</h2>
     <form @submit.prevent="submit">
-      <div style="margin:8px 0"><input v-model="username" placeholder="用户名（登录用）" /></div>
+      <div style="margin:8px 0"><input v-model="username" placeholder="账号（登录用）" /></div>
       <div style="margin:8px 0"><input v-model="password" type="password" placeholder="密码（≥6位）" /></div>
       <div style="margin:8px 0"><input v-model="nickname" placeholder="群昵称" /></div>
       <div style="margin:8px 0"><input v-model="code" placeholder="注册码" /></div>
