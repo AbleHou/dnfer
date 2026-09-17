@@ -32,10 +32,10 @@ def job_tree() -> list[dict]:
         if not children:
             continue
         out.append({
-            "id": cat["id"], "name": cat["name"], "title": cat.get("title", ""),
+            "id": cat.get("id"), "name": cat.get("name", ""), "title": cat.get("title", ""),
             "children": [
-                {"id": c.get("id"), "name": c["name"], "title": c.get("title", ""),
-                 "class_type": class_type_for(c["name"])}
+                {"id": c.get("id"), "name": c.get("name", ""), "title": c.get("title", ""),
+                 "class_type": class_type_for(c.get("name", ""))}
                 for c in children
             ],
         })

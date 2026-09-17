@@ -20,6 +20,12 @@ logger = logging.getLogger("dnfer")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    from . import jobs as job_data
+    try:
+        job_data.job_tree()
+    except FileNotFoundError as e:
+        logger.error("职业数据加载失败：%s", e)
+        raise
     db = SessionLocal()
     if not db.query(User).filter(User.username == settings.admin_username).first():
         db.add(User(username=settings.admin_username,

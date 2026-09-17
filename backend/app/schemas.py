@@ -135,7 +135,7 @@ class JobChild(BaseModel):
     id: int
     name: str
     title: str
-    class_type: str
+    class_type: Literal["输出", "辅助"]
 
 class JobCategory(BaseModel):
     id: int
