@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     api_token: str = "change-me-bot-token"
     code_expire_days: int | None = 7
     static_dir: str = "../frontend/dist"
+    job_data_path: str = "../职业信息.json"
+    images_dir: str = "../images/adventure"
 
     model_config = {"env_file": ".env", "env_prefix": "DNFER_"}
 

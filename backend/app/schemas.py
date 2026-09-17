@@ -130,3 +130,15 @@ class FillResponse(BaseModel):
     slot: SlotOut
     warnings: list[str] = []
     removed_slots: list[SlotOut] = []
+
+class JobChild(BaseModel):
+    id: int
+    name: str
+    title: str
+    class_type: str
+
+class JobCategory(BaseModel):
+    id: int
+    name: str
+    title: str
+    children: list[JobChild]
