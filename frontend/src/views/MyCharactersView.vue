@@ -19,8 +19,16 @@ const selectedJob = ref<JobChild | null>(null)
 const isSupport = computed(() => selectedJob.value?.class_type === '辅助')
 
 async function load() {
-  list.value = await api.get<Character[]>('/api/me/characters')
-  categories.value = await api.getJobs()
+  try {
+    const [chars, cats] = await Promise.all([
+      api.get<Character[]>('/api/me/characters'),
+      api.getJobs(),
+    ])
+    list.value = chars
+    categories.value = cats
+  } catch (e: any) {
+    error.value = e.message
+  }
 }
 onMounted(load)
 
@@ -129,22 +137,25 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
         <label for="char-fame" style="width:80px;flex-shrink:0">名望：</label>
         <input id="char-fame" v-model.number="form.fame" type="number" style="flex:1" />
       </div>
-      <template v-if="!isSupport">
-        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-          <label for="char-damage" style="width:80px;flex-shrink:0">模拟伤害（亿）：</label>
-          <input id="char-damage" v-model.number="form.simulated_damage" type="number" style="flex:1" />
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-          <label for="char-dps" style="width:80px;flex-shrink:0">秒伤（亿）：</label>
-          <input id="char-dps" v-model.number="form.sustained_dps" type="number" style="flex:1" />
-        </div>
+      <template v-if="selectedJob">
+        <template v-if="!isSupport">
+          <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+            <label for="char-damage" style="width:80px;flex-shrink:0">模拟伤害（亿）：</label>
+            <input id="char-damage" v-model.number="form.simulated_damage" type="number" style="flex:1" />
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+            <label for="char-dps" style="width:80px;flex-shrink:0">秒伤（亿）：</label>
+            <input id="char-dps" v-model.number="form.sustained_dps" type="number" style="flex:1" />
+          </div>
+        </template>
+        <template v-else>
+          <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+            <label for="char-buff" style="width:80px;flex-shrink:0">增益量：</label>
+            <input id="char-buff" v-model.number="form.buff_amount" type="number" style="flex:1" />
+          </div>
+        </template>
       </template>
-      <template v-else>
-        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-          <label for="char-buff" style="width:80px;flex-shrink:0">增益量：</label>
-          <input id="char-buff" v-model.number="form.buff_amount" type="number" style="flex:1" />
-        </div>
-      </template>
+      <p v-else style="color:#999;font-size:12px">请先选择职业</p>
       <p v-if="error" style="color:#c62828">{{ error }}</p>
       <button :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
       <button @click="showForm = false">取消</button>
