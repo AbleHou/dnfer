@@ -74,7 +74,7 @@
 - 新增 `src/lib/job.ts`：
   - `jobIcon(job_name)` → `/images/jobs/{job_name}.png`
   - `categoryIcon(parent_name)` → `/images/sub/{parent_name}.png`
-  - `iconFallback` → 占位图 `/images/jobs/empty.png`，`<img>` 加载失败时回退（`@error` 换 src）
+  - `ICON_FALLBACK` → 占位图 `/images/jobs/empty.png`，`<img>` 加载失败时回退（`@error` 换 src）
   - 输入区判定（增益量 vs 模拟伤害+秒伤）直接读 `GET /api/jobs` 下发的 `child.class_type`，不维护辅助职业集合副本
 - `api/client.ts`：增 `getJobs()`。
 

@@ -43,6 +43,8 @@ describe('raid store', () => {
     store.raid = makeRaid()
     applyEvent(store, { type: 'slot:removed', slot_id: 1 })
     expect(store.raid!.waves[0].slots[0].character_id).toBeNull()
+    expect(store.raid!.waves[0].slots[0].job_name).toBeNull()
+    expect(store.raid!.waves[0].slots[0].job_title).toBeNull()
   })
 
   it('applies slot:duty_changed', () => {
