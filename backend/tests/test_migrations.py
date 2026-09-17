@@ -1,6 +1,10 @@
+from datetime import datetime
+
 from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 from app.migrations import migrate_dungeons
+from app.models import Raid
 
 def test_migrate_legacy_db():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
@@ -21,3 +25,9 @@ def test_migrate_legacy_db():
         names = [r[0] for r in conn.execute(text("SELECT name FROM dungeons")).all()]
         assert "巴卡尔" in names and "未指定" in names
     migrate_dungeons(engine)  # 幂等
+    # 迁移后 ORM 插入新攻坚应成功：遗留 dungeon NOT NULL 列已移除
+    Session = sessionmaker(bind=engine)
+    with Session() as s:
+        s.add(Raid(name="新攻坚", dungeon_id=1, size=12,
+                   starts_at=datetime(2026, 9, 3, 10, 0), created_by=1))
+        s.commit()

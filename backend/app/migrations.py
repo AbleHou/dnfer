@@ -39,6 +39,8 @@ def migrate_dungeons(engine: Engine) -> None:
                     WHERE d.name = CASE WHEN raids.dungeon IS NULL OR raids.dungeon = ''
                                         THEN '未指定' ELSE raids.dungeon END
                 ) WHERE dungeon_id IS NULL"""))
+            # 遗留 dungeon 列是 NOT NULL 且新模型不再映射；不删除则 ORM 插入会 NOT NULL 失败
+            conn.execute(text("ALTER TABLE raids DROP COLUMN dungeon"))
         conn.execute(text("UPDATE raids SET starts_at = created_at WHERE starts_at IS NULL"))
 
 
