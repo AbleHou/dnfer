@@ -12,7 +12,7 @@ from .auth import hash_password
 from .config import settings
 from .db import SessionLocal, init_db
 from .models import User
-from .routers import auth, members, public, raids
+from .routers import auth, dungeons, members, public, raids
 from .ws import router as ws_router
 
 logger = logging.getLogger("dnfer")
@@ -36,6 +36,7 @@ app.add_middleware(CORSMiddleware,
                    allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 app.include_router(auth.router)
+app.include_router(dungeons.router)
 app.include_router(members.router)
 app.include_router(raids.router)
 app.include_router(public.router)

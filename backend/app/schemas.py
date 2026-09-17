@@ -51,6 +51,19 @@ class CodeOut(BaseModel):
     expires_at: datetime | None
     single_use: bool
 
+class DungeonIn(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    size: int = 12
+    description: str = Field(default="", max_length=2000)
+
+class DungeonOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    size: int
+    description: str
+    created_at: datetime
+
 class RaidCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     dungeon: str = Field(default="", max_length=64)
