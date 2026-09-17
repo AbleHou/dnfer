@@ -10,7 +10,7 @@ def test_migrate_legacy_db():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     with engine.begin() as conn:
         conn.execute(text("""CREATE TABLE raids (
-            id INTEGER PRIMARY KEY, name VARCHAR(128), dungeon VARCHAR(64),
+            id INTEGER PRIMARY KEY, name VARCHAR(128), dungeon VARCHAR(64) NOT NULL,
             size INTEGER, locked BOOLEAN, created_by INTEGER, created_at DATETIME)"""))
         conn.execute(text("""INSERT INTO raids (name, dungeon, size, locked, created_by, created_at)
             VALUES ('攻坚1', '巴卡尔', 12, 0, 1, '2026-09-01 10:00:00')"""))
