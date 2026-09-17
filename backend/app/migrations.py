@@ -44,6 +44,26 @@ def migrate_dungeons(engine: Engine) -> None:
         conn.execute(text("UPDATE raids SET starts_at = created_at WHERE starts_at IS NULL"))
 
 
+def migrate_jobs(engine: Engine) -> None:
+    """为存量库补建 characters.job_name，并清空存量角色与占位（幂等）。
+
+    清空仅发生在「本次新增 job_name 列」时（存量库首次迁移）：
+    必须先清 slots 占位再删 characters——SQLite 已启用 PRAGMA foreign_keys=ON，
+    Slot.character_id 外键无 ON DELETE 动作，先删角色会触发外键约束错误。
+    """
+    from . import models  # noqa: F401  确保模型注册
+    from .db import Base
+
+    Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(characters)")).all()}
+        if "job_name" not in cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN job_name VARCHAR(64)"))
+            conn.execute(text("UPDATE slots SET character_id = NULL, duty = NULL, "
+                              "version = version + 1, updated_by = NULL, updated_at = NULL"))
+            conn.execute(text("DELETE FROM characters"))
+
+
 if __name__ == "__main__":
     from .db import engine
     migrate_dungeons(engine)
