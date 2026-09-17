@@ -50,3 +50,9 @@ def test_invalid_job_name_rejected(client):
     r = client.post("/api/me/characters", headers=h, json={
         "name": "x", "job_name": "not_a_job", "fame": 1})
     assert r.status_code == 400
+
+def test_empty_job_name_rejected(client):
+    h, _ = register_user(client, "p11", "占位")
+    r = client.post("/api/me/characters", headers=h, json={
+        "name": "x", "job_name": "empty", "fame": 1})
+    assert r.status_code == 400

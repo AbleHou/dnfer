@@ -21,8 +21,9 @@ def class_type_for(job_name: str) -> str:
 def job_meta(job_name: str) -> dict | None:
     for cat in _load():
         for c in cat.get("children", []):
-            if c.get("name") == job_name:
-                return {"title": c.get("title", ""), "parent_name": cat.get("name", "")}
+            if c.get("name") == "empty" or c.get("name") != job_name:
+                continue
+            return {"title": c.get("title", ""), "parent_name": cat.get("name", "")}
     return None
 
 def job_tree() -> list[dict]:
