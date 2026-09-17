@@ -1,3 +1,5 @@
+import type { JobCategory } from '../types'
+
 const TOKEN_KEY = 'dnfer_token'
 
 export function getToken(): string | null { return localStorage.getItem(TOKEN_KEY) }
@@ -34,4 +36,5 @@ export const api = {
   post: <T>(url: string, body?: unknown) => request<T>('POST', url, body),
   put: <T>(url: string, body?: unknown) => request<T>('PUT', url, body),
   del: <T>(url: string) => request<T>('DELETE', url),
+  getJobs: () => request<JobCategory[]>('GET', '/api/jobs'),
 }
