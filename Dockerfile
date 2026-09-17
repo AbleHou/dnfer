@@ -13,7 +13,6 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 COPY 职业信息.json ./
-COPY images/ ./images/
 COPY --from=frontend /app/frontend/dist ./static
 ENV DNFER_STATIC_DIR=/app/static
 ENV DNFER_JOB_DATA_PATH=/app/职业信息.json

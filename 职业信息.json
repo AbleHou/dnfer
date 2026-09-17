@@ -1,0 +1,225 @@
+[
+    {
+        "id": 0,
+        "name": "swordman_male",
+        "title": "鬼剑士(男)",
+        "children": [
+            {"id": 0, "name": "weapon_master", "title": "极诣·剑魂", "class": "GF.swordman_male.weapon_master"},
+            {"id": 1, "name": "soul_bender", "title": "极诣·鬼泣", "class": "GF.swordman_male.soul_bender"},
+            {"id": 2, "name": "berserker", "title": "极诣·狂战士", "class": "GF.swordman_male.berserker"},
+            {"id": 3, "name": "asura", "title": "极诣·阿修罗", "class": "GF.swordman_male.asura"},
+            {"id": 4, "name": "ghostblade", "title": "极诣·剑影", "class": "GF.swordman_male.ghostblade"}
+        ]
+    },
+    {
+        "id": 1,
+        "name": "swordman_female",
+        "title": "鬼剑士(女)",
+        "children": [
+            {"id": 0, "name": "sword_master", "title": "极诣·驭剑士", "class": "GF.swordman_female.sword_master"},
+            {"id": 1, "name": "dark_templar", "title": "极诣·暗殿骑士", "class": "GF.swordman_female.dark_templar"},
+            {"id": 2, "name": "demon_slayer", "title": "极诣·契魔者", "class": "GF.swordman_female.demon_slayer"},
+            {"id": 3, "name": "vegabond", "title": "极诣·流浪武士", "class": "GF.swordman_female.vegabond"},
+            {"id": 4, "name": "spectre", "title": "极诣·刃影", "class": "GF.swordman_female.spectre"}
+        ]
+    },
+    {
+        "id": 2,
+        "name": "fighter_male",
+        "title": "格斗家(男)",
+        "children": [
+            {"id": 0, "name": "nenmaster_male", "title": "归元·气功师", "class": "GF.fighter_male.nenmaster_male"},
+            {"id": 1, "name": "striker_male", "title": "归元·散打", "class": "GF.fighter_male.striker_male"},
+            {"id": 2, "name": "brawler_male", "title": "归元·街霸", "class": "GF.fighter_male.brawler_male"},
+            {"id": 3, "name": "grappler_male", "title": "归元·柔道家", "class": "GF.fighter_male.grappler_male"}
+            
+        ]
+    },
+    {
+        "id": 3,
+        "name": "fighter_female",
+        "title": "格斗家(女)",
+        "children": [
+            {"id": 0, "name": "nenmaster_female", "title": "归元·气功师", "class": "GF.fighter_female.nenmaster_female"},
+            {"id": 1, "name": "striker_female", "title": "归元·散打", "class": "GF.fighter_female.striker_female"},
+            {"id": 2, "name": "brawler_female", "title": "归元·街霸", "class": "GF.fighter_female.brawler_female"},
+            {"id": 3, "name": "grappler_female", "title": "归元·柔道家", "class": "GF.fighter_female.grappler_female"}
+            
+        ]
+    },
+    {
+        "id": 4,
+        "name": "gunner_male",
+        "title": "神枪手(男)",
+        "children": [
+            {"id": 0, "name": "ranger_male", "title": "重霄·漫游枪手", "class": "GF.gunner_male.ranger_male"},
+            {"id": 1, "name": "launcher_male", "title": "重霄·枪炮师", "class": "GF.gunner_male.launcher_male"},
+            {"id": 2, "name": "mechanic_male", "title": "重霄·机械师", "class": "GF.gunner_male.mechanic_male"},
+            {"id": 3, "name": "spitfire_male", "title": "重霄·弹药专家", "class": "GF.gunner_male.spitfire_male"},
+            {"id": 4, "name": "assault", "title": "重霄·合金战士", "class": "GF.gunner_male.assault"}
+        ]
+    },
+    {
+        "id": 5,
+        "name": "gunner_female",
+        "title": "神枪手(女)",
+        "children": [
+            {"id": 0, "name": "ranger_female", "title": "重霄·漫游枪手", "class": "GF.gunner_female.ranger_female"},
+            {"id": 1, "name": "launcher_female", "title": "重霄·枪炮师", "class": "GF.gunner_female.launcher_female"},
+            {"id": 2, "name": "mechanic_female", "title": "重霄·机械师", "class": "GF.gunner_female.mechanic_female"},
+            {"id": 3, "name": "spitfire_female", "title": "重霄·弹药专家", "class": "GF.gunner_female.spitfire_female"},
+            {"id": 4, "name": "paramedic", "title": "重霄·协战师", "class": "GF.gunner_female.paramedic"}
+        ]
+    },
+    {
+        "id": 6,
+        "name": "mage_male",
+        "title": "魔法师(男)",
+        "children": [
+            {"id": 0, "name": "elemental_bomber", "title": "知源·元素爆破师", "class": "GF.mage_male.elemental_bomber"},
+            {"id": 1, "name": "glacial_master", "title": "知源·冰结师", "class": "GF.mage_male.glacial_master"},
+            {"id": 2, "name": "blood_mage", "title": "知源·血法师", "class": "GF.mage_male.blood_mage"},
+            {"id": 3, "name": "swift_master", "title": "知源·逐风者", "class": "GF.mage_male.swift_master"},
+            {"id": 4, "name": "dimension_walker", "title": "知源·次元行者", "class": "GF.mage_male.dimension_walker"}
+        ]
+    },
+    {
+        "id": 7,
+        "name": "mage_female",
+        "title": "魔法师(女)",
+        "children": [
+            {"id": 0, "name": "elementalist", "title": "知源·元素师", "class": "GF.mage_female.elementalist"},
+            {"id": 1, "name": "summoner", "title": "知源·召唤师", "class": "GF.mage_female.summoner"},
+            {"id": 2, "name": "battle_mage", "title": "知源·战斗法师", "class": "GF.mage_female.battle_mage"},
+            {"id": 3, "name": "witch", "title": "知源·魔道学者", "class": "GF.mage_female.witch"},
+            {
+                "id": 4,
+                "name": "enchantress",
+                "title": "知源·小魔女",
+                "open": true,
+                "class": "GF.mage_female.enchantress"
+            }
+        ]
+    },
+    {
+        "id": 8,
+        "name": "priest_male",
+        "title": "圣职者(男)",
+        "children": [
+            {
+                "id": 0,
+                "name": "crusader_male",
+                "title": "神启·圣骑士",
+                "open": true,
+                "class": "GF.priest_male.crusader_male"
+            },
+            {"id": 1, "name": "infighter", "title": "神启·蓝拳圣使", "class": "GF.priest_male.infighter"},
+            {"id": 2, "name": "exorcist", "title": "神启·驱魔师", "class": "GF.priest_male.exorcist"},
+            {"id": 3, "name": "avenger", "title": "神启·复仇者", "class": "GF.priest_male.avenger"},
+            {"id": 4, "name": "empty", "title": ""}
+        ]
+    },
+    {
+        "id": 9,
+        "name": "priest_female",
+        "title": "圣职者(女)",
+        "children": [
+            {
+                "id": 0,
+                "name": "crusader_female",
+                "title": "神启·圣骑士",
+                "open": true,
+                "class": "GF.priest_female.crusader_female"
+                
+            },
+            {"id": 1, "name": "inquistor", "title": "神启·异端审判者", "class": "GF.priest_female.inquistor"},
+            {"id": 2, "name": "sorceress", "title": "神启·巫女", "class": "GF.priest_female.sorceress"},
+            {"id": 3, "name": "mistress", "title": "神启·诱魔者", "class": "GF.priest_female.mistress"},
+            {"id": 4, "name": "infighter_female", "title": "神启·蓝拳圣使", "class": "GF.priest_female.infighter_female"}
+        ]
+    },
+    {
+        "id": 10,
+        "name": "thief",
+        "title": "暗夜使者",
+        "children": [
+            {"id": 0, "name": "rogue", "title": "隐夜·刺客", "class": "GF.thief.rogue"},
+            {"id": 1, "name": "necro", "title": "隐夜·死灵术士", "class": "GF.thief.necro"},
+            {"id": 2, "name": "kunoichi", "title": "隐夜·忍者", "class": "GF.thief.kunoichi"},
+            {"id": 3, "name": "shadow_dancer", "title": "隐夜·影舞者", "class": "GF.thief.shadow_dancer"},
+            {"id": 4, "name": "empty", "title": ""}
+        ]
+    },
+    {
+        "id": 11,
+        "name": "knight",
+        "title": "守护者",
+        "children": [
+            {"id": 0, "name": "elven_knight", "title": "皓曦·精灵骑士", "class": "GF.knight.elven_knight"},
+            {"id": 1, "name": "chaos", "title": "皓曦·混沌魔灵", "class": "GF.knight.chaos"},
+            {"id": 2, "name": "paladin", "title": "皓曦·帕拉丁", "class": "GF.knight.paladin"},
+            {"id": 3, "name": "dragon_knight", "title": "皓曦·龙骑士", "class": "GF.knight.dragon_knight"},
+            {"id": 4, "name": "empty", "title": ""}
+        ]
+    },
+    {
+        "id": 12,
+        "name": "demonic_lancer",
+        "title": "魔枪士",
+        "children": [
+            {"id": 0, "name": "vanguard", "title": "千魂·征战者", "class": "GF.demonic_lancer.vanguard"},
+            {"id": 1, "name": "skirmisher", "title": "千魂·决战者", "class": "GF.demonic_lancer.skirmisher"},
+            {"id": 2, "name": "dragoon", "title": "千魂·狩猎者", "class": "GF.demonic_lancer.dragoon"},
+            {"id": 3, "name": "impaler", "title": "千魂·暗枪士", "class": "GF.demonic_lancer.impaler"},
+            {"id": 4, "name": "empty", "title": ""}
+        ]
+    },
+    {
+        "id": 13,
+        "name": "gunblader",
+        "title": "枪剑士",
+        "children": [
+            {"id": 0, "name": "hitman", "title": "苍暮·暗刃", "class": "GF.gunblader.hitman"},
+            {"id": 1, "name": "agent", "title": "苍暮·特工", "class": "GF.gunblader.agent"},
+            {"id": 2, "name": "trouble_shooter", "title": "苍暮·战线佣兵", "class": "GF.gunblader.trouble_shooter"},
+            {"id": 3, "name": "specialist", "title": "苍暮·源能专家", "class": "GF.gunblader.specialist"},
+            {"id": 4, "name": "empty", "title": ""}
+        ]
+    },
+    {
+        "id": 14,
+        "name": "archer",
+        "title": "弓箭手",
+        "children": [
+            {"id": 0, "name": "muse", "title": "聆风·缪斯", "class": "GF.archer.muse"},
+            {"id": 1, "name": "traveler", "title": "聆风·旅人", "class": "GF.archer.traveler"},
+            {"id": 2, "name": "hunter", "title": "聆风·猎人", "class": "GF.archer.hunter"},
+            {"id": 3, "name": "vigilante", "title": "聆风·妖护使", "class": "GF.archer.vigilante"},
+            {"id": 4, "name": "chimera", "title": "聆风·奇美拉", "class": "GF.archer.chimera"}
+        ]
+    },
+    {
+        "id": 16,
+        "name": "imperialknight",
+        "title": "帝国骑士",
+        "children": [
+            {"id": 0, "name": "breaker", "title": "鸣锋·破浪者", "class": "GF.imperialknight.breaker"},
+            {"id": 1, "name": "empty", "title": ""},
+            {"id": 2, "name": "empty", "title": ""},
+            {"id": 3, "name": "empty", "title": ""},
+            {"id": 4, "name": "empty", "title": ""}
+        ]
+    },
+    {
+        "id": 15,
+        "name": "extra",
+        "title": "外传",
+        "children": [
+            {"id": 0, "name": "creator", "title": "知源·缔造者", "class": "GF.extra.creator"},
+            {"id": 1, "name": "dark_knight", "title": "极诣·黑暗武士", "class": "GF.extra.dark_knight"},
+            {"id": 2, "name": "empty", "title": ""},
+            {"id": 3, "name": "empty", "title": ""},
+            {"id": 4, "name": "empty", "title": ""}
+        ]
+    }
+]

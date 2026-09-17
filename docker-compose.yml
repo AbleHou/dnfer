@@ -12,6 +12,7 @@ services:
       DNFER_DATABASE_URL: sqlite:////data/dnfer.db
     volumes:
       - dnfer-data:/data
+      - ./images:/app/images:ro
     restart: unless-stopped
 
   nginx:

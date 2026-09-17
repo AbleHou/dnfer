@@ -8,3 +8,4 @@ backend/data/
 node_modules/
 dist/
 *.tsbuildinfo
+images/
