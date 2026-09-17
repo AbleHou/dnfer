@@ -35,6 +35,7 @@
 - 新增 `starts_at` datetime（必填）：用户所选墙上时间（naive，前端 `datetime-local` 直接提交，后端原样存储/返回，不做时区换算）。
 - `size`：创建时从副本 `size` 拷贝，创建后不可变（与现状一致）。
 - `name`：保留；创建时默认填入副本名，可改。
+- `dungeon_name` **不落库**：序列化时经 `dungeon_id` 关联读取（与 `character_name` 同模式）。因此通过 `PUT /api/dungeons/{id}` 重命名副本会**追溯反映**到已创建的攻坚上。
 
 ### 2.3 删除约束
 
@@ -54,22 +55,21 @@
 ### 3.2 攻坚端点调整
 
 - `POST /api/raids`：body 改为 `{name?, dungeon_id, starts_at}`；`size` 从 body 移除，由副本带入。
-- `GET /api/raids` / `GET /api/raids/{id}`：响应增加 `dungeon_id`、`dungeon_name`、`starts_at`。
-- `PUT /api/raids/{id}`：仅可改 `name`、`starts_at`；副本与规模不可变。
-- `GET /api/public/raids`：增加副本名与发起时间。
+- `GET /api/raids` / `GET /api/raids/{id}` / `GET /api/public/raids`：原 `dungeon` 字段**替换**为 `dungeon_id`、`dungeon_name`，并新增 `starts_at`。
+- `PUT /api/raids/{id}`：仅可改 `name`、`starts_at`；副本与规模不可变。**本次不新增前端编辑界面**（无请求，YAGNI）；端点仅保持既有后端能力并适配新语义。
 
 ### 3.3 WebSocket
 
-`PUT /api/raids/{id}` 改名/改时间后广播 `raid:updated`，排表页实时更新头部信息。其余事件不变。
+无改动。攻坚头部信息（名称/副本/时间）不参与实时广播；排表页实时性仅涉及格子与波次，维持现状。
 
 ## 4. 前端界面
 
 - **AdminView** 新增「副本管理」区块：副本列表表格（名称/人数/描述）+ 新建表单 + 编辑 + 删除。
-- **创建攻坚表单**（AdminView）：
-  - 副本：下拉选择预设，选中后自动带入并锁定人数（只读展示）。
+- **创建攻坚表单**（现有 `RaidListView.vue` 内，不改位置）：
+  - 副本：下拉选择预设（`GET /api/dungeons`），选中后自动带入并锁定人数（只读展示）。
   - 发起时间：`<input type="datetime-local">` 必填。
-  - 攻坚名称：默认自动填入副本名，可改。
-  - 移除手动选择规模。
+  - 攻坚名称：选中副本后默认自动填入副本名，可改。
+  - 移除原自由文本副本输入与手动规模选择。
 - **攻坚列表 / 详情页**：显示副本名、规模、发起时间（如「9月20日 14:00」）。
 - 新增时间格式化工具函数，列表与详情复用。
 
@@ -83,12 +83,12 @@
 
 ## 6. 数据迁移
 
-现有库中攻坚的 `dungeon` 自由文本字段：
+现有库中攻坚的 `dungeon` 自由文本字段（SQLite 无 alembic，schema 由 `create_all` 管理）：
 
 1. 创建 `dungeons` 表。
-2. 对现有攻坚的 `dungeon` 文本去重，逐项创建副本预设（size 默认 12、description 空）。
-3. 回填 `raid.dungeon_id`。
-4. 将 `dungeon_id` 设为非空。
+2. 对现有攻坚的非空 `dungeon` 文本去重，逐项创建副本预设（size 默认 12、description 空）。
+3. 空 `dungeon`（`""`）归入自动创建的「未指定」预设；该预设与普通预设无异（可编辑/删除，被引用则删除受阻，也会出现在创建攻坚的下拉中）。
+4. **重建 `raids` 表**：SQLite 无法对已有数据的表直接加 NOT NULL 列，需复制数据重建表，新增 `dungeon_id`（非空 FK）与 `starts_at`（非空）；回填 `dungeon_id`，存量攻坚 `starts_at` 用 `created_at` 兜底。
 
 ## 7. 测试
 
@@ -110,8 +110,10 @@
 
 前端：
 
-- `frontend/src/views/AdminView.vue` — 副本管理 + 创建攻坚表单
-- `frontend/src/views/RaidListView.vue` — 展示副本名/规模/时间
-- `frontend/src/views/RaidDetailView.vue` — 展示副本名/规模/时间，接收 `raid:updated`
-- `frontend/src/api/` — 新接口与类型
+- `frontend/src/views/AdminView.vue` — 新增副本管理区块
+- `frontend/src/views/RaidListView.vue` — 创建攻坚表单改造（选副本 + 发起时间）+ 列表展示
+- `frontend/src/views/RaidDetailView.vue` — 展示副本名/规模/发起时间
+- `frontend/src/types.ts` — `Raid` / `RaidListItem` / 新增 `Dungeon` 类型
+- `frontend/src/stores/raid.spec.ts` — 更新 `makeRaid()` 测试夹具（`dungeon: ''` 需随类型变更调整）
+- `frontend/src/api/client.ts` — 新接口
 - 时间格式化工具
