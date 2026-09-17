@@ -17,6 +17,8 @@ function choose(c: Character) {
 }
 function confirm() { if (selected.value) emit('select', selected.value, duty.value) }
 const options = computed(() => selected.value ? dutyOptions(selected.value.class_type) : [])
+function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
+function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
 </script>
 
 <template>
@@ -31,7 +33,7 @@ const options = computed(() => selected.value ? dutyOptions(selected.value.class
         <b>{{ c.name }}</b>
         <span style="color:#666;font-size:12px">{{ c.class_type }} · 名望 {{ c.fame }}</span>
         <div style="color:#999;font-size:12px">
-          {{ c.class_type === '输出' ? `模拟 ${c.simulated_damage} · 秒伤 ${c.sustained_dps}` : `增益 ${c.buff_amount}` }}
+          {{ c.class_type === '输出' ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}` : `增益 ${fmtBuff(c.buff_amount)}` }}
         </div>
       </div>
       <p v-if="!characters.length" style="color:#999">还没有角色，去「我的角色」添加</p>

@@ -6,7 +6,7 @@ import type { Character, ClassType } from '../types'
 const list = ref<Character[]>([])
 const showForm = ref(false)
 const editing = ref<Character | null>(null)
-const form = ref({ name: '', class_type: '输出' as ClassType, fame: 0,
+const form = ref({ name: '', class_type: '输出' as ClassType, fame: null as number | null,
   simulated_damage: null as number | null, sustained_dps: null as number | null,
   buff_amount: null as number | null })
 const error = ref('')
@@ -20,7 +20,7 @@ watch(() => form.value.class_type, (t) => {
 async function load() { list.value = await api.get<Character[]>('/api/me/characters') }
 onMounted(load)
 
-function startCreate() { editing.value = null; showForm.value = true; form.value = { name: '', class_type: '输出', fame: 0,
+function startCreate() { editing.value = null; showForm.value = true; form.value = { name: '', class_type: '输出', fame: null,
   simulated_damage: null, sustained_dps: null, buff_amount: null } }
 function startEdit(c: Character) {
   editing.value = c; showForm.value = true
@@ -30,8 +30,9 @@ function startEdit(c: Character) {
 async function save() {
   saving.value = true; error.value = ''
   try {
-    if (editing.value) await api.put(`/api/me/characters/${editing.value.id}`, form.value)
-    else await api.post('/api/me/characters', form.value)
+    const payload = { ...form.value, fame: Number(form.value.fame) || 0 }
+    if (editing.value) await api.put(`/api/me/characters/${editing.value.id}`, payload)
+    else await api.post('/api/me/characters', payload)
     editing.value = null; showForm.value = false; await load()
   } catch (e: any) { error.value = e.message }
   finally { saving.value = false }
@@ -42,6 +43,8 @@ async function remove(c: Character) {
   catch (e: any) { alert(e.message) }
 }
 const isDps = computed(() => form.value.class_type === '输出')
+function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
+function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
 </script>
 
 <template>
@@ -58,8 +61,8 @@ const isDps = computed(() => form.value.class_type === '输出')
         <span style="color:#666;font-size:12px">{{ c.class_type }} · 名望 {{ c.fame }}</span>
         <div style="color:#999;font-size:12px">
           {{ c.class_type === '输出'
-            ? `模拟 ${c.simulated_damage ?? '-'} · 秒伤 ${c.sustained_dps ?? '-'}`
-            : `增益 ${c.buff_amount ?? '-'}` }}
+            ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}`
+            : `增益 ${fmtBuff(c.buff_amount)}` }}
         </div>
       </div>
       <button @click="startEdit(c)">编辑</button>
@@ -69,20 +72,36 @@ const isDps = computed(() => form.value.class_type === '输出')
 
     <div v-if="showForm" style="border:1px solid #ddd;padding:16px;margin:12px 0">
       <h3>{{ editing ? '编辑角色' : '添加角色' }}</h3>
-      <div><input v-model="form.name" placeholder="角色名" /></div>
-      <div>
-        <select v-model="form.class_type">
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+        <label for="char-name" style="width:80px;flex-shrink:0">角色名：</label>
+        <input id="char-name" v-model="form.name" style="flex:1" />
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+        <label for="char-class" style="width:80px;flex-shrink:0">职业：</label>
+        <select id="char-class" v-model="form.class_type" style="flex:1">
           <option value="输出">输出</option>
           <option value="辅助">辅助</option>
         </select>
-        <input v-model.number="form.fame" type="number" placeholder="名望值" />
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+        <label for="char-fame" style="width:80px;flex-shrink:0">名望：</label>
+        <input id="char-fame" v-model.number="form.fame" type="number" style="flex:1" />
       </div>
       <template v-if="isDps">
-        <div><input v-model.number="form.simulated_damage" type="number" placeholder="模拟伤害" /></div>
-        <div><input v-model.number="form.sustained_dps" type="number" placeholder="秒伤" /></div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-damage" style="width:80px;flex-shrink:0">模拟伤害（亿）：</label>
+          <input id="char-damage" v-model.number="form.simulated_damage" type="number" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-dps" style="width:80px;flex-shrink:0">秒伤（亿）：</label>
+          <input id="char-dps" v-model.number="form.sustained_dps" type="number" style="flex:1" />
+        </div>
       </template>
       <template v-else>
-        <div><input v-model.number="form.buff_amount" type="number" placeholder="增益量" /></div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-buff" style="width:80px;flex-shrink:0">增益量：</label>
+          <input id="char-buff" v-model.number="form.buff_amount" type="number" style="flex:1" />
+        </div>
       </template>
       <p v-if="error" style="color:#c62828">{{ error }}</p>
       <button :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
