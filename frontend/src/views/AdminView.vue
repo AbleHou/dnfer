@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api } from '../api/client'
-import type { CodeItem, User } from '../types'
+import type { CodeItem, Dungeon, User } from '../types'
 
 const codes = ref<CodeItem[]>([])
 const users = ref<User[]>([])
+const dungeons = ref<Dungeon[]>([])
+const dgName = ref('')
+const dgSize = ref(12)
+const dgDesc = ref('')
+const editingId = ref<number | null>(null)
+const dgError = ref('')
+const dgBusy = ref(false)
 const singleUse = ref(true)
 const expireDays = ref(7)
 const error = ref('')
@@ -13,6 +20,7 @@ const generating = ref(false)
 async function load() {
   codes.value = await api.get<CodeItem[]>('/api/admin/codes')
   users.value = await api.get<User[]>('/api/admin/users')
+  dungeons.value = await api.get<Dungeon[]>('/api/dungeons')
 }
 onMounted(load)
 
@@ -23,6 +31,32 @@ async function genCode() {
     await load()
   } catch (e: any) { error.value = e.message }
   finally { generating.value = false }
+}
+
+async function saveDungeon() {
+  dgBusy.value = true; dgError.value = ''
+  try {
+    if (editingId.value) {
+      await api.put(`/api/dungeons/${editingId.value}`,
+        { name: dgName.value, size: dgSize.value, description: dgDesc.value })
+    } else {
+      await api.post('/api/dungeons',
+        { name: dgName.value, size: dgSize.value, description: dgDesc.value })
+    }
+    editingId.value = null; dgName.value = ''; dgSize.value = 12; dgDesc.value = ''
+    await load()
+  } catch (e: any) { dgError.value = e.message }
+  finally { dgBusy.value = false }
+}
+
+function editDungeon(d: Dungeon) {
+  editingId.value = d.id; dgName.value = d.name; dgSize.value = d.size; dgDesc.value = d.description
+}
+
+async function delDungeon(d: Dungeon) {
+  if (!confirm(`确认删除副本「${d.name}」？`)) return
+  try { await api.del(`/api/dungeons/${d.id}`); await load() }
+  catch (e: any) { alert(e.message) }
 }
 </script>
 
@@ -52,6 +86,28 @@ async function genCode() {
           <td>{{ u.nickname }}</td>
           <td>{{ u.username }}</td>
           <td>{{ u.is_admin ? '管理员' : '成员' }}</td>
+        </tr>
+      </table>
+    </section>
+    <section style="margin:16px 0">
+      <h3>副本管理</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input v-model="dgName" placeholder="副本名称" />
+        <select v-model.number="dgSize">
+          <option v-for="s in [4,8,12,16,20]" :key="s" :value="s">{{ s }} 人</option>
+        </select>
+        <input v-model="dgDesc" placeholder="描述（可选）" />
+        <button :disabled="dgBusy" @click="saveDungeon">{{ editingId ? '保存' : '新增' }}</button>
+      </div>
+      <p v-if="dgError" style="color:#c62828">{{ dgError }}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:12px">
+        <tr><th style="text-align:left">副本</th><th>人数</th><th style="text-align:left">描述</th><th></th></tr>
+        <tr v-for="d in dungeons" :key="d.id">
+          <td>{{ d.name }}</td><td>{{ d.size }}</td><td>{{ d.description }}</td>
+          <td style="white-space:nowrap">
+            <button @click="editDungeon(d)">编辑</button>
+            <button @click="delDungeon(d)">删除</button>
+          </td>
         </tr>
       </table>
     </section>
