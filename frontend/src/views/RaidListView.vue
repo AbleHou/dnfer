@@ -18,7 +18,7 @@ const creating = ref(false)
 
 async function load() {
   raids.value = await api.get<RaidListItem[]>('/api/raids')
-  dungeons.value = await api.get<Dungeon[]>('/api/dungeons')
+  if (auth.isAdmin) dungeons.value = await api.get<Dungeon[]>('/api/dungeons')
 }
 onMounted(load)
 

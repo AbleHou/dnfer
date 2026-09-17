@@ -46,4 +46,17 @@ describe('RaidListView create form', () => {
     expect((inputs[1].element as HTMLInputElement).value).toBe('巴卡尔')
     expect(wrapper.text()).toContain('规模锁定：16 人')
   })
+
+  it('does not fetch dungeons for non-admin members', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false }
+
+    const wrapper = mount(RaidListView, {
+      global: { plugins: [pinia], stubs: ['router-link'] },
+    })
+    await flushPromises()
+    expect(apiMock.get).not.toHaveBeenCalledWith('/api/dungeons')
+  })
 })
