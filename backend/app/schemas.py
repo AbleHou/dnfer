@@ -100,6 +100,7 @@ class RaidDetail(BaseModel):
 class FillIn(BaseModel):
     character_id: int
     duty: str | None = None  # 可选；缺省按职业默认（主C/主奶）
+    replace: bool = False    # True：遇到角色已在其他格 / 同玩家同波已占位时，自动撤下冲突格子再放入
 
 class DutyIn(BaseModel):
     duty: str
@@ -111,3 +112,4 @@ class SlotMutationResult(BaseModel):
 class FillResponse(BaseModel):
     slot: SlotOut
     warnings: list[str] = []
+    removed_slots: list[SlotOut] = []

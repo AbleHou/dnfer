@@ -85,43 +85,117 @@ def test_character_unique_across_waves(client):
                     json={"character_id": cid})
     assert r.status_code == 400
 
-def test_main_healer_limit(client):
+def test_one_character_per_player_per_wave(client):
     ah = _admin(client)
-    h, _ = register_user(client, "p6", "己")
+    h, _ = register_user(client, "p10", "癸")
     c1 = client.post("/api/me/characters", headers=h, json={
-        "name": "奶1", "class_type": "辅助", "fame": 1, "buff_amount": 9000}).json()["id"]
+        "name": "C1", "class_type": "输出", "fame": 1}).json()["id"]
     c2 = client.post("/api/me/characters", headers=h, json={
-        "name": "奶2", "class_type": "辅助", "fame": 1, "buff_amount": 8000}).json()["id"]
+        "name": "C2", "class_type": "输出", "fame": 1}).json()["id"]
     rid = client.post("/api/raids", headers=ah, json={"name": "x", "size": 12}).json()["id"]
     slots = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"]
+    s_a = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
+    s_b = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)
+    # 同一波：第一个角色占位成功
+    assert client.post(f"/api/raids/{rid}/slots/{s_a['id']}/fill", headers=h,
+                       json={"character_id": c1}).status_code == 200
+    # 同一波再上第二个角色 → 同一玩家本波唯一 → 400
+    assert client.post(f"/api/raids/{rid}/slots/{s_b['id']}/fill", headers=h,
+                       json={"character_id": c2}).status_code == 400
+    # 不同波次可以再上另一个角色
+    client.post(f"/api/raids/{rid}/waves", headers=h, json={})
+    w2 = next(w for w in client.get(f"/api/raids/{rid}", headers=h).json()["waves"]
+              if w["index"] == 2)
+    s2 = next(s for s in w2["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    assert client.post(f"/api/raids/{rid}/slots/{s2['id']}/fill", headers=h,
+                       json={"character_id": c2}).status_code == 200
+
+def test_fill_replace_moves_conflicting_slot(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "p13", "寅")
+    c1 = client.post("/api/me/characters", headers=h, json={
+        "name": "C1", "class_type": "输出", "fame": 1}).json()["id"]
+    c2 = client.post("/api/me/characters", headers=h, json={
+        "name": "C2", "class_type": "输出", "fame": 1}).json()["id"]
+    rid = client.post("/api/raids", headers=ah, json={"name": "x", "size": 12}).json()["id"]
+    slots = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"]
+    s_a = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
+    s_b = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)
+    assert client.post(f"/api/raids/{rid}/slots/{s_a['id']}/fill", headers=h,
+                       json={"character_id": c1}).status_code == 200
+    # 同波再放 C2 → replace：C2 放 s_b，撤下 s_a 的 C1
+    r = client.post(f"/api/raids/{rid}/slots/{s_b['id']}/fill", headers=h,
+                    json={"character_id": c2, "replace": True})
+    assert r.status_code == 200
+    by_id = {s["id"]: s for s in client.get(f"/api/raids/{rid}", headers=h)
+             .json()["waves"][0]["slots"]}
+    assert by_id[s_b["id"]]["character_id"] == c2
+    assert by_id[s_a["id"]]["character_id"] is None
+    assert [s["id"] for s in r.json()["removed_slots"]] == [s_a["id"]]
+
+def test_fill_replace_moves_same_character(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "p14", "卯")
+    c1 = client.post("/api/me/characters", headers=h, json={
+        "name": "C1", "class_type": "输出", "fame": 1}).json()["id"]
+    rid = client.post("/api/raids", headers=ah, json={"name": "x", "size": 12}).json()["id"]
+    w1 = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]
+    s1 = w1["slots"][0]
+    client.post(f"/api/raids/{rid}/waves", headers=h, json={})
+    w2 = next(w for w in client.get(f"/api/raids/{rid}", headers=h).json()["waves"]
+              if w["index"] == 2)
+    s2 = next(s for s in w2["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    assert client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h,
+                       json={"character_id": c1}).status_code == 200
+    # 同一角色想放另一波 → replace：撤下 wave1，放到 wave2
+    r = client.post(f"/api/raids/{rid}/slots/{s2['id']}/fill", headers=h,
+                    json={"character_id": c1, "replace": True})
+    assert r.status_code == 200
+    detail = client.get(f"/api/raids/{rid}", headers=h).json()["waves"]
+    w1s = {s["id"]: s for s in next(w for w in detail if w["index"] == 1)["slots"]}
+    w2s = {s["id"]: s for s in next(w for w in detail if w["index"] == 2)["slots"]}
+    assert w1s[s1["id"]]["character_id"] is None
+    assert w2s[s2["id"]]["character_id"] == c1
+
+def test_main_healer_limit(client):
+    ah = _admin(client)
+    h1, _ = register_user(client, "p6", "己")
+    h2, _ = register_user(client, "p6b", "己b")
+    c1 = client.post("/api/me/characters", headers=h1, json={
+        "name": "奶1", "class_type": "辅助", "fame": 1, "buff_amount": 9000}).json()["id"]
+    c2 = client.post("/api/me/characters", headers=h2, json={
+        "name": "奶2", "class_type": "辅助", "fame": 1, "buff_amount": 8000}).json()["id"]
+    rid = client.post("/api/raids", headers=ah, json={"name": "x", "size": 12}).json()["id"]
+    slots = client.get(f"/api/raids/{rid}", headers=h1).json()["waves"][0]["slots"]
     s0, s1 = slots[0], slots[1]
     # c1 默认主奶，占位成功
-    assert client.post(f"/api/raids/{rid}/slots/{s0['id']}/fill", headers=h,
+    assert client.post(f"/api/raids/{rid}/slots/{s0['id']}/fill", headers=h1,
                        json={"character_id": c1}).status_code == 200
     # c2 默认主奶 → 超限 400
-    assert client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h,
+    assert client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h2,
                        json={"character_id": c2}).status_code == 400
     # 指定太阳奶可占位
-    assert client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h,
+    assert client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h2,
                        json={"character_id": c2, "duty": "太阳奶"}).status_code == 200
     # 之后想改成主奶 → 400
-    assert client.put(f"/api/raids/{rid}/slots/{s1['id']}/duty", headers=h,
+    assert client.put(f"/api/raids/{rid}/slots/{s1['id']}/duty", headers=h2,
                       json={"duty": "主奶"}).status_code == 400
 
 def test_full_squad_composition_error(client):
     ah = _admin(client)
-    h, _ = register_user(client, "p6b", "己b")
+    # 同一玩家同波只能上一个角色，故用 4 个不同玩家各建一个输出，专测组成规则
+    hs = [register_user(client, f"sq{i}", f"sq{i}")[0] for i in range(4)]
     ids = [client.post("/api/me/characters", headers=h, json={
         "name": f"C{i}", "class_type": "输出", "fame": 1}).json()["id"]
-        for i in range(4)]
+        for i, h in enumerate(hs)]
     rid = client.post("/api/raids", headers=ah, json={"name": "x", "size": 12}).json()["id"]
-    squad0 = [s for s in client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"]
+    squad0 = [s for s in client.get(f"/api/raids/{rid}", headers=hs[0]).json()["waves"][0]["slots"]
               if s["squad_index"] == 0]
     for i in range(3):
-        assert client.post(f"/api/raids/{rid}/slots/{squad0[i]['id']}/fill", headers=h,
+        assert client.post(f"/api/raids/{rid}/slots/{squad0[i]['id']}/fill", headers=hs[i],
                            json={"character_id": ids[i]}).status_code == 200
     # 第 4 个输出占满小队 → 缺少辅助，硬错误 400
-    assert client.post(f"/api/raids/{rid}/slots/{squad0[3]['id']}/fill", headers=h,
+    assert client.post(f"/api/raids/{rid}/slots/{squad0[3]['id']}/fill", headers=hs[3],
                        json={"character_id": ids[3]}).status_code == 400
 
 def test_locked_raid_only_admin_edits(client):

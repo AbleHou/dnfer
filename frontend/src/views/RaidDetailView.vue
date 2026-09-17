@@ -37,9 +37,14 @@ async function onPick(slot: Slot) { pickSlot.value = slot }
 async function onSelectCharacter(c: Character, duty: Duty) {
   if (!pickSlot.value) return
   try {
-    const r = await api.post<{ slot: Slot; warnings: string[] }>(
-      `/api/raids/${rid}/slots/${pickSlot.value.id}/fill`, { character_id: c.id, duty })
-    notice.value = r.warnings.length ? r.warnings.join('；') : ''
+    // replace：遇到角色已占位/同玩家同波已占时自动撤下冲突格子，而非报错
+    const r = await api.post<{ slot: Slot; warnings: string[]; removed_slots?: Slot[] }>(
+      `/api/raids/${rid}/slots/${pickSlot.value.id}/fill`,
+      { character_id: c.id, duty, replace: true })
+    const moved = r.removed_slots?.length ? '已替换原占位角色' : ''
+    notice.value = r.warnings.length
+      ? r.warnings.join('；') + (moved ? '，' + moved : '')
+      : moved
     setTimeout(() => (notice.value = ''), 5000)
   } catch (e: any) { alert(e.message) }
   pickSlot.value = null

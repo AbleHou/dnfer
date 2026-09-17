@@ -26,6 +26,13 @@ def _raid_or_404(db: Session, rid: int) -> Raid:
         raise HTTPException(404, "攻坚不存在")
     return r
 
+def _clear_slot(slot: Slot) -> None:
+    slot.character_id = None
+    slot.duty = None
+    slot.version += 1
+    slot.updated_by = None
+    slot.updated_at = None
+
 def _slot_out(slot: Slot) -> SlotOut:
     c = slot.character
     return SlotOut(
@@ -175,16 +182,43 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
         raise HTTPException(404, "角色不存在")
     if not user.is_admin and char.user_id != user.id:
         raise HTTPException(400, "只能使用自己的角色")
-    dup = db.query(Slot).filter(Slot.character_id == char.id,
-                                Slot.id != slot.id).first()
-    if dup:
-        raise HTTPException(400, "该角色已在其他格子中")
+    removed: list[Slot] = []
+    if body.replace:
+        # 冲突即替换：同一角色已在其他格（任意波）或同玩家同波已有角色时，
+        # 自动撤下冲突格子再放入新角色（不报错）
+        char_dup = db.query(Slot).filter(Slot.character_id == char.id,
+                                         Slot.id != slot.id).all()
+        same_owner = db.query(Slot).filter(
+            Slot.wave_id == slot.wave_id,
+            Slot.id != slot.id,
+            Slot.character.has(user_id=char.user_id),
+        ).all()
+        seen: set[int] = set()
+        for s in [*char_dup, *same_owner]:
+            if s.id not in seen:
+                seen.add(s.id)
+                removed.append(s)
+    else:
+        dup = db.query(Slot).filter(Slot.character_id == char.id,
+                                    Slot.id != slot.id).first()
+        if dup:
+            raise HTTPException(400, "该角色已在其他格子中")
+        # 同一波次内，一个玩家只能上一个角色（不同波次可以再上）
+        same_owner = db.query(Slot).filter(
+            Slot.wave_id == slot.wave_id,
+            Slot.id != slot.id,
+            Slot.character.has(user_id=char.user_id),
+        ).first()
+        if same_owner:
+            raise HTTPException(400, "同一波次中一个玩家只能上一个角色")
     duty = body.duty or default_duty(char.class_type)
     if not duty_valid_for_class(duty, char.class_type):
         raise HTTPException(400, "职责与职业不匹配")
     slot.character = char   # 显式赋值 relationship，保证 identity map 一致（autoflush=False 下校验读的是内存态）
     slot.character_id = char.id
     slot.duty = duty
+    for c in removed:
+        _clear_slot(c)
     # 先在校验器上校验（读取的是 session 内存态，未 commit 也生效）；违规则回滚并 400
     try:
         warnings = _raise_if_hard(db, slot.wave, slot.squad_index)
@@ -197,7 +231,10 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
     db.commit()
     db.refresh(slot)
     await manager.broadcast(rid, {"type": "slot:filled", "slot": _slot_out(slot).model_dump()})
-    return FillResponse(slot=_slot_out(slot), warnings=warnings)
+    for c in removed:
+        await manager.broadcast(rid, {"type": "slot:removed", "slot_id": c.id})
+    return FillResponse(slot=_slot_out(slot), warnings=warnings,
+                        removed_slots=[_slot_out(c) for c in removed])
 
 @router.delete("/{rid}/slots/{slot_id}", response_model=SlotMutationResult)
 async def remove_slot(rid: int, slot_id: int, user: User = Depends(get_current_user),
@@ -213,11 +250,7 @@ async def remove_slot(rid: int, slot_id: int, user: User = Depends(get_current_u
             raise HTTPException(403, "攻坚已锁定，仅管理员可编辑")
         if slot.updated_by != user.id:
             raise HTTPException(403, "只能操作自己的格子")
-    slot.character_id = None
-    slot.duty = None
-    slot.version += 1
-    slot.updated_by = None
-    slot.updated_at = None
+    _clear_slot(slot)
     db.commit()
     db.refresh(slot)
     await manager.broadcast(rid, {"type": "slot:removed", "slot_id": slot_id})
