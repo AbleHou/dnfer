@@ -2,9 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api/client'
 import { defaultDuty, dutyOptions } from '../lib/duty'
-import { jobIcon, ICON_FALLBACK } from '../lib/job'
+import { jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Character, Duty } from '../types'
-function onIconError(e: Event) { (e.target as HTMLImageElement).src = ICON_FALLBACK }
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'select', c: Character, duty: Duty): void }>()

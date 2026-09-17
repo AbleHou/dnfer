@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { jobIcon, ICON_FALLBACK } from '../lib/job'
+import { jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Slot } from '../types'
 import DutySelect from './DutySelect.vue'
-function onIconError(e: Event) { (e.target as HTMLImageElement).src = ICON_FALLBACK }
 
 const props = defineProps<{
   slot: Slot

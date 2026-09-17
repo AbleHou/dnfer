@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
 import { api } from '../api/client'
-import { categoryIcon, jobIcon, ICON_FALLBACK } from '../lib/job'
+import { categoryIcon, jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Character, JobCategory, JobChild } from '../types'
 
 const list = ref<Character[]>([])
@@ -32,7 +32,6 @@ async function load() {
 }
 onMounted(load)
 
-function onIconError(e: Event) { (e.target as HTMLImageElement).src = ICON_FALLBACK }
 function onPickCategory(cat: JobCategory) { selectedCat.value = cat; selectedJob.value = null }
 
 watch(selectedJob, (j) => {
