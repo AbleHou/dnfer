@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { jobIcon, ICON_FALLBACK } from '../lib/job'
 import type { Slot } from '../types'
 import DutySelect from './DutySelect.vue'
+function onIconError(e: Event) { (e.target as HTMLImageElement).src = ICON_FALLBACK }
 
 const props = defineProps<{
   slot: Slot
@@ -34,6 +36,9 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
       <div style="color:#333">
         <b>{{ slot.owner_nickname }}</b>
         <span style="color:#777;font-size:12px">（{{ slot.character_name }}）</span>
+        <img v-if="slot.job_name" :src="jobIcon(slot.job_name)" @error="onIconError"
+             style="width:20px;height:20px;margin-left:6px;vertical-align:middle">
+        <span v-if="slot.job_title" style="color:#888;font-size:12px;margin-left:6px">{{ slot.job_title }}</span>
         <DutySelect v-if="editable" :class-type="slot.character_class!"
                     :model-value="slot.duty" @update:model-value="(d) => emit('duty', slot, d)" />
         <span v-else style="background:#eee;border-radius:3px;padding:1px 5px;font-size:11px">{{ slot.duty }}</span>

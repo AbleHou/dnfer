@@ -2,7 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api/client'
 import { defaultDuty, dutyOptions } from '../lib/duty'
+import { jobIcon, ICON_FALLBACK } from '../lib/job'
 import type { Character, Duty } from '../types'
+function onIconError(e: Event) { (e.target as HTMLImageElement).src = ICON_FALLBACK }
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'select', c: Character, duty: Duty): void }>()
@@ -30,8 +32,9 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
            style="border:1px solid #eee;padding:10px;margin:6px 0;cursor:pointer"
            :style="selected?.id === c.id ? 'outline:2px solid #1976d2' : ''"
            @click="choose(c)">
+        <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:28px;height:28px;margin-right:8px">
         <b>{{ c.name }}</b>
-        <span style="color:#666;font-size:12px">{{ c.class_type }} · 名望 {{ c.fame }}</span>
+        <span style="color:#666;font-size:12px">{{ c.job_title }} · {{ c.class_type }} · 名望 {{ c.fame }}</span>
         <div style="color:#999;font-size:12px">
           {{ c.class_type === '输出' ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}` : `增益 ${fmtBuff(c.buff_amount)}` }}
         </div>
