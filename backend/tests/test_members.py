@@ -56,3 +56,18 @@ def test_empty_job_name_rejected(client):
     r = client.post("/api/me/characters", headers=h, json={
         "name": "x", "job_name": "empty", "fame": 1})
     assert r.status_code == 400
+
+def test_update_character_re_derives_class_type(client):
+    h, _ = register_user(client, "p12", "转职")
+    r = client.post("/api/me/characters", headers=h, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1,
+        "simulated_damage": 100, "sustained_dps": 50})
+    assert r.status_code == 200
+    cid = r.json()["id"]
+    assert r.json()["class_type"] == "输出"
+    r = client.put(f"/api/me/characters/{cid}", headers=h, json={
+        "name": "剑魂", "job_name": "crusader_male", "fame": 1, "buff_amount": 9000})
+    assert r.status_code == 200
+    assert r.json()["class_type"] == "辅助"
+    assert r.json()["job_title"] == "神启·圣骑士"
+    assert r.json()["parent_name"] == "priest_male"

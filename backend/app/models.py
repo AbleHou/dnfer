@@ -34,7 +34,7 @@ class Character(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     name: Mapped[str] = mapped_column(String(64))
     job_name: Mapped[str] = mapped_column(String(64))  # 具体职业（职业信息.json 的 children.name）
-    class_type: Mapped[str] = mapped_column(String(8))  # "输出" | "辅助"
+    class_type: Mapped[str] = mapped_column(String(8))  # "输出" | "辅助"（job_name 写库时推导的冗余快照）
     fame: Mapped[int] = mapped_column(Integer, default=0)
     simulated_damage: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 输出
     sustained_dps: Mapped[int | None] = mapped_column(Integer, nullable=True)      # 输出

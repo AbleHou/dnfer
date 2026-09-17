@@ -18,7 +18,7 @@ def _character_out(c: Character) -> CharacterOut:
                         simulated_damage=c.simulated_damage,
                         sustained_dps=c.sustained_dps, buff_amount=c.buff_amount)
 
-def _validate_job(body) -> None:
+def _validate_job(body: CharacterIn) -> None:
     if job_data.job_meta(body.job_name) is None:
         raise HTTPException(400, "职业不存在")
 
