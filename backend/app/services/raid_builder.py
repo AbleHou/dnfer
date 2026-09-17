@@ -1,6 +1,8 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
-from ..models import Raid, Slot, Wave
+from ..models import Dungeon, Raid, Slot, Wave
 
 LEGAL_SIZES = {4, 8, 12, 16, 20}
 SQUAD_PALETTE = ["红", "黄", "绿", "蓝", "紫"]
@@ -9,9 +11,10 @@ def validate_size(size: int) -> None:
     if size not in LEGAL_SIZES:
         raise ValueError("规模必须是 4/8/12/16/20")
 
-def create_raid(db: Session, name: str, dungeon: str, size: int, created_by: int) -> Raid:
-    validate_size(size)
-    raid = Raid(name=name, dungeon=dungeon, size=size, created_by=created_by)
+def create_raid(db: Session, name: str, dungeon: Dungeon, starts_at: datetime,
+                created_by: int) -> Raid:
+    raid = Raid(name=name, dungeon_id=dungeon.id, size=dungeon.size,
+                starts_at=starts_at, created_by=created_by)
     db.add(raid)
     db.flush()
     create_wave(db, raid)

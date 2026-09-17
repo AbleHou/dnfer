@@ -65,20 +65,22 @@ class DungeonOut(BaseModel):
     created_at: datetime
 
 class RaidCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=128)
-    dungeon: str = Field(default="", max_length=64)
-    size: int = 12
+    name: str | None = None
+    dungeon_id: int
+    starts_at: datetime
 
 class RaidUpdate(BaseModel):
     name: str | None = None
-    dungeon: str | None = None
+    starts_at: datetime | None = None
 
 class RaidListItem(BaseModel):
     id: int
     name: str
-    dungeon: str
+    dungeon_id: int
+    dungeon_name: str
     size: int
     locked: bool
+    starts_at: datetime
     wave_count: int
 
 class SlotOut(BaseModel):
@@ -105,9 +107,11 @@ class WaveOut(BaseModel):
 class RaidDetail(BaseModel):
     id: int
     name: str
-    dungeon: str
+    dungeon_id: int
+    dungeon_name: str
     size: int
     locked: bool
+    starts_at: datetime
     waves: list[WaveOut]
 
 class FillIn(BaseModel):

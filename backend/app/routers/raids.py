@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..auth import get_current_user, require_admin
 from ..db import get_db
-from ..models import Character, Raid, Slot, User, Wave
+from ..models import Character, Dungeon, Raid, Slot, User, Wave
 from ..schemas import (DutyIn, FillIn, FillResponse, RaidCreate, RaidDetail,
                        RaidListItem, RaidUpdate, SlotMutationResult, SlotOut,
                        WaveOut)
@@ -54,8 +54,9 @@ def _detail(db: Session, raid: Raid) -> RaidDetail:
     for w in raid.waves:
         waves.append(WaveOut(id=w.id, index=w.index,
                              slots=[_slot_out(s) for s in w.slots]))
-    return RaidDetail(id=raid.id, name=raid.name, dungeon=raid.dungeon,
-                      size=raid.size, locked=raid.locked, waves=waves)
+    return RaidDetail(id=raid.id, name=raid.name, dungeon_id=raid.dungeon_id,
+                      dungeon_name=raid.dungeon.name, size=raid.size,
+                      locked=raid.locked, starts_at=raid.starts_at, waves=waves)
 
 def _squad_occupied(db: Session, wave: Wave, squad_index: int) -> list[tuple[str, str]]:
     return [(s.duty, s.character.class_type) for s in wave.slots
@@ -87,18 +88,21 @@ def _raise_if_hard(db: Session, wave: Wave, squad_index: int) -> list[str]:
 @router.get("", response_model=list[RaidListItem])
 def list_raids(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     items = []
-    for r in db.query(Raid).order_by(Raid.created_at.desc()).all():
-        items.append(RaidListItem(id=r.id, name=r.name, dungeon=r.dungeon, size=r.size,
-                                  locked=r.locked, wave_count=len(r.waves)))
+    for r in db.query(Raid).options(selectinload(Raid.dungeon)).order_by(Raid.created_at.desc()).all():
+        items.append(RaidListItem(id=r.id, name=r.name, dungeon_id=r.dungeon_id,
+                                  dungeon_name=r.dungeon.name, size=r.size,
+                                  locked=r.locked, starts_at=r.starts_at,
+                                  wave_count=len(r.waves)))
     return items
 
 @router.post("")
 def create_raid(body: RaidCreate, admin: User = Depends(require_admin),
                 db: Session = Depends(get_db)):
-    try:
-        raid = _build_raid(db, body.name, body.dungeon, body.size, admin.id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
+    dungeon = db.get(Dungeon, body.dungeon_id)
+    if dungeon is None:
+        raise HTTPException(404, "副本不存在")
+    name = body.name or dungeon.name
+    raid = _build_raid(db, name, dungeon, body.starts_at, admin.id)
     db.commit()
     return _detail(db, raid)
 
@@ -112,8 +116,8 @@ def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_admin)
     raid = _raid_or_404(db, rid)
     if body.name is not None:
         raid.name = body.name
-    if body.dungeon is not None:
-        raid.dungeon = body.dungeon
+    if body.starts_at is not None:
+        raid.starts_at = body.starts_at
     db.commit()
     return _detail(db, raid)
 

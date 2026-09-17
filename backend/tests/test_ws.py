@@ -1,5 +1,7 @@
 import json
 
+from .helpers import make_raid
+
 def _admin(client):
     r = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
     return r.json()["token"]
@@ -8,7 +10,7 @@ def test_ws_receives_slot_events(client):
     from fastapi.testclient import TestClient
     token = _admin(client)
     ah = {"Authorization": f"Bearer {token}"}
-    rid = client.post("/api/raids", headers=ah, json={"name": "x", "size": 12}).json()["id"]
+    rid = make_raid(client, ah)["id"]
 
     with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
         # 管理员锁定时会产生 raid:locked 事件

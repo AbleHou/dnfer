@@ -1,4 +1,4 @@
-from .helpers import register_user
+from .helpers import make_raid, register_user
 
 def _admin(client):
     r = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
@@ -10,7 +10,7 @@ def test_public_requires_token(client):
 
 def test_public_list_and_wave(client):
     ah = _admin(client)
-    rid = client.post("/api/raids", headers=ah, json={"name": "巴卡尔", "size": 12}).json()["id"]
+    rid = make_raid(client, ah, name="巴卡尔")["id"]
     # 填一个角色
     h, _ = register_user(client, "p1", "甲")
     cid = client.post("/api/me/characters", headers=h, json={

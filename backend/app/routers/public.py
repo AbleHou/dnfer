@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..auth import require_api_token
 from ..db import get_db
@@ -12,9 +12,12 @@ router = APIRouter(prefix="/api/public", tags=["public"],
 
 @router.get("/raids", response_model=list[RaidListItem])
 def public_raids(db: Session = Depends(get_db)):
-    return [RaidListItem(id=r.id, name=r.name, dungeon=r.dungeon, size=r.size,
-                         locked=r.locked, wave_count=len(r.waves))
-            for r in db.query(Raid).order_by(Raid.created_at.desc()).all()]
+    return [RaidListItem(id=r.id, name=r.name, dungeon_id=r.dungeon_id,
+                         dungeon_name=r.dungeon.name, size=r.size,
+                         locked=r.locked, starts_at=r.starts_at,
+                         wave_count=len(r.waves))
+            for r in db.query(Raid).options(selectinload(Raid.dungeon))
+                    .order_by(Raid.created_at.desc()).all()]
 
 @router.get("/raids/{rid}/waves/{index}")
 def public_wave(rid: int, index: int, db: Session = Depends(get_db)):

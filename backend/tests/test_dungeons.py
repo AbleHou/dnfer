@@ -1,4 +1,4 @@
-from .helpers import register_user
+from .helpers import make_dungeon, make_raid, register_user
 
 def _admin(client):
     r = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
@@ -33,3 +33,11 @@ def test_dungeon_dup_name(client):
     client.post("/api/dungeons", headers=ah, json={"name": "巴卡尔", "size": 12})
     assert client.post("/api/dungeons", headers=ah,
                        json={"name": "巴卡尔", "size": 12}).status_code == 400
+
+def test_dungeon_delete_blocked_if_used(client):
+    ah = _admin(client)
+    did = client.post("/api/dungeons", headers=ah,
+                      json={"name": "巴卡尔", "size": 12}).json()["id"]
+    client.post("/api/raids", headers=ah, json={
+        "name": "x", "dungeon_id": did, "starts_at": "2026-09-20T14:00:00"})
+    assert client.delete(f"/api/dungeons/{did}", headers=ah).status_code == 400
