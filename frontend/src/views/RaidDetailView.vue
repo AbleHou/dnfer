@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
 import { connectRaidWs } from '../api/ws'
 import WaveSection from '../components/WaveSection.vue'
+import { formatDateTime } from '../utils/datetime'
 import CharacterPickerModal from '../components/CharacterPickerModal.vue'
 import type { Character, Duty, Slot } from '../types'
 
@@ -81,7 +82,7 @@ async function onDeleteWave(index: number) {
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <h2 style="margin:0">{{ store.raid.name }}</h2>
       <span v-if="store.raid.dungeon_name" style="color:#666">{{ store.raid.dungeon_name }}</span>
-      <span style="color:#999">{{ store.raid.size }} 人</span>
+      <span style="color:#999">{{ store.raid.size }} 人 · {{ formatDateTime(store.raid.starts_at) }}</span>
       <span :style="{color: store.raid.locked ? '#c62828' : '#2e7d32'}">
         {{ store.raid.locked ? '已锁定' : '未锁定' }}
       </span>
