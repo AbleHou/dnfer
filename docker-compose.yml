@@ -2,7 +2,7 @@ services:
   dnfer:
     build: .
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       DNFER_SECRET_KEY: ${DNFER_SECRET_KEY:?DNFER_SECRET_KEY 必须设置}
       DNFER_ADMIN_USERNAME: ${DNFER_ADMIN_USERNAME:-admin}
@@ -13,6 +13,17 @@ services:
     volumes:
       - dnfer-data:/data
     restart: unless-stopped
+
+  nginx:
+    image: nginx:stable
+    container_name: nginx
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./ssl:/usr/share/nginx/ssl/
+      - ./nginx.conf:/etc/nginx/nginx.conf
 
 volumes:
   dnfer-data:
