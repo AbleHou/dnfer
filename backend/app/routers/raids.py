@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
 
+from .. import jobs as job_data
 from ..auth import get_current_user, require_admin
 from ..db import get_db
 from ..models import Character, Dungeon, Raid, Slot, User, Wave
@@ -35,11 +36,14 @@ def _clear_slot(slot: Slot) -> None:
 
 def _slot_out(slot: Slot) -> SlotOut:
     c = slot.character
+    meta = job_data.job_meta(c.job_name) if c else None
     return SlotOut(
         id=slot.id, squad_index=slot.squad_index, row_index=slot.row_index,
         character_id=slot.character_id,
         character_name=c.name if c else None,
         character_class=c.class_type if c else None,
+        job_name=c.job_name if c else None,
+        job_title=(meta or {}).get("title") if c else None,
         fame=c.fame if c else None,
         simulated_damage=c.simulated_damage if c else None,
         sustained_dps=c.sustained_dps if c else None,

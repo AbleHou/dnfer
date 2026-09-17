@@ -5,16 +5,18 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class CharacterIn(BaseModel):
     name: str = Field(min_length=1, max_length=64)
-    class_type: Literal["输出", "辅助"]
+    job_name: str = Field(min_length=1, max_length=64)
     fame: int = Field(default=0, ge=0)
     simulated_damage: int | None = None
     sustained_dps: int | None = None
     buff_amount: int | None = None
 
 class CharacterOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    job_name: str
+    job_title: str
+    parent_name: str
     class_type: str
     fame: int
     simulated_damage: int | None
@@ -90,6 +92,8 @@ class SlotOut(BaseModel):
     character_id: int | None
     character_name: str | None
     character_class: str | None
+    job_name: str | None
+    job_title: str | None
     fame: int | None
     simulated_damage: int | None
     sustained_dps: int | None

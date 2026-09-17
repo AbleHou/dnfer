@@ -14,7 +14,7 @@ def test_public_list_and_wave(client):
     # 填一个角色
     h, _ = register_user(client, "p1", "甲")
     cid = client.post("/api/me/characters", headers=h, json={
-        "name": "剑魂", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1}).json()["id"]
     slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
     client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h, json={"character_id": cid})
 

@@ -29,7 +29,7 @@ def test_member_fill_remove_duty(client):
     ah = _admin(client)
     h, user = register_user(client, "p2", "乙")
     cid = client.post("/api/me/characters", headers=h, json={
-        "name": "剑魂", "class_type": "输出", "fame": 20000,
+        "name": "剑魂", "job_name": "weapon_master", "fame": 20000,
         "simulated_damage": 600000, "sustained_dps": 400000}).json()["id"]
     rid = make_raid(client, ah)["id"]
     slots = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"]
@@ -42,6 +42,8 @@ def test_member_fill_remove_duty(client):
     assert r.json()["slot"]["duty"] == "主C"
     assert r.json()["slot"]["owner_nickname"] == "乙"
     assert r.json()["slot"]["character_name"] == "剑魂"
+    assert r.json()["slot"]["job_name"] == "weapon_master"
+    assert r.json()["slot"]["job_title"] == "极诣·剑魂"
     assert "缺少辅助" in r.json()["warnings"]
 
     # change duty
@@ -57,7 +59,7 @@ def test_cannot_fill_others_characters(client):
     h1, _ = register_user(client, "p3", "丙")
     h2, _ = register_user(client, "p4", "丁")
     cid = client.post("/api/me/characters", headers=h1, json={
-        "name": "C", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     slot = client.get(f"/api/raids/{rid}", headers=h2).json()["waves"][0]["slots"][0]
     r = client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h2,
@@ -68,7 +70,7 @@ def test_character_unique_across_waves(client):
     ah = _admin(client)
     h, _ = register_user(client, "p5", "戊")
     cid = client.post("/api/me/characters", headers=h, json={
-        "name": "C", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/waves", headers=h, json={})  # add wave 2
     w1, w2 = [w for w in client.get(f"/api/raids/{rid}", headers=h).json()["waves"]
@@ -85,9 +87,9 @@ def test_one_character_per_player_per_wave(client):
     ah = _admin(client)
     h, _ = register_user(client, "p10", "癸")
     c1 = client.post("/api/me/characters", headers=h, json={
-        "name": "C1", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C1", "job_name": "weapon_master", "fame": 1}).json()["id"]
     c2 = client.post("/api/me/characters", headers=h, json={
-        "name": "C2", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C2", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     slots = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"]
     s_a = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
@@ -110,9 +112,9 @@ def test_fill_replace_moves_conflicting_slot(client):
     ah = _admin(client)
     h, _ = register_user(client, "p13", "寅")
     c1 = client.post("/api/me/characters", headers=h, json={
-        "name": "C1", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C1", "job_name": "weapon_master", "fame": 1}).json()["id"]
     c2 = client.post("/api/me/characters", headers=h, json={
-        "name": "C2", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C2", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     slots = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"]
     s_a = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
@@ -133,7 +135,7 @@ def test_fill_replace_moves_same_character(client):
     ah = _admin(client)
     h, _ = register_user(client, "p14", "卯")
     c1 = client.post("/api/me/characters", headers=h, json={
-        "name": "C1", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C1", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     w1 = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]
     s1 = w1["slots"][0]
@@ -158,9 +160,9 @@ def test_main_healer_limit(client):
     h1, _ = register_user(client, "p6", "己")
     h2, _ = register_user(client, "p6b", "己b")
     c1 = client.post("/api/me/characters", headers=h1, json={
-        "name": "奶1", "class_type": "辅助", "fame": 1, "buff_amount": 9000}).json()["id"]
+        "name": "奶1", "job_name": "crusader_male", "fame": 1, "buff_amount": 9000}).json()["id"]
     c2 = client.post("/api/me/characters", headers=h2, json={
-        "name": "奶2", "class_type": "辅助", "fame": 1, "buff_amount": 8000}).json()["id"]
+        "name": "奶2", "job_name": "crusader_male", "fame": 1, "buff_amount": 8000}).json()["id"]
     rid = make_raid(client, ah)["id"]
     slots = client.get(f"/api/raids/{rid}", headers=h1).json()["waves"][0]["slots"]
     s0, s1 = slots[0], slots[1]
@@ -182,7 +184,7 @@ def test_full_squad_composition_error(client):
     # 同一玩家同波只能上一个角色，故用 4 个不同玩家各建一个输出，专测组成规则
     hs = [register_user(client, f"sq{i}", f"sq{i}")[0] for i in range(4)]
     ids = [client.post("/api/me/characters", headers=h, json={
-        "name": f"C{i}", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": f"C{i}", "job_name": "weapon_master", "fame": 1}).json()["id"]
         for i, h in enumerate(hs)]
     rid = make_raid(client, ah)["id"]
     squad0 = [s for s in client.get(f"/api/raids/{rid}", headers=hs[0]).json()["waves"][0]["slots"]
@@ -198,7 +200,7 @@ def test_locked_raid_only_admin_edits(client):
     ah = _admin(client)
     h, _ = register_user(client, "p7", "庚")
     cid = client.post("/api/me/characters", headers=h, json={
-        "name": "C", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/lock", headers=ah)
     slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
@@ -209,7 +211,7 @@ def test_wave_add_and_delete_rules(client):
     ah = _admin(client)
     h, user = register_user(client, "p8", "辛")
     cid = client.post("/api/me/characters", headers=h, json={
-        "name": "C", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     # add wave 2
     r = client.post(f"/api/raids/{rid}/waves", headers=h, json={})
@@ -228,7 +230,7 @@ def test_wave_add_and_delete_rules(client):
 def test_delete_character_in_use_blocked(client):
     h, _ = register_user(client, "p9", "壬")
     cid = client.post("/api/me/characters", headers=h, json={
-        "name": "C", "class_type": "输出", "fame": 10000}).json()["id"]
+        "name": "C", "job_name": "weapon_master", "fame": 10000}).json()["id"]
     ah = _admin(client)
     rid = make_raid(client, ah)["id"]
     slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
@@ -288,7 +290,7 @@ def test_delete_raid_cascades(client):
     ah = _admin(client)
     h, _ = register_user(client, "pDel2", "删乙")
     cid = client.post("/api/me/characters", headers=h, json={
-        "name": "剑魂", "class_type": "输出", "fame": 1}).json()["id"]
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
     client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
