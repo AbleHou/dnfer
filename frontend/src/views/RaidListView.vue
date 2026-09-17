@@ -45,6 +45,12 @@ async function create() {
   } catch (e: any) { error.value = e.message }
   finally { creating.value = false }
 }
+
+async function onDelete(r: RaidListItem) {
+  if (!confirm(`确认删除攻坚「${r.name}」？该操作不可恢复`)) return
+  try { await api.del(`/api/raids/${r.id}`); await load() }
+  catch (e: any) { alert(e.message) }
+}
 </script>
 
 <template>
@@ -78,6 +84,7 @@ async function create() {
       <span v-if="r.dungeon_name" style="color:#666">{{ r.dungeon_name }}</span>
       <span style="color:#999">{{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
       <span :style="{color: r.locked ? '#c62828' : '#2e7d32'}">{{ r.locked ? '已锁定' : '未锁定' }}</span>
+      <button v-if="auth.isAdmin" @click.stop="onDelete(r)" style="margin-left:auto">删除</button>
     </div>
     <p v-if="!raids.length" style="color:#999">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
   </div>

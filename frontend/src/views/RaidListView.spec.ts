@@ -59,4 +59,47 @@ describe('RaidListView create form', () => {
     await flushPromises()
     expect(apiMock.get).not.toHaveBeenCalledWith('/api/dungeons')
   })
+
+  it('admin can delete a raid after confirming', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
+    const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
+      size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1 }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [raid] as RaidListItem[]
+      if (url === '/api/dungeons') return dungeons
+      return []
+    })
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const wrapper = mount(RaidListView, {
+      global: { plugins: [pinia], stubs: ['router-link'] },
+    })
+    await flushPromises()
+    const delBtn = wrapper.findAll('button').find(b => b.text().includes('删除'))
+    expect(delBtn).toBeTruthy()
+    await delBtn!.trigger('click')
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(apiMock.del).toHaveBeenCalledWith('/api/raids/3')
+    confirmSpy.mockRestore()
+  })
+
+  it('does not show delete button for non-admin', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false }
+    const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
+      size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1 }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [raid] as RaidListItem[]
+      return []
+    })
+    const wrapper = mount(RaidListView, {
+      global: { plugins: [pinia], stubs: ['router-link'] },
+    })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('删除')
+  })
 })
