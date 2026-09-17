@@ -66,6 +66,11 @@ class SpaStaticFiles(StaticFiles):
         return response
 
 try:
+    app.mount("/images", StaticFiles(directory=settings.images_dir), name="images")
+except RuntimeError:
+    logger.warning("职业图标目录 %s 不存在，跳过挂载", settings.images_dir)
+
+try:
     app.mount("/", SpaStaticFiles(directory=settings.static_dir, html=True), name="static")
 except RuntimeError:
     logger.warning("前端静态目录 %s 不存在，跳过静态托管", settings.static_dir)
