@@ -10,7 +10,10 @@ export interface Slot { id: number; squad_index: number; row_index: number;
   buff_amount: number | null; owner_id: number | null; owner_nickname: string | null;
   duty: Duty | null; version: number }
 export interface Wave { id: number; index: number; slots: Slot[] }
-export interface Raid { id: number; name: string; dungeon: string; size: number; locked: boolean; waves: Wave[] }
-export interface RaidListItem { id: number; name: string; dungeon: string; size: number; locked: boolean; wave_count: number }
+export interface Dungeon { id: number; name: string; size: number; description: string; created_at: string }
+export interface Raid { id: number; name: string; dungeon_id: number; dungeon_name: string;
+  size: number; locked: boolean; starts_at: string; waves: Wave[] }
+export interface RaidListItem { id: number; name: string; dungeon_id: number; dungeon_name: string;
+  size: number; locked: boolean; starts_at: string; wave_count: number }
 export interface CodeItem { id: number; code: string; used_by: number | null; used_at: string | null;
   expires_at: string | null; single_use: boolean }

@@ -47,7 +47,7 @@ async function create() {
     <div v-for="r in raids" :key="r.id" style="border:1px solid #eee;padding:12px;margin:8px 0;
          display:flex;align-items:center;gap:12px">
       <router-link :to="`/raids/${r.id}`" style="font-weight:bold">{{ r.name }}</router-link>
-      <span v-if="r.dungeon" style="color:#666">{{ r.dungeon }}</span>
+      <span v-if="r.dungeon_name" style="color:#666">{{ r.dungeon_name }}</span>
       <span style="color:#999">{{ r.size }} 人 · {{ r.wave_count }} 波</span>
       <span :style="{color: r.locked ? '#c62828' : '#2e7d32'}">{{ r.locked ? '已锁定' : '未锁定' }}</span>
     </div>

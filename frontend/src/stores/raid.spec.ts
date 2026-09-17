@@ -5,7 +5,8 @@ import type { Raid } from '../types'
 
 function makeRaid(): Raid {
   return {
-    id: 1, name: 'x', dungeon: '', size: 12, locked: false,
+    id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: '2026-09-20T14:00:00',
+    size: 12, locked: false,
     waves: [{ id: 1, index: 1, slots: Array.from({ length: 12 }, (_, i) => ({
       id: i + 1, squad_index: Math.floor(i / 4), row_index: i % 4,
       character_id: null, character_name: null, character_class: null, fame: null,
