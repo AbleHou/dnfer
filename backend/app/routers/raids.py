@@ -121,6 +121,14 @@ def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_admin)
     db.commit()
     return _detail(db, raid)
 
+@router.delete("/{rid}")
+def delete_raid(rid: int, admin: User = Depends(require_admin),
+                db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    db.delete(raid)  # waves/slots 经级联一并清理
+    db.commit()
+    return {"ok": True}
+
 @router.post("/{rid}/lock")
 async def lock_raid(rid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)

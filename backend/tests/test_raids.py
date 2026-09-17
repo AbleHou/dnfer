@@ -275,3 +275,30 @@ def test_update_raid_name_starts_at_only(client):
     assert r.json()["name"] == "改名"
     assert r.json()["starts_at"] == "2026-09-21T10:30:00"
     assert r.json()["size"] == 12
+
+def test_delete_raid_only_admin(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "pDel1", "删甲")
+    rid = make_raid(client, ah)["id"]
+    assert client.delete(f"/api/raids/{rid}", headers=h).status_code == 403
+    assert client.delete(f"/api/raids/{rid}", headers=ah).status_code == 200
+    assert client.get(f"/api/raids/{rid}", headers=h).status_code == 404
+
+def test_delete_raid_cascades(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "pDel2", "删乙")
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "剑魂", "class_type": "输出", "fame": 1}).json()["id"]
+    rid = make_raid(client, ah)["id"]
+    slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                json={"character_id": cid})
+    assert client.delete(f"/api/raids/{rid}", headers=ah).status_code == 200
+    # 攻坚已不存在（波次/格子随之级联删除）
+    assert client.get(f"/api/raids/{rid}", headers=h).status_code == 404
+    # 角色不再被占用格子引用，可以删除
+    assert client.delete(f"/api/me/characters/{cid}", headers=h).status_code == 200
+
+def test_delete_raid_not_found(client):
+    ah = _admin(client)
+    assert client.delete("/api/raids/999", headers=ah).status_code == 404
