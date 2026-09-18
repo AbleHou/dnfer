@@ -981,10 +981,14 @@ describe('RaidListView create form', () => {
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
     await wrapper.find('[data-test="create-toggle"]').trigger('click')
-    await wrapper.findComponent({ name: 'NSelect' }).vm.$emit('update:value', 7)
+    // naive 组件 name 是 'Select'（不是 'NSelect'）
+    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', 7)
     await flushPromises()
 
-    expect(wrapper.findComponent({ name: 'NInput' }).props('value')).toBe('巴卡尔')
+    // NDatePicker 内部也渲染一个 'Input'，须按 data-test 过滤出名称输入框
+    const nameInput = wrapper.findAllComponents({ name: 'Input' })
+      .find(w => w.attributes('data-test') === 'name-input')
+    expect(nameInput!.props('value')).toBe('巴卡尔')
     expect(wrapper.text()).toContain('规模锁定：16 人')
   })
 
@@ -1078,7 +1082,8 @@ const raids = ref<RaidListItem[]>([])
 const showCreate = ref(false)
 const name = ref('')
 const dungeonId = ref<number | null>(null)
-const startsAt = ref<string>('')
+// 注意：用 null 而非 '' —— NDatePicker 的 date-fns 对空串 format 会抛 RangeError
+const startsAt = ref<string | null>(null)
 const dungeons = ref<Dungeon[]>([])
 const sizeLocked = ref<number | null>(null)
 const error = ref('')
@@ -1141,8 +1146,9 @@ async function onDelete(r: RaidListItem) {
         <span v-if="sizeLocked" style="color:var(--dnf-text-muted)">规模锁定：{{ sizeLocked }} 人</span>
       </div>
       <div style="margin:8px 0">
-        <n-date-picker data-test="starts-at" type="datetime" value-format="yyyy-MM-ddTHH:mm:ss"
-                       :actions="null" clearable placeholder="发起时间" v-model:value="startsAt" />
+        <!-- 用 v-model:formatted-value（v-model:value 绑定的是原始时间戳）；'T' 必须加引号（date-fns 保留 token） -->
+        <n-date-picker data-test="starts-at" type="datetime" value-format="yyyy-MM-dd'T'HH:mm:ss"
+                       :actions="null" clearable placeholder="发起时间" v-model:formatted-value="startsAt" />
       </div>
       <div style="margin:8px 0">
         <n-input data-test="name-input" v-model:value="name" placeholder="攻坚名称（默认副本名）" />
