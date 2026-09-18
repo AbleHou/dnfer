@@ -1325,7 +1325,7 @@ Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/uvicorn app.main:app --port
 
 走查清单（对照浏览器）：
 - [ ] 登录/注册页：居中鎏金卡片、背景纹理、NInput/NButton 金色主题
-- [ ] 攻坚列表：卡片鎏金描边、锁定/未锁定徽章、创建表单（副本 NSelect 自动填名、NDatePicker、名称 NInput）
+- [ ] 攻坚列表：卡片鎏金描边、锁定/未锁定徽章、创建表单（副本 NSelect 自动填名、NDatePicker、名称 NInput）；**验证清空 NDatePicker 后点创建出现「请选择副本并填写发起时间」**（Task 8 质量评审建议的边界）
 - [ ] 排表详情：波次面板、红/黄/绿小队色块与计数、格子占位/空位、职责 NSelect、锁定时按钮只读态
 - [ ] **修 dnf.css 死选择器**：`.squad-0 .squad-col { border-color: ... }` 等 5 行是后代选择器，但 `squad-N` 类在 `.squad-col` 自身，永不匹配 → 改为复合选择器 `.squad-col.squad-0`（等 5 行），让小队卡片显示各队深色描边（Task 4 质量评审的 Important 项）
 - [ ] **恢复 `RaidDetailView` 副本名 `v-if` 守卫**：头部 `{{ store.raid.dungeon_name }}` 恢复为 `v-if="store.raid.dungeon_name"`，与 RaidListView 保持一致（Task 5 质量评审建议）
