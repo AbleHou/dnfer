@@ -12,7 +12,8 @@
 ## 2. 已确认决策
 
 - **显示位置**：排表详情页（`RaidDetailView` → `WaveSection`）每个小队列内，小队表头下方新增一行统计。
-- **统计口径**：只统计 `character_class === '输出'` **且已占位**（`character_id != null`）的格子；辅助/空格不参与；字段值为 `null` 跳过；该队**不存在**任何已占位输出角色时整行不显示。
+- **统计口径**：只统计 `character_class === '输出'` **且已占位**（`character_id != null`）的格子；辅助/空格不参与；字段值为 `null` 跳过。
+- **显隐**：该队**不存在**任何已占位输出角色时整行不显示；**输出角色的模拟伤害与秒伤均为 0（数值未录入）时也不显示**——避免把「未录入数据」误导成「输出为 0」。
 - **单位**：`simulated_damage` / `sustained_dps` 字段本身即「亿」单位，直接求和、直接显示。
 - **实现**：抽取纯函数 `sumSquadDamage(slots)` 到 `src/lib/damage.ts`，配 vitest 单测；`WaveSection.vue` 调用。与现有 `lib/duty.ts` / `lib/job.ts` 风格一致。
 - 纯前端，零后端改动，不改数据模型。
@@ -55,7 +56,7 @@ const totals = computed(() => squads.value.map(sumSquadDamage))
 - 模板：`.squad-head` 之后插入：
 
 ```html
-<div v-if="totals[i].hasOutput" class="squad-stats">
+<div v-if="totals[i].hasOutput && (totals[i].simulated > 0 || totals[i].sustained > 0)" class="squad-stats">
   总输出 {{ totals[i].simulated }}亿 · 秒伤 {{ totals[i].sustained }}亿
 </div>
 ```

@@ -37,7 +37,7 @@ const totals = computed(() => squads.value.map(sumSquadDamage))
     <div class="squad-grid">
       <div v-for="(g, i) in squads" :key="i" class="squad-col" :class="'squad-' + i">
         <div class="squad-head">{{ SQUAD_NAMES[i] }} · {{ counts[i].filled }}/{{ counts[i].total }}</div>
-        <div v-if="totals[i].hasOutput" class="squad-stats">
+        <div v-if="totals[i].hasOutput && (totals[i].simulated > 0 || totals[i].sustained > 0)" class="squad-stats">
           总输出 {{ totals[i].simulated }}亿 · 秒伤 {{ totals[i].sustained }}亿
         </div>
         <div class="squad-cells">

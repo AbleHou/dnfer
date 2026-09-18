@@ -160,10 +160,12 @@ const totals = computed(() => squads.value.map(sumSquadDamage))
 template 部分：`.squad-head` 之后、`.squad-cells` 之前插入统计行（现有结构为 `<div class="squad-head">…</div><div class="squad-cells">…</div>`）：
 
 ```html
-<div v-if="totals[i].hasOutput" class="squad-stats">
+<div v-if="totals[i].hasOutput && (totals[i].simulated > 0 || totals[i].sustained > 0)" class="squad-stats">
   总输出 {{ totals[i].simulated }}亿 · 秒伤 {{ totals[i].sustained }}亿
 </div>
 ```
+
+> 显隐：无已占位输出角色，或输出数值全为 0（未录入）时不显示，避免误导性的「总输出 0亿」。
 
 - [ ] **Step 2: 修改 `frontend/src/styles/dnf.css`**（在 `.squad-head` 相关块附近新增）
 
