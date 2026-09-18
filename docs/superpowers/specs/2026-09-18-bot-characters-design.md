@@ -46,8 +46,8 @@
 - upsert 键 `(user_id, name)`：
   - **创建**（不存在）：`job_name` 为 `None` 时默认 `weapon_master`，`fame` 为 `None` 时默认 `100000`，数值字段为 `None` 时落 `null`；`class_type` 按 `job_name` 推导。
   - **编辑**（已存在）：仅写入本次提供（非 `None`）的字段，缺失字段保留原值；`job_name` 被提供时重推 `class_type`。
-- 请求内重名处理：维护进程内 `name → Character` 映射，同一请求内后出现的同名角色命中映射更新（避免依赖 flush 后查询，`SessionLocal` 为 `autoflush=False`）。
-- 响应（逐角色结果）：
+- 请求内重名处理：维护进程内 `name → Character` 映射，同一请求内后出现的同名角色命中映射并按 §2.1「编辑」语义做部分更新（避免依赖 flush 后查询，`SessionLocal` 为 `autoflush=False`）。
+- 响应 `results` 顺序与请求内 `characters` 顺序一致；响应（逐角色结果）：
 
 ```json
 {
@@ -75,7 +75,7 @@
 
 新增 5 个模型：
 
-- `BotCharacterIn`：`name`（必填）、`job_name: str | None = None`、`fame: int | None = Field(default=None, ge=0)`、`simulated_damage`/`sustained_dps`/`buff_amount`（`int | None = None`）
+- `BotCharacterIn`：`name`（必填 `min_length=1`）、`job_name: str | None = Field(default=None, min_length=1)`、`fame: int | None = Field(default=None, ge=0)`、`simulated_damage`/`sustained_dps`/`buff_amount`（`int | None = None`）
 - `BotCharactersIn`：`account`（`min_length=1`）、`characters: list[BotCharacterIn]`
 - `BotCharacterResult`：`name`、`ok: bool`、`action: Literal["created","updated"] | None = None`、`error: str | None = None`、`character: CharacterOut | None = None`
 - `BotCharactersOut`：`account`、`results: list[BotCharacterResult]`
@@ -87,13 +87,13 @@
 
 - 账号不存在：POST / GET 均整体失败，404「账号不存在」。
 - 批量内单角色职业非法（`jobs.job_meta` 返回 `None`）：仅该角色 `ok:false, error:"职业不存在"`，其余角色继续处理。
-- 单次请求内重名角色：后一个覆盖前一个（同一 upsert 键再次命中更新）。
+- 单次请求内重名角色：后一个在前一个基础上按「编辑」语义做部分更新，不新建行。
 - 事务：全部角色校验后统一 `db.commit()`；单角色失败不触发整体回滚（跳过非法项继续）。
 - 空 `characters` 列表：允许，返回空 `results`。
 
 ## 5. 组件与复用
 
-- `bot.py` 内的角色序列化复用 `members.py` 的 `_character_out`（跨模块引用现有私有助手，避免重复实现）。
+- `bot.py` 内的角色序列化复用 `members.py` 的 `_character_out`（跨模块引用现有私有助手，是有意为之的复用；实现时不要顺手重命名/重构它，除非后续统一抽共享助手）。
 - 职业校验复用 `jobs.job_meta` 与 `jobs.class_type_for`。
 - 默认常量在 `bot.py` 内定义为模块级：`DEFAULT_JOB = "weapon_master"`、`DEFAULT_FAME = 100000`。
 
@@ -109,6 +109,7 @@
 - POST 不存在的账号 → 404。
 - POST 批量多个角色 → 每个角色各有一条 result。
 - GET 按账号返回角色（按 id 升序）与昵称；GET 不存在账号 → 404。
+- round-trip：POST 创建后 GET 同一账号能取回该角色。
 
 ## 7. 变更文件范围
 
