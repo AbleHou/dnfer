@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { NInput, NButton } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -19,14 +20,16 @@ async function submit() {
 </script>
 
 <template>
-  <div style="max-width:320px;margin:80px auto">
-    <h2>登录</h2>
-    <form @submit.prevent="submit">
-      <div style="margin:8px 0"><input v-model="username" placeholder="账号" /></div>
-      <div style="margin:8px 0"><input v-model="password" type="password" placeholder="密码" /></div>
-      <p v-if="error" style="color:#c62828">{{ error }}</p>
-      <button :disabled="loading">{{ loading ? '登录中…' : '登录' }}</button>
-    </form>
-    <p style="margin-top:12px">还没有账号？<router-link to="/register">凭注册码注册</router-link></p>
+  <div class="auth-wrap">
+    <div class="dnf-panel auth-card">
+      <h2 style="margin-top:0">登录</h2>
+      <form @submit.prevent="submit">
+        <div style="margin:10px 0"><n-input v-model:value="username" placeholder="账号" /></div>
+        <div style="margin:10px 0"><n-input v-model:value="password" type="password" placeholder="密码" /></div>
+        <p v-if="error" class="form-error">{{ error }}</p>
+        <n-button type="primary" attr-type="submit" block :loading="loading">登录</n-button>
+      </form>
+      <p style="margin-top:12px">还没有账号？<router-link to="/register">凭注册码注册</router-link></p>
+    </div>
   </div>
 </template>
