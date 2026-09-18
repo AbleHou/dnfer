@@ -68,3 +68,11 @@ def upsert_characters(body: BotCharactersIn, db: Session = Depends(get_db)):
                                               character=_character_out(c)))
     db.commit()
     return BotCharactersOut(account=body.account, results=results)
+
+@router.get("/characters", response_model=BotCharacterList)
+def list_characters(account: str, db: Session = Depends(get_db)):
+    user = _get_user(db, account)
+    chars = db.scalars(select(Character).where(Character.user_id == user.id)
+                       .order_by(Character.id)).all()
+    return BotCharacterList(account=account, nickname=user.nickname,
+                            characters=[_character_out(c) for c in chars])

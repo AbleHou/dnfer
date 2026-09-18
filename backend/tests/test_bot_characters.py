@@ -107,3 +107,37 @@ def test_explicit_zero_fame(client):
     assert r.status_code == 200
     assert r.json()["results"][0]["action"] == "updated"
     assert r.json()["results"][0]["character"]["fame"] == 0
+
+def test_get_requires_token(client):
+    assert client.get("/api/public/characters").status_code == 401
+    bad = {"Authorization": "Bearer wrong"}
+    assert client.get("/api/public/characters", headers=bad).status_code == 401
+
+def test_get_characters_by_account(client):
+    register_user(client, "p8", "辛")
+    client.post("/api/public/characters", headers=TOKEN, json={"account": "p8",
+        "characters": [{"name": "剑魂"}, {"name": "鬼泣", "job_name": "soul_bender", "fame": 65000}]})
+    r = client.get("/api/public/characters", params={"account": "p8"}, headers=TOKEN)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["account"] == "p8"
+    assert body["nickname"] == "辛"
+    names = [c["name"] for c in body["characters"]]
+    assert names == ["剑魂", "鬼泣"]          # 按 id 升序 = 创建顺序
+    assert body["characters"][1]["job_name"] == "soul_bender"
+    assert body["characters"][1]["fame"] == 65000
+
+def test_get_nonexistent_account(client):
+    r = client.get("/api/public/characters", params={"account": "nobody"}, headers=TOKEN)
+    assert r.status_code == 404
+
+def test_round_trip(client):
+    register_user(client, "p9", "壬")
+    client.post("/api/public/characters", headers=TOKEN, json={"account": "p9",
+        "characters": [{"name": "奶妈", "job_name": "crusader_female", "buff_amount": 2000}]})
+    r = client.get("/api/public/characters", params={"account": "p9"}, headers=TOKEN)
+    assert r.status_code == 200
+    c = r.json()["characters"][0]
+    assert c["name"] == "奶妈"
+    assert c["class_type"] == "辅助"
+    assert c["buff_amount"] == 2000
