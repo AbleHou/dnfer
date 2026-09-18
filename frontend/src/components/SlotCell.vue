@@ -6,9 +6,9 @@ import DutySelect from './DutySelect.vue'
 
 const props = defineProps<{
   slot: Slot
-  color: string
-  editable: boolean      // 是管理员或自己占的格
-  pickable: boolean      // 空格且可占
+  squadIndex: number
+  editable: boolean
+  pickable: boolean
 }>()
 const emit = defineEmits<{
   (e: 'pick', slot: Slot): void
@@ -16,7 +16,6 @@ const emit = defineEmits<{
   (e: 'remove', slot: Slot): void
 }>()
 
-const bg = computed(() => props.color)
 const occupied = computed(() => props.slot.character_id != null)
 const attrs = computed(() => {
   const s = props.slot
@@ -29,27 +28,28 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 </script>
 
 <template>
-  <td :style="{ background: bg, border: '1px solid #ddd', padding: '8px', height: '60px',
-                verticalAlign: 'middle', textAlign: occupied ? 'left' : 'center' }">
+  <div class="slot-cell" :class="[
+    { occupied, pickable, empty: !occupied && !pickable },
+    `squad-${squadIndex}`,
+  ]">
     <template v-if="occupied">
-      <div style="color:#333">
-        <b>{{ slot.owner_nickname }}</b>
-        <span style="color:#777;font-size:12px">（{{ slot.character_name }}）</span>
+      <div>
+        <b style="color:var(--dnf-text)">{{ slot.owner_nickname }}</b>
+        <span style="color:var(--dnf-text-muted);font-size:12px">（{{ slot.character_name }}）</span>
         <img v-if="slot.job_name" :src="jobIcon(slot.job_name)" @error="onIconError"
              style="width:20px;height:20px;margin-left:6px;vertical-align:middle">
-        <span v-if="slot.job_title" style="color:#888;font-size:12px;margin-left:6px">{{ slot.job_title }}</span>
-        <DutySelect v-if="editable" :class-type="slot.character_class!"
-                    :model-value="slot.duty" @update:model-value="(d) => emit('duty', slot, d)" />
-        <span v-else style="background:#eee;border-radius:3px;padding:1px 5px;font-size:11px">{{ slot.duty }}</span>
+        <span v-if="slot.job_title" style="color:var(--dnf-text-muted);font-size:12px;margin-left:6px">{{ slot.job_title }}</span>
+        <DutySelect v-if="editable" :class-type="slot.character_class!" :model-value="slot.duty"
+                    @update:model-value="(d) => emit('duty', slot, d)" />
+        <span v-else class="dnf-badge" style="font-size:11px;color:var(--dnf-gold-hi);border-color:var(--dnf-gold-deep)">{{ slot.duty }}</span>
       </div>
-      <div style="color:#666;font-size:12px;margin-top:2px">
+      <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
         {{ attrs }}
-        <a v-if="editable" href="#" style="margin-left:8px;color:#c62828"
+        <a v-if="editable" href="#" style="margin-left:8px;color:var(--dnf-danger)"
            @click.prevent="emit('remove', slot)">撤下</a>
       </div>
     </template>
-    <button v-else-if="pickable" style="border:none;background:transparent;color:#888;cursor:pointer"
-            @click="emit('pick', slot)">＋ 点击占位</button>
-    <span v-else style="color:#ddd">—</span>
-  </td>
+    <button v-else-if="pickable" class="pick-btn" @click="emit('pick', slot)">＋ 点击占位</button>
+    <span v-else>—</span>
+  </div>
 </template>
