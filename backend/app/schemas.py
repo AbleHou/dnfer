@@ -146,3 +146,31 @@ class JobCategory(BaseModel):
     name: str
     title: str
     children: list[JobChild]
+
+class BotCharacterIn(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    job_name: str | None = Field(default=None, min_length=1, max_length=64)
+    fame: int | None = Field(default=None, ge=0)
+    simulated_damage: int | None = None
+    sustained_dps: int | None = None
+    buff_amount: int | None = None
+
+class BotCharactersIn(BaseModel):
+    account: str = Field(min_length=1, max_length=64)
+    characters: list[BotCharacterIn]
+
+class BotCharacterResult(BaseModel):
+    name: str
+    ok: bool
+    action: Literal["created", "updated"] | None = None
+    error: str | None = None
+    character: CharacterOut | None = None
+
+class BotCharactersOut(BaseModel):
+    account: str
+    results: list[BotCharacterResult]
+
+class BotCharacterList(BaseModel):
+    account: str
+    nickname: str
+    characters: list[CharacterOut]
