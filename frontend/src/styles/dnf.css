@@ -38,10 +38,6 @@ a { color: var(--dnf-gold-hi); }
   background: linear-gradient(180deg, var(--dnf-panel-inner), var(--dnf-panel));
   box-shadow: inset 0 0 0 1px var(--dnf-gold-deep), 0 4px 12px rgba(0, 0, 0, .5);
 }
-.dnf-divider {
-  height: 1px; border: none; margin: 14px 0;
-  background: linear-gradient(90deg, transparent, var(--dnf-gold), transparent);
-}
 
 /* 按钮：品牌面层用 dnf-btn，复杂交互控件用 Naive */
 .dnf-btn {
