@@ -8,6 +8,7 @@ import { connectRaidWs } from '../api/ws'
 import WaveSection from '../components/WaveSection.vue'
 import { formatDateTime } from '../utils/datetime'
 import CharacterPickerModal from '../components/CharacterPickerModal.vue'
+import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { Character, Duty, Slot } from '../types'
 
 const route = useRoute()
@@ -16,7 +17,6 @@ const store = useRaidStore()
 const rid = Number(route.params.id)
 
 const pickSlot = ref<Slot | null>(null)
-const notice = ref('')
 let disconnect: (() => void) | null = null
 
 const editable = computed(() => !store.raid?.locked || auth.isAdmin)
@@ -43,56 +43,54 @@ async function onSelectCharacter(c: Character, duty: Duty) {
       `/api/raids/${rid}/slots/${pickSlot.value.id}/fill`,
       { character_id: c.id, duty, replace: true })
     const moved = r.removed_slots?.length ? '已替换原占位角色' : ''
-    notice.value = r.warnings.length
-      ? r.warnings.join('；') + (moved ? '，' + moved : '')
-      : moved
-    setTimeout(() => (notice.value = ''), 5000)
-  } catch (e: any) { alert(e.message) }
+    const msg = r.warnings.length ? r.warnings.join('；') + (moved ? '，' + moved : '') : moved
+    if (r.warnings.length) notifyWarning(msg)
+    else if (moved) notifySuccess(moved)
+  } catch (e: any) { notifyError(e.message) }
   pickSlot.value = null
   await load()
 }
 async function onDuty(slot: Slot, duty: string) {
   try { await api.put(`/api/raids/${rid}/slots/${slot.id}/duty`, { duty }) }
-  catch (e: any) { alert(e.message) }
+  catch (e: any) { notifyError(e.message) }
   await load()
 }
 async function onRemove(slot: Slot) {
   try { await api.del(`/api/raids/${rid}/slots/${slot.id}`) }
-  catch (e: any) { alert(e.message) }
+  catch (e: any) { notifyError(e.message) }
   await load()
 }
 async function onAddWave() {
-  try { await api.post(`/api/raids/${rid}/waves`) } catch (e: any) { alert(e.message) }
+  try { await api.post(`/api/raids/${rid}/waves`) } catch (e: any) { notifyError(e.message) }
   await load()
 }
 async function onToggleLock() {
   const act = store.raid?.locked ? 'unlock' : 'lock'
-  try { await api.post(`/api/raids/${rid}/${act}`) } catch (e: any) { alert(e.message) }
+  try { await api.post(`/api/raids/${rid}/${act}`) } catch (e: any) { notifyError(e.message) }
   await load()
 }
 async function onDeleteWave(index: number) {
-  if (!confirm(`确认删除第 ${index} 波？`)) return
-  try { await api.del(`/api/raids/${rid}/waves/${index}`) } catch (e: any) { alert(e.message) }
+  const ok = await confirmDialog({ content: `确认删除第 ${index} 波？` })
+  if (!ok) return
+  try { await api.del(`/api/raids/${rid}/waves/${index}`) } catch (e: any) { notifyError(e.message) }
   await load()
 }
 </script>
 
 <template>
-  <div v-if="store.raid" style="max-width:900px;margin:24px auto">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <div v-if="store.raid" class="dnf-page">
+    <div class="page-head" style="flex-wrap:wrap;gap:10px">
       <h2 style="margin:0">{{ store.raid.name }}</h2>
-      <span v-if="store.raid.dungeon_name" style="color:#666">{{ store.raid.dungeon_name }}</span>
-      <span style="color:#999">{{ store.raid.size }} 人 · {{ formatDateTime(store.raid.starts_at) }}</span>
-      <span :style="{color: store.raid.locked ? '#c62828' : '#2e7d32'}">
+      <span style="color:var(--dnf-text-muted)">{{ store.raid.dungeon_name }}</span>
+      <span style="color:var(--dnf-text-faint)">{{ store.raid.size }} 人 · {{ formatDateTime(store.raid.starts_at) }}</span>
+      <span class="dnf-badge" :class="store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
         {{ store.raid.locked ? '已锁定' : '未锁定' }}
       </span>
       <span style="margin-left:auto;display:flex;gap:8px">
-        <button v-if="auth.isAdmin" @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
-        <button v-if="editable" @click="onAddWave">＋ 添加一波</button>
+        <button v-if="auth.isAdmin" class="dnf-btn" @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
+        <button v-if="editable" class="dnf-btn dnf-btn-primary" @click="onAddWave">＋ 添加一波</button>
       </span>
     </div>
-
-    <p v-if="notice" style="color:#e65100;background:#fff3e0;padding:8px;border-radius:4px">{{ notice }}</p>
 
     <WaveSection v-for="w in store.raid.waves" :key="w.id"
                  :wave="w" :editable="editable" :is-admin="auth.isAdmin"
