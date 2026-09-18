@@ -17,6 +17,7 @@
 - **账号 = 系统登录账号 username**（非游戏账号、非群昵称）。角色挂在该 `User` 下，与现有 `Character.user_id` 结构一致。
 - **账号不存在时报错**：机器人向不存在的 username 录入/查询时返回 404「账号不存在」，不自动创建账号（避免绕过注册码流程创建无主账号）。
 - **角色名唯一键 upsert**：每位玩家角色名不重复，添加时以角色名为唯一标识，在同一账号下（`user_id`, `name`）存在则更新、否则新建。
+- **部分更新语义**（已确认）：创建时缺失字段用默认值（职业→极诣·剑魂、名望→100000、数值→null）；编辑（同名已存在）时只更新本次提供的字段，缺失字段保留原值。机器人每次只提取对话中能获得的信息，重复录入不清掉之前填对的职业/名望/数值。
 - 批量录入接口需返回每个角色的添加情况（成功/失败、创建/更新），单角色失败不影响其余角色。
 - 默认职业常量 `weapon_master`（极诣·剑魂）、默认名望 `100000`。
 - 不改 DB 模型，不加唯一约束（沿用现有无约束结构；应用层按 `user_id + name` 查首条 upsert）。
@@ -41,8 +42,11 @@
 }
 ```
 
-- 每角色：`name` 必填（`min_length=1, max_length=64`）；`job_name` / `fame` 缺省或为 `null` 时分别默认 `weapon_master` / `100000`；`simulated_damage` / `sustained_dps` / `buff_amount` 可选透传。
-- upsert 键 `(user_id, name)`：已存在则更新全部字段（含 `class_type` 按新 `job_name` 推导），否则新建。
+- 每角色：`name` 必填（`min_length=1, max_length=64`）；`job_name` / `fame` / `simulated_damage` / `sustained_dps` / `buff_amount` 均可选（缺省或 `null` 即 `None`）。
+- upsert 键 `(user_id, name)`：
+  - **创建**（不存在）：`job_name` 为 `None` 时默认 `weapon_master`，`fame` 为 `None` 时默认 `100000`，数值字段为 `None` 时落 `null`；`class_type` 按 `job_name` 推导。
+  - **编辑**（已存在）：仅写入本次提供（非 `None`）的字段，缺失字段保留原值；`job_name` 被提供时重推 `class_type`。
+- 请求内重名处理：维护进程内 `name → Character` 映射，同一请求内后出现的同名角色命中映射更新（避免依赖 flush 后查询，`SessionLocal` 为 `autoflush=False`）。
 - 响应（逐角色结果）：
 
 ```json
@@ -65,19 +69,19 @@
 }
 ```
 
-`CharacterOut` 复用现有 schema（含 `job_title` / `parent_name` / `class_type` / `fame` 等）。
+`CharacterOut` 复用现有 schema（含 `job_title` / `parent_name` / `class_type` / `fame` 等）。角色按 `id` 升序返回。
 
 ## 3. Schema 变更（`backend/app/schemas.py`）
 
 新增 5 个模型：
 
-- `BotCharacterIn`：`name`（必填）、`job_name: str | None = None`、`fame: int | None = None`、`simulated_damage`/`sustained_dps`/`buff_amount`（`int | None = None`）
+- `BotCharacterIn`：`name`（必填）、`job_name: str | None = None`、`fame: int | None = Field(default=None, ge=0)`、`simulated_damage`/`sustained_dps`/`buff_amount`（`int | None = None`）
 - `BotCharactersIn`：`account`（`min_length=1`）、`characters: list[BotCharacterIn]`
 - `BotCharacterResult`：`name`、`ok: bool`、`action: Literal["created","updated"] | None = None`、`error: str | None = None`、`character: CharacterOut | None = None`
 - `BotCharactersOut`：`account`、`results: list[BotCharacterResult]`
 - `BotCharacterList`：`account`、`nickname`、`characters: list[CharacterOut]`
 
-默认值处理：`BotCharacterIn.job_name/fame` 缺省即 `None`，在 `bot.py` 处理器内统一 `job_name or "weapon_master"`、`fame if fame is not None else 100000`（区分「未提供」与「显式 0」）。
+默认值处理：`BotCharacterIn.job_name/fame` 缺省即 `None`，在 `bot.py` 处理器内仅**创建**时应用默认——`job_name or "weapon_master"`、`fame if fame is not None else 100000`（区分「未提供」与「显式 0」）；**编辑**时 `None` 一律视为「不更新，保留原值」。
 
 ## 4. 错误处理与边界
 
@@ -96,12 +100,15 @@
 ## 6. 测试（`backend/tests/test_bot_characters.py`）
 
 - token 缺失 / 错误 → 401（POST 与 GET 均验证）。
-- POST 默认值：无 `job_name` / `fame` → 落库 `weapon_master` / `100000`，响应 `action=created`。
-- POST 同名 upsert：再次提交同名角色 → `action=updated`，字段更新。
+- POST 默认值：无 `job_name` / `fame` → 创建落库 `weapon_master` / `100000`，响应 `action=created`。
+- POST 同名 upsert：再次提交同名角色 → `action=updated`。
+- POST 编辑部分更新：同名已存在，仅提交 `name` + 新 `fame` → 职业与数值字段保留原值、名望更新。
 - POST 非法职业：该角色 `ok:false, error:"职业不存在"`，同批其余角色成功落库。
+- POST 单次请求内重名角色：后一个覆盖前一个，只产生一行（不重复建行）。
+- POST 空 `characters` 列表 → `results` 为空数组。
 - POST 不存在的账号 → 404。
 - POST 批量多个角色 → 每个角色各有一条 result。
-- GET 按账号返回角色与昵称；GET 不存在账号 → 404。
+- GET 按账号返回角色（按 id 升序）与昵称；GET 不存在账号 → 404。
 
 ## 7. 变更文件范围
 
