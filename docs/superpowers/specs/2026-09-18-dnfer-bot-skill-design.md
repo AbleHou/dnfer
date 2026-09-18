@@ -47,6 +47,7 @@ description: 录入与查询 DNF 角色到 DNfer 系统。当群友发送自己�
 1. **目的与触发**：何时使用本 skill。
 2. **API 调用**：`python scripts/dnfer_api.py add <账号> '<角色数组json>'` 与 `list <账号>`；说明 env `DNFER_API_BASE`/`DNFER_API_TOKEN` 已由运行环境提供，无需关心。
 3. **角色解析规则**：
+   - **账号 = DNfer 系统登录用户名 username**（非游戏账号、非群昵称），须在 skill 指令中显式说明，避免录到错误账号。
    - 名称必填（从截图角色名或文字提取）。
    - 职业：截图/文字可见则给 `job_name`（如 `weapon_master`、`soul_bender`、`crusader_female`），不可见则省略（API 默认极诣·剑魂）。
    - 名望：可见则给 `fame`，不可见则省略（API 默认 100000）。
@@ -54,7 +55,7 @@ description: 录入与查询 DNF 角色到 DNfer 系统。当群友发送自己�
    - **绝不编造**未在截图/文字中出现的信息。
 4. **录入命令示例**：展示 body 结构（`{"account":"...","characters":[...]}`）与逐角色结果含义（created/updated/error）。
 5. **查询命令示例**：展示响应结构（account/nickname/characters）。
-6. **回复格式**：录入 → 逐角色报告成功/失败；查询 → 列出角色（职业、名望、数值）。
+6. **回复格式**：录入 → 逐角色报告成功/失败；查询 → 列出角色（职业、名望、数值），账号存在但无角色时明确告知「该账号还没有角色」。
 7. **边界情况**：账号不存在（404「账号不存在」）→ 提示群友先凭注册码注册；职业非法 → 报告该角色失败、其余继续；token/网络错误 → 提示稍后再试；同消息多角色 → 一次批量提交。
 
 ## 4. dnfer_api.py 设计
@@ -64,13 +65,14 @@ description: 录入与查询 DNF 角色到 DNfer 系统。当群友发送自己�
 - **命令**：
   - `add <account> <characters_json>` → `POST {base}/api/public/characters`，body `{"account":..., "characters":[...]}`，`Authorization: Bearer <token>`。
   - `list <account>` → `GET {base}/api/public/characters?account=<account>`。
-- **输出**：机器可读 JSON（stdout）＋ 简明摘要；非 2xx 输出 `{"ok":false,"error":...,"status":...}`，含 404/401/网络异常区分。
+- **输出**：**stdout 只输出机器可读 JSON**（模型据此可靠解析，不掺其他文本），简明人读摘要写到 **stderr**；非 2xx 输出 `{"ok":false,"error":...,"status":...}`，含 404/401/网络异常区分。
 - 请求头 `Content-Type: application/json`；`Accept: application/json`。
 
 ## 5. README.md 设计
 
 - 安装：将 `dnfer-characters/` 目录打成 zip（含 `SKILL.md`，大小写一致）→ AstrBot 管理面板「插件 → 技能」→ 上传。
 - 环境变量：在 AstrBot 运行环境设置 `DNFER_API_BASE=http://127.0.0.1:8000`（默认即此值）、`DNFER_API_TOKEN=<与 .env 的 DNFER_API_TOKEN 一致>`。
+- **同机部署前提**：AstrBot 须以宿主机进程（或 host 网络）运行，使其 `127.0.0.1` 能直达后端绑定端口；若 AstrBot 本身容器化，需改用宿主机 IP 或改走 `https://<域名>`（注意 nginx UA 拦截）。
 - 自测：给出直跑脚本的 curl 等价示例与脚本自测命令。
 - 同机便利说明：后端绑定 `127.0.0.1:8000`，走内网端口不受 nginx 限流/UA 拦截影响。
 
