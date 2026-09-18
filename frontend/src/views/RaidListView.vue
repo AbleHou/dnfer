@@ -28,8 +28,7 @@ async function load() {
 onMounted(load)
 
 function onDungeonChange(v: number | null) {
-  dungeonId.value = v
-  const d = dungeons.value.find(x => x.id === dungeonId.value)
+  const d = dungeons.value.find(x => x.id === v)
   sizeLocked.value = d ? d.size : null
   if (d && !name.value) name.value = d.name
 }
@@ -71,7 +70,8 @@ async function onDelete(r: RaidListItem) {
     <div v-if="showCreate" class="dnf-panel create-form">
       <div style="margin:8px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <n-select data-test="dungeon-select" style="flex:1;min-width:220px"
-                  :options="dungeonOptions" placeholder="选择副本" @update:value="onDungeonChange" />
+                  v-model:value="dungeonId" :options="dungeonOptions" placeholder="选择副本"
+                  @update:value="onDungeonChange" />
         <span v-if="sizeLocked" style="color:var(--dnf-text-muted)">规模锁定：{{ sizeLocked }} 人</span>
       </div>
       <div style="margin:8px 0">
