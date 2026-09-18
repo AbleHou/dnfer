@@ -1329,6 +1329,8 @@ Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/uvicorn app.main:app --port
 - [ ] 排表详情：波次面板、红/黄/绿小队色块与计数、格子占位/空位、职责 NSelect、锁定时按钮只读态
 - [ ] **修 dnf.css 死选择器**：`.squad-0 .squad-col { border-color: ... }` 等 5 行是后代选择器，但 `squad-N` 类在 `.squad-col` 自身，永不匹配 → 改为复合选择器 `.squad-col.squad-0`（等 5 行），让小队卡片显示各队深色描边（Task 4 质量评审的 Important 项）
 - [ ] **恢复 `RaidDetailView` 副本名 `v-if` 守卫**：头部 `{{ store.raid.dungeon_name }}` 恢复为 `v-if="store.raid.dungeon_name"`，与 RaidListView 保持一致（Task 5 质量评审建议）
+- [ ] **`MyCharactersView.spec.ts` 加 notify mock**：仿 `RaidListView.spec.ts` 顶部加 `vi.mock('../lib/notify', () => ({ confirmDialog: vi.fn(async () => true), notifyError: vi.fn() }))`，去掉 jsdom 里加载真实 `createDiscreteApi` 的隐性依赖（Task 9 质量评审 Important 项）
+- [ ] **`MyCharactersView` 职业按钮装饰图加 `alt=""`**：两个 `<img>`（`categoryIcon`/`jobIcon`）补 `alt=""` 明确为装饰性（Task 9 质量评审建议）
 - [ ] 我的角色：卡片网格、职业选择按钮 active 态、表单
 - [ ] 管理页：三个分区面板、表格金色表头、删除确认弹窗（Naive 金色对话框）
 - [ ] 移动端（DevTools 窄屏 <768px）：顶导航收进 ☰ 汉堡菜单、排表小队纵向堆叠
