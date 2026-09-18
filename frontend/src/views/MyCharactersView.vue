@@ -2,6 +2,7 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { api } from '../api/client'
 import { categoryIcon, jobIcon, handleIconError as onIconError } from '../lib/job'
+import { confirmDialog, notifyError } from '../lib/notify'
 import type { Character, JobCategory, JobChild } from '../types'
 
 const list = ref<Character[]>([])
@@ -68,96 +69,98 @@ async function save() {
   finally { saving.value = false }
 }
 async function remove(c: Character) {
-  if (!confirm(`删除角色 ${c.name}？`)) return
+  const ok = await confirmDialog({ content: `删除角色 ${c.name}？` })
+  if (!ok) return
   try { await api.del(`/api/me/characters/${c.id}`); await load() }
-  catch (e: any) { alert(e.message) }
+  catch (e: any) { notifyError(e.message) }
 }
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
 function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
 </script>
 
 <template>
-  <div style="max-width:600px;margin:24px auto">
-    <div style="display:flex;align-items:center;gap:12px">
+  <div class="dnf-page" style="max-width:640px">
+    <div class="page-head">
       <h2>我的角色</h2>
-      <button @click="startCreate">＋ 添加角色</button>
+      <button class="dnf-btn dnf-btn-primary" @click="startCreate">＋ 添加角色</button>
     </div>
 
-    <div v-for="c in list" :key="c.id" style="border:1px solid #eee;padding:10px;margin:8px 0;
-         display:flex;align-items:center;gap:12px">
+    <div v-for="c in list" :key="c.id" class="dnf-panel" style="padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px">
       <div style="display:flex;align-items:center;gap:10px;flex:1">
         <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
         <div>
           <b>{{ c.name }}</b>
-          <span style="color:#666;font-size:12px">{{ c.job_title }} · {{ c.class_type }} · 名望 {{ c.fame }}</span>
-          <div style="color:#999;font-size:12px">
+          <span style="color:var(--dnf-text-muted);font-size:12px">{{ c.job_title }} · {{ c.class_type }} · 名望 {{ c.fame }}</span>
+          <div style="color:var(--dnf-text-faint);font-size:12px">
             {{ c.class_type === '输出'
               ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}`
               : `增益 ${fmtBuff(c.buff_amount)}` }}
           </div>
         </div>
       </div>
-      <button @click="startEdit(c)">编辑</button>
-      <button @click="remove(c)" style="color:#c62828">删除</button>
+      <button class="dnf-btn dnf-btn-sm" @click="startEdit(c)">编辑</button>
+      <button class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="remove(c)">删除</button>
     </div>
-    <p v-if="!list.length" style="color:#999">还没有角色</p>
+    <p v-if="!list.length" style="color:var(--dnf-text-faint)">还没有角色</p>
 
-    <div v-if="showForm" style="border:1px solid #ddd;padding:16px;margin:12px 0">
+    <div v-if="showForm" class="dnf-panel create-form">
       <h3>{{ editing ? '编辑角色' : '添加角色' }}</h3>
       <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-        <label for="char-name" style="width:80px;flex-shrink:0">角色名：</label>
-        <input id="char-name" v-model="form.name" style="flex:1" />
+        <label for="char-name" class="form-label">角色名：</label>
+        <input id="char-name" v-model="form.name" class="dnf-input" style="flex:1" />
       </div>
       <div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0">
-        <label style="width:80px;flex-shrink:0">职业：</label>
+        <label class="form-label">职业：</label>
         <div style="flex:1">
           <div style="display:flex;flex-wrap:wrap;gap:8px">
             <button v-for="cat in categories" :key="cat.name" type="button" :data-cat="cat.name"
-                    @click="onPickCategory(cat)"
-                    :style="selectedCat?.name === cat.name ? 'outline:2px solid #1976d2' : ''">
+                    class="job-pick-btn"
+                    :class="{ active: selectedCat?.name === cat.name }"
+                    @click="onPickCategory(cat)">
               <img :src="categoryIcon(cat.name)" @error="onIconError" style="width:36px;height:36px">
               <span style="display:block;font-size:11px">{{ cat.title }}</span>
             </button>
           </div>
           <div v-if="selectedCat" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
             <button v-for="child in selectedCat.children" :key="child.name" type="button"
-                    :data-job="child.name" @click="selectedJob = child"
-                    :style="selectedJob?.name === child.name ? 'outline:2px solid #1976d2' : ''">
+                    :data-job="child.name" class="job-pick-btn"
+                    :class="{ active: selectedJob?.name === child.name }"
+                    @click="selectedJob = child">
               <img :src="jobIcon(child.name)" @error="onIconError" style="width:36px;height:36px">
               <span style="display:block;font-size:11px">{{ child.title }}</span>
             </button>
           </div>
-          <p v-if="selectedJob" style="color:#666;font-size:12px;margin:4px 0 0">
+          <p v-if="selectedJob" style="color:var(--dnf-text-muted);font-size:12px;margin:4px 0 0">
             已选：{{ selectedJob.title }}（{{ selectedJob.class_type }}职业）
           </p>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-        <label for="char-fame" style="width:80px;flex-shrink:0">名望：</label>
-        <input id="char-fame" v-model.number="form.fame" type="number" style="flex:1" />
+        <label for="char-fame" class="form-label">名望：</label>
+        <input id="char-fame" v-model.number="form.fame" type="number" class="dnf-input" style="flex:1" />
       </div>
       <template v-if="selectedJob">
         <template v-if="!isSupport">
           <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-            <label for="char-damage" style="width:80px;flex-shrink:0">模拟伤害（亿）：</label>
-            <input id="char-damage" v-model.number="form.simulated_damage" type="number" style="flex:1" />
+            <label for="char-damage" class="form-label">模拟伤害（亿）：</label>
+            <input id="char-damage" v-model.number="form.simulated_damage" type="number" class="dnf-input" style="flex:1" />
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-            <label for="char-dps" style="width:80px;flex-shrink:0">秒伤（亿）：</label>
-            <input id="char-dps" v-model.number="form.sustained_dps" type="number" style="flex:1" />
+            <label for="char-dps" class="form-label">秒伤（亿）：</label>
+            <input id="char-dps" v-model.number="form.sustained_dps" type="number" class="dnf-input" style="flex:1" />
           </div>
         </template>
         <template v-else>
           <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-            <label for="char-buff" style="width:80px;flex-shrink:0">增益量：</label>
-            <input id="char-buff" v-model.number="form.buff_amount" type="number" style="flex:1" />
+            <label for="char-buff" class="form-label">增益量：</label>
+            <input id="char-buff" v-model.number="form.buff_amount" type="number" class="dnf-input" style="flex:1" />
           </div>
         </template>
       </template>
-      <p v-else style="color:#999;font-size:12px">请先选择职业</p>
-      <p v-if="error" style="color:#c62828">{{ error }}</p>
-      <button :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
-      <button @click="showForm = false">取消</button>
+      <p v-else style="color:var(--dnf-text-faint);font-size:12px">请先选择职业</p>
+      <p v-if="error" class="form-error">{{ error }}</p>
+      <button class="dnf-btn dnf-btn-primary" :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+      <button class="dnf-btn" @click="showForm = false">取消</button>
     </div>
   </div>
 </template>
