@@ -95,10 +95,18 @@ npm run dev
 |---|---|
 | `GET /api/public/raids` | 列出攻坚计划（id、名称、副本、规模、波次数、锁定状态） |
 | `GET /api/public/raids/{id}/waves/{index}` | 第 n 波配置：各小队每格含群昵称、角色名、职责、属性 |
+| `POST /api/public/characters` | 按账号批量添加/编辑角色（名称必填；职业缺省极诣·剑魂、名望缺省 100000；编辑仅更新提供的字段；返回逐角色结果） |
+| `GET /api/public/characters?account={账号}` | 查询账号（username）的全部角色 |
 
 ```bash
 curl -H "Authorization: Bearer $DNFER_API_TOKEN" http://127.0.0.1:8000/api/public/raids
 curl -H "Authorization: Bearer $DNFER_API_TOKEN" http://127.0.0.1:8000/api/public/raids/1/waves/1
+curl -X POST -H "Authorization: Bearer $DNFER_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"account":"zhangsan","characters":[{"name":"剑魂"}]}' \
+  http://127.0.0.1:8000/api/public/characters
+curl -H "Authorization: Bearer $DNFER_API_TOKEN" \
+  "http://127.0.0.1:8000/api/public/characters?account=zhangsan"
 ```
 
 ## 测试
