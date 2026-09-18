@@ -55,4 +55,9 @@ describe('sumSquadDamage', () => {
     const slots = [slot({ character_id: 1, character_class: '输出' })]
     expect(sumSquadDamage(slots)).toEqual({ simulated: 0, sustained: 0, hasOutput: true })
   })
+
+  it('unoccupied slot typed as output is excluded and does not set hasOutput', () => {
+    const slots = [slot({ character_id: null, character_class: '输出', simulated_damage: 999 })]
+    expect(sumSquadDamage(slots)).toEqual({ simulated: 0, sustained: 0, hasOutput: false })
+  })
 })
