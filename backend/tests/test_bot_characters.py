@@ -92,3 +92,18 @@ def test_post_nonexistent_account(client):
     r = client.post("/api/public/characters", headers=TOKEN, json={
         "account": "nobody", "characters": [{"name": "x"}]})
     assert r.status_code == 404
+
+def test_explicit_zero_fame(client):
+    h, _ = register_user(client, "p10", "癸")
+    # 创建时显式 0 名望 → 落 0（区别于未提供时默认 100000）
+    client.post("/api/public/characters", headers=TOKEN, json={
+        "account": "p10", "characters": [{"name": "剑魂", "fame": 0}]})
+    assert client.get("/api/me/characters", headers=h).json()[0]["fame"] == 0
+    # 编辑时显式 0 名望 → 覆盖原值（0 非 None 应写入，不被当作缺失保留）
+    client.post("/api/public/characters", headers=TOKEN, json={
+        "account": "p10", "characters": [{"name": "剑魂", "fame": 21000}]})
+    r = client.post("/api/public/characters", headers=TOKEN, json={
+        "account": "p10", "characters": [{"name": "剑魂", "fame": 0}]})
+    assert r.status_code == 200
+    assert r.json()["results"][0]["action"] == "updated"
+    assert r.json()["results"][0]["character"]["fame"] == 0
