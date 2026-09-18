@@ -31,7 +31,7 @@ function onMenuSelect(key: string) {
 <template>
   <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
     <nav v-if="auth.user" class="dnf-nav">
-      <router-link to="/" class="logo">阿拉德远征</router-link>
+      <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
       <router-link to="/" class="nav-link">攻坚列表</router-link>
       <router-link to="/characters" class="nav-link">我的角色</router-link>
       <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">管理</router-link>
