@@ -74,23 +74,31 @@ async function delDungeon(d: Dungeon) {
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
       <table class="dnf-table">
-        <tr><th>注册码</th><th>状态</th><th>过期</th></tr>
-        <tr v-for="c in codes" :key="c.id">
-          <td><code>{{ c.code }}</code></td>
-          <td>{{ c.single_use ? (c.used_by ? '已使用' : '未使用') : '多用户' }}</td>
-          <td>{{ c.expires_at ? new Date(c.expires_at + 'Z').toLocaleString() : '不限' }}</td>
-        </tr>
+        <thead>
+          <tr><th scope="col">注册码</th><th scope="col">状态</th><th scope="col">过期</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="c in codes" :key="c.id">
+            <td><code>{{ c.code }}</code></td>
+            <td>{{ c.single_use ? (c.used_by ? '已使用' : '未使用') : '多用户' }}</td>
+            <td>{{ c.expires_at ? new Date(c.expires_at + 'Z').toLocaleString() : '不限' }}</td>
+          </tr>
+        </tbody>
       </table>
     </section>
     <section class="dnf-panel dnf-section">
       <h3>成员</h3>
       <table class="dnf-table">
-        <tr><th>群昵称</th><th>用户名</th><th>角色</th></tr>
-        <tr v-for="u in users" :key="u.id">
-          <td>{{ u.nickname }}</td>
-          <td>{{ u.username }}</td>
-          <td>{{ u.is_admin ? '管理员' : '成员' }}</td>
-        </tr>
+        <thead>
+          <tr><th scope="col">群昵称</th><th scope="col">用户名</th><th scope="col">角色</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="u in users" :key="u.id">
+            <td>{{ u.nickname }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.is_admin ? '管理员' : '成员' }}</td>
+          </tr>
+        </tbody>
       </table>
     </section>
     <section class="dnf-panel dnf-section">
@@ -105,14 +113,18 @@ async function delDungeon(d: Dungeon) {
       </div>
       <p v-if="dgError" class="form-error">{{ dgError }}</p>
       <table class="dnf-table">
-        <tr><th>副本</th><th>人数</th><th>描述</th><th></th></tr>
-        <tr v-for="d in dungeons" :key="d.id">
-          <td>{{ d.name }}</td><td>{{ d.size }}</td><td>{{ d.description }}</td>
-          <td style="white-space:nowrap">
-            <button class="dnf-btn dnf-btn-sm" @click="editDungeon(d)">编辑</button>
-            <button class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="delDungeon(d)">删除</button>
-          </td>
-        </tr>
+        <thead>
+          <tr><th scope="col">副本</th><th scope="col">人数</th><th scope="col">描述</th><th scope="col"></th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="d in dungeons" :key="d.id">
+            <td>{{ d.name }}</td><td>{{ d.size }}</td><td>{{ d.description }}</td>
+            <td style="white-space:nowrap">
+              <button class="dnf-btn dnf-btn-sm" @click="editDungeon(d)">编辑</button>
+              <button class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="delDungeon(d)">删除</button>
+            </td>
+          </tr>
+        </tbody>
       </table>
     </section>
   </div>

@@ -87,11 +87,11 @@ a { color: var(--dnf-gold-hi); }
 .dnf-badge-danger { color: var(--dnf-danger); border-color: var(--dnf-danger); }
 
 /* 原生表单控件（MyCharacters/Admin 的输入框与下拉，保留原生以维持测试 id 可定位） */
-.dnf-input, .dnf-select, .dnf-number {
+.dnf-input, .dnf-select {
   background: var(--dnf-panel-inner); border: 2px solid var(--dnf-gold-deep);
   color: var(--dnf-text); border-radius: 6px; padding: 7px 10px; font-size: 14px;
 }
-.dnf-input:focus, .dnf-select:focus, .dnf-number:focus { outline: none; border-color: var(--dnf-gold); }
+.dnf-input:focus, .dnf-select:focus { outline: none; border-color: var(--dnf-gold); }
 .form-label { width: 80px; flex-shrink: 0; color: var(--dnf-text-muted); }
 .form-error { color: #ff8a80; }
 
@@ -108,11 +108,11 @@ a { color: var(--dnf-gold-hi); }
 .squad-2 .squad-head { background: linear-gradient(180deg, #3a6b35, #2a4e26); color: #d8f0cf; }
 .squad-3 .squad-head { background: linear-gradient(180deg, #2a5a8a, #1d3f61); color: #d6e8f5; }
 .squad-4 .squad-head { background: linear-gradient(180deg, #7a4a8a, #5a3466); color: #f0dcf5; }
-.squad-0 .squad-col { border-color: #a12a1e; }
-.squad-1 .squad-col { border-color: #96720a; }
-.squad-2 .squad-col { border-color: #2f5a29; }
-.squad-3 .squad-col { border-color: #244b73; }
-.squad-4 .squad-col { border-color: #5d3a6b; }
+.squad-col.squad-0 { border-color: #a12a1e; }
+.squad-col.squad-1 { border-color: #96720a; }
+.squad-col.squad-2 { border-color: #2f5a29; }
+.squad-col.squad-3 { border-color: #244b73; }
+.squad-col.squad-4 { border-color: #5d3a6b; }
 
 /* 格子（SlotCell） */
 .slot-cell {

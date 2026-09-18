@@ -117,7 +117,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
                     class="job-pick-btn"
                     :class="{ active: selectedCat?.name === cat.name }"
                     @click="onPickCategory(cat)">
-              <img :src="categoryIcon(cat.name)" @error="onIconError" style="width:36px;height:36px">
+              <img :src="categoryIcon(cat.name)" alt="" @error="onIconError" style="width:36px;height:36px">
               <span style="display:block;font-size:11px">{{ cat.title }}</span>
             </button>
           </div>
@@ -126,7 +126,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
                     :data-job="child.name" class="job-pick-btn"
                     :class="{ active: selectedJob?.name === child.name }"
                     @click="selectedJob = child">
-              <img :src="jobIcon(child.name)" @error="onIconError" style="width:36px;height:36px">
+              <img :src="jobIcon(child.name)" alt="" @error="onIconError" style="width:36px;height:36px">
               <span style="display:block;font-size:11px">{{ child.title }}</span>
             </button>
           </div>

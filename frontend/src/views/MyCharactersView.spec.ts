@@ -13,6 +13,10 @@ vi.mock('../api/client', () => ({
   setToken: vi.fn(),
   clearToken: vi.fn(),
 }))
+vi.mock('../lib/notify', () => ({
+  confirmDialog: vi.fn(async () => true),
+  notifyError: vi.fn(),
+}))
 
 const tree: JobCategory[] = [
   { id: 0, name: 'swordman_male', title: '鬼剑士(男)', children: [

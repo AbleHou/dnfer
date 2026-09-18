@@ -81,7 +81,7 @@ async function onDeleteWave(index: number) {
   <div v-if="store.raid" class="dnf-page">
     <div class="page-head" style="flex-wrap:wrap;gap:10px">
       <h2 style="margin:0">{{ store.raid.name }}</h2>
-      <span style="color:var(--dnf-text-muted)">{{ store.raid.dungeon_name }}</span>
+      <span v-if="store.raid.dungeon_name" style="color:var(--dnf-text-muted)">{{ store.raid.dungeon_name }}</span>
       <span style="color:var(--dnf-text-faint)">{{ store.raid.size }} 人 · {{ formatDateTime(store.raid.starts_at) }}</span>
       <span class="dnf-badge" :class="store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
         {{ store.raid.locked ? '已锁定' : '未锁定' }}
