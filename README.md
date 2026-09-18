@@ -20,7 +20,7 @@ DNF 游戏群团队成员管理 + 攻坚队排表工具。管理员发起攻坚�
 
 | 端 | 技术 |
 |---|---|
-| 前端 | Vue 3 · TypeScript · Vite · Pinia · Vue Router |
+| 前端 | Vue 3 · TypeScript · Vite · Pinia · Vue Router · Naive UI |
 | 后端 | Python FastAPI · SQLAlchemy 2 · SQLite |
 | 部署 | Docker Compose（`dnfer` 应用容器 + `nginx` 反向代理，静态前端由后端托管） |
 
