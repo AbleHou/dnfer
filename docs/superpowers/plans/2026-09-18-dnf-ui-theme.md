@@ -1312,35 +1312,44 @@ EOF
 ## Task 11: 最终验证 + 视觉清单
 
 **Files:**
+- Modify: `frontend/src/styles/dnf.css`（死选择器修复 + 删无用 `.dnf-number`）
+- Modify: `frontend/src/views/RaidDetailView.vue`（副本名 v-if 恢复）
+- Modify: `frontend/src/views/MyCharactersView.vue`（职业按钮装饰图 alt=""）
+- Modify: `frontend/src/views/MyCharactersView.spec.ts`（notify mock）
+- Modify: `frontend/src/views/AdminView.vue`（表格 thead/tbody/scope）
 - 可选：`README.md` 技术栈表前端一栏补 `Naive UI`
 
-- [ ] **Step 1: 全量测试与构建**
+- [ ] **Step 1: 应用走查前积累的代码修复**（各评审的 Important/建议项，合并一个提交）
+
+1. `frontend/src/styles/dnf.css`：`.squad-0 .squad-col { border-color: ... }` 等 5 行改为复合选择器 `.squad-col.squad-0`（等）；删除无引用的 `.dnf-number` 选择器（与 `.dnf-input`/`.dnf-select` 并组的那处）
+2. `frontend/src/views/RaidDetailView.vue`：头部 `{{ store.raid.dungeon_name }}` 恢复为 `v-if="store.raid.dungeon_name"`
+3. `frontend/src/views/MyCharactersView.vue`：职业按钮两个 `<img>`（`categoryIcon`/`jobIcon`）补 `alt=""`
+4. `frontend/src/views/MyCharactersView.spec.ts`：顶部仿 RaidListView 加 `vi.mock('../lib/notify', () => ({ confirmDialog: vi.fn(async () => true), notifyError: vi.fn() }))`，去掉 jsdom 加载真实 createDiscreteApi 的隐性依赖
+5. `frontend/src/views/AdminView.vue`：三张 `.dnf-table` 补 `<thead>`/`<tbody>` 与 `<th scope="col">`
+
+- [ ] **Step 2: 全量测试与构建**
 
 Run: `cd /Users/able/toys/dnfer/frontend && npm run test && npm run build`
 预期：全部通过。
 
-- [ ] **Step 2: 启动本地开发服务做视觉走查**
+- [ ] **Step 3: 启动本地开发服务做视觉走查**
 
 Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/uvicorn app.main:app --port 8000`（另一终端）与 `cd /Users/able/toys/dnfer/frontend && npm run dev`
 
 走查清单（对照浏览器）：
 - [ ] 登录/注册页：居中鎏金卡片、背景纹理、NInput/NButton 金色主题
 - [ ] 攻坚列表：卡片鎏金描边、锁定/未锁定徽章、创建表单（副本 NSelect 自动填名、NDatePicker、名称 NInput）；**验证清空 NDatePicker 后点创建出现「请选择副本并填写发起时间」**（Task 8 质量评审建议的边界）
-- [ ] 排表详情：波次面板、红/黄/绿小队色块与计数、格子占位/空位、职责 NSelect、锁定时按钮只读态
-- [ ] **修 dnf.css 死选择器**：`.squad-0 .squad-col { border-color: ... }` 等 5 行是后代选择器，但 `squad-N` 类在 `.squad-col` 自身，永不匹配 → 改为复合选择器 `.squad-col.squad-0`（等 5 行），让小队卡片显示各队深色描边（Task 4 质量评审的 Important 项）
-- [ ] **恢复 `RaidDetailView` 副本名 `v-if` 守卫**：头部 `{{ store.raid.dungeon_name }}` 恢复为 `v-if="store.raid.dungeon_name"`，与 RaidListView 保持一致（Task 5 质量评审建议）
-- [ ] **`MyCharactersView.spec.ts` 加 notify mock**：仿 `RaidListView.spec.ts` 顶部加 `vi.mock('../lib/notify', () => ({ confirmDialog: vi.fn(async () => true), notifyError: vi.fn() }))`，去掉 jsdom 里加载真实 `createDiscreteApi` 的隐性依赖（Task 9 质量评审 Important 项）
-- [ ] **`MyCharactersView` 职业按钮装饰图加 `alt=""`**：两个 `<img>`（`categoryIcon`/`jobIcon`）补 `alt=""` 明确为装饰性（Task 9 质量评审建议）
+- [ ] 排表详情：波次面板、红/黄/绿小队色块与计数（深色描边需 Step 1 修复后可见）、格子占位/空位、职责 NSelect、锁定时按钮只读态
 - [ ] 我的角色：卡片网格、职业选择按钮 active 态、表单
 - [ ] 管理页：三个分区面板、表格金色表头、删除确认弹窗（Naive 金色对话框）
 - [ ] 移动端（DevTools 窄屏 <768px）：顶导航收进 ☰ 汉堡菜单、排表小队纵向堆叠
 - [ ] 无 JS 报错；`alert()`/`confirm()` 不再出现（已被 notify 取代）
 
-- [ ] **Step 3: （可选）README 技术栈表**
+- [ ] **Step 4: （可选）README 技术栈表**
 
 `README.md` 第 23 行前端一栏 `Vue 3 · TypeScript · Vite · Pinia · Vue Router` → 追加 `· Naive UI`。
 
-- [ ] **Step 4: 提交收尾**
+- [ ] **Step 5: 提交收尾**
 
 ```bash
 cd /Users/able/toys/dnfer
