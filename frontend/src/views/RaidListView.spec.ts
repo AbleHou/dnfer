@@ -7,8 +7,10 @@ import RaidListView from './RaidListView.vue'
 import { useAuthStore } from '../stores/auth'
 import type { Dungeon, RaidListItem } from '../types'
 
-const { apiMock } = vi.hoisted(() => ({
+const { apiMock, confirmDialogMock, notifyErrorMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn() },
+  confirmDialogMock: vi.fn(async () => true),
+  notifyErrorMock: vi.fn(),
 }))
 vi.mock('../api/client', () => ({
   api: apiMock,
@@ -16,11 +18,20 @@ vi.mock('../api/client', () => ({
   setToken: vi.fn(),
   clearToken: vi.fn(),
 }))
+vi.mock('../lib/notify', () => ({
+  confirmDialog: confirmDialogMock,
+  notifyError: notifyErrorMock,
+  notifyWarning: vi.fn(),
+  notifySuccess: vi.fn(),
+}))
 
 const dungeons: Dungeon[] = [{ id: 7, name: '巴卡尔', size: 16, description: '', created_at: '' }]
+const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
+  size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  confirmDialogMock.mockResolvedValue(true)
   apiMock.get.mockImplementation(async (url: string) => {
     if (url === '/api/raids') return [] as RaidListItem[]
     if (url === '/api/dungeons') return dungeons
@@ -35,15 +46,15 @@ describe('RaidListView create form', () => {
     const auth = useAuthStore()
     auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
 
-    const wrapper = mount(RaidListView, {
-      global: { plugins: [pinia], stubs: ['router-link'] },
-    })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
-    await wrapper.find('button').trigger('click')        // 展开创建表单
-    await wrapper.find('select').setValue(7)             // 选择副本
-    const inputs = wrapper.findAll('input')
-    // 表单输入顺序为 [starts_at(datetime-local), name]，name 是第 2 个（自动填入副本名）
-    expect((inputs[1].element as HTMLInputElement).value).toBe('巴卡尔')
+    await wrapper.find('[data-test="create-toggle"]').trigger('click')
+    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', 7)
+    await flushPromises()
+
+    const nameInput = wrapper.findAllComponents({ name: 'Input' })
+      .find(c => c.attributes('data-test') === 'name-input')
+    expect(nameInput?.props('value')).toBe('巴卡尔')
     expect(wrapper.text()).toContain('规模锁定：16 人')
   })
 
@@ -53,9 +64,7 @@ describe('RaidListView create form', () => {
     const auth = useAuthStore()
     auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false }
 
-    const wrapper = mount(RaidListView, {
-      global: { plugins: [pinia], stubs: ['router-link'] },
-    })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
     expect(apiMock.get).not.toHaveBeenCalledWith('/api/dungeons')
   })
@@ -65,24 +74,39 @@ describe('RaidListView create form', () => {
     setActivePinia(pinia)
     const auth = useAuthStore()
     auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
-    const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
-      size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1 }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       if (url === '/api/dungeons') return dungeons
       return []
     })
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    const wrapper = mount(RaidListView, {
-      global: { plugins: [pinia], stubs: ['router-link'] },
-    })
+
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
     const delBtn = wrapper.findAll('button').find(b => b.text().includes('删除'))
     expect(delBtn).toBeTruthy()
     await delBtn!.trigger('click')
-    expect(confirmSpy).toHaveBeenCalled()
+    await flushPromises()
+    expect(confirmDialogMock).toHaveBeenCalled()
     expect(apiMock.del).toHaveBeenCalledWith('/api/raids/3')
-    confirmSpy.mockRestore()
+  })
+
+  it('cancel keeps the raid', async () => {
+    confirmDialogMock.mockResolvedValue(false)
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [raid] as RaidListItem[]
+      if (url === '/api/dungeons') return dungeons
+      return []
+    })
+
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text().includes('删除'))!.trigger('click')
+    await flushPromises()
+    expect(apiMock.del).not.toHaveBeenCalled()
   })
 
   it('does not show delete button for non-admin', async () => {
@@ -90,15 +114,12 @@ describe('RaidListView create form', () => {
     setActivePinia(pinia)
     const auth = useAuthStore()
     auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false }
-    const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
-      size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1 }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       return []
     })
-    const wrapper = mount(RaidListView, {
-      global: { plugins: [pinia], stubs: ['router-link'] },
-    })
+
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
     expect(wrapper.text()).not.toContain('删除')
   })

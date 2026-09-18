@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { NSelect, NDatePicker, NInput } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
+import { confirmDialog, notifyError } from '../lib/notify'
 import type { Dungeon, RaidListItem } from '../types'
 
 const auth = useAuthStore()
@@ -10,11 +12,14 @@ const raids = ref<RaidListItem[]>([])
 const showCreate = ref(false)
 const name = ref('')
 const dungeonId = ref<number | null>(null)
-const startsAt = ref('')
+const startsAt = ref<string | null>(null)
 const dungeons = ref<Dungeon[]>([])
 const sizeLocked = ref<number | null>(null)
 const error = ref('')
 const creating = ref(false)
+
+const dungeonOptions = computed(() =>
+  dungeons.value.map(d => ({ label: `${d.name}（${d.size} 人）`, value: d.id })))
 
 async function load() {
   raids.value = await api.get<RaidListItem[]>('/api/raids')
@@ -22,7 +27,8 @@ async function load() {
 }
 onMounted(load)
 
-function onDungeonChange() {
+function onDungeonChange(v: number | null) {
+  dungeonId.value = v
   const d = dungeons.value.find(x => x.id === dungeonId.value)
   sizeLocked.value = d ? d.size : null
   if (d && !name.value) name.value = d.name
@@ -40,52 +46,55 @@ async function create() {
       starts_at: startsAt.value,
     })
     showCreate.value = false; name.value = ''; dungeonId.value = null
-    startsAt.value = ''; sizeLocked.value = null
+    startsAt.value = null; sizeLocked.value = null
     await load()
   } catch (e: any) { error.value = e.message }
   finally { creating.value = false }
 }
 
 async function onDelete(r: RaidListItem) {
-  if (!confirm(`确认删除攻坚「${r.name}」？该操作不可恢复`)) return
+  const ok = await confirmDialog({ content: `确认删除攻坚「${r.name}」？该操作不可恢复` })
+  if (!ok) return
   try { await api.del(`/api/raids/${r.id}`); await load() }
-  catch (e: any) { alert(e.message) }
+  catch (e: any) { notifyError(e.message) }
 }
 </script>
 
 <template>
-  <div style="max-width:800px;margin:24px auto">
-    <div style="display:flex;align-items:center;gap:12px">
-      <h2>攻坚列表</h2>
-      <button v-if="auth.isAdmin" @click="showCreate = !showCreate">＋ 发起攻坚</button>
+  <div class="dnf-page">
+    <div class="page-head">
+      <h2 style="margin:0">攻坚列表</h2>
+      <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-primary" data-test="create-toggle"
+              @click="showCreate = !showCreate">＋ 发起攻坚</button>
     </div>
 
-    <div v-if="showCreate" style="border:1px solid #ddd;padding:16px;margin:12px 0">
-      <div style="margin:6px 0">
-        <select v-model.number="dungeonId" @change="onDungeonChange">
-          <option :value="null" disabled>选择副本</option>
-          <option v-for="d in dungeons" :key="d.id" :value="d.id">{{ d.name }}（{{ d.size }} 人）</option>
-        </select>
-        <span v-if="sizeLocked" style="margin-left:8px;color:#666">规模锁定：{{ sizeLocked }} 人</span>
+    <div v-if="showCreate" class="dnf-panel create-form">
+      <div style="margin:8px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <n-select data-test="dungeon-select" style="flex:1;min-width:220px"
+                  :options="dungeonOptions" placeholder="选择副本" @update:value="onDungeonChange" />
+        <span v-if="sizeLocked" style="color:var(--dnf-text-muted)">规模锁定：{{ sizeLocked }} 人</span>
       </div>
-      <div style="margin:6px 0">
-        <input v-model="startsAt" type="datetime-local" placeholder="发起时间" />
+      <div style="margin:8px 0">
+        <n-date-picker data-test="starts-at" type="datetime" value-format="yyyy-MM-dd'T'HH:mm:ss"
+                       :actions="null" clearable placeholder="发起时间" v-model:formatted-value="startsAt" />
       </div>
-      <div style="margin:6px 0">
-        <input v-model="name" placeholder="攻坚名称（默认副本名）" />
+      <div style="margin:8px 0">
+        <n-input data-test="name-input" v-model:value="name" placeholder="攻坚名称（默认副本名）" />
       </div>
-      <p v-if="error" style="color:#c62828">{{ error }}</p>
-      <button :disabled="creating" @click="create">{{ creating ? '创建中…' : '创建' }}</button>
+      <p v-if="error" class="form-error">{{ error }}</p>
+      <button class="dnf-btn dnf-btn-primary" data-test="create-submit" :disabled="creating" @click="create">
+        {{ creating ? '创建中…' : '创建' }}
+      </button>
     </div>
 
-    <div v-for="r in raids" :key="r.id" style="border:1px solid #eee;padding:12px;margin:8px 0;
-         display:flex;align-items:center;gap:12px">
-      <router-link :to="`/raids/${r.id}`" style="font-weight:bold">{{ r.name }}</router-link>
-      <span v-if="r.dungeon_name" style="color:#666">{{ r.dungeon_name }}</span>
-      <span style="color:#999">{{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
-      <span :style="{color: r.locked ? '#c62828' : '#2e7d32'}">{{ r.locked ? '已锁定' : '未锁定' }}</span>
-      <button v-if="auth.isAdmin" @click.stop="onDelete(r)" style="margin-left:auto">删除</button>
+    <div v-for="r in raids" :key="r.id" class="dnf-panel raid-card">
+      <router-link :to="`/raids/${r.id}`" class="raid-name">{{ r.name }}</router-link>
+      <span class="raid-meta">{{ r.dungeon_name }} · {{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
+      <span class="dnf-badge" :class="r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
+        {{ r.locked ? '已锁定' : '未锁定' }}
+      </span>
+      <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" style="margin-left:auto" @click="onDelete(r)">删除</button>
     </div>
-    <p v-if="!raids.length" style="color:#999">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
+    <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
   </div>
 </template>
