@@ -405,6 +405,8 @@ export function confirmDialog(options: { title?: string; content: string }): Pro
       onPositiveClick: () => resolve(true),
       onNegativeClick: () => resolve(false),
       onClose: () => resolve(false),
+      onMaskClick: () => resolve(false),
+      onEsc: () => resolve(false),
     })
   })
 }
