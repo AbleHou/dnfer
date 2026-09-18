@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { Wave } from '../types'
 import SlotCell from './SlotCell.vue'
 import { SQUAD_NAMES } from '../lib/colors'
+import { sumSquadDamage } from '../lib/damage'
 
 const props = defineProps<{
   wave: Wave
@@ -24,6 +25,7 @@ const squads = computed(() => {
 })
 const counts = computed(() =>
   squads.value.map(g => ({ filled: g.filter(s => s.character_id != null).length, total: g.length })))
+const totals = computed(() => squads.value.map(sumSquadDamage))
 </script>
 
 <template>
@@ -35,6 +37,9 @@ const counts = computed(() =>
     <div class="squad-grid">
       <div v-for="(g, i) in squads" :key="i" class="squad-col" :class="'squad-' + i">
         <div class="squad-head">{{ SQUAD_NAMES[i] }} · {{ counts[i].filled }}/{{ counts[i].total }}</div>
+        <div v-if="totals[i].hasOutput" class="squad-stats">
+          总输出 {{ totals[i].simulated }}亿 · 秒伤 {{ totals[i].sustained }}亿
+        </div>
         <div class="squad-cells">
           <SlotCell v-for="slot in g" :key="slot.id" :slot="slot" :squad-index="i"
                     :editable="editable && (isAdmin || slot.owner_id === currentUserId)"
