@@ -281,6 +281,27 @@ def test_move_ws_broadcast(client):
         types = [ws.receive_json()["type"] for _ in range(2)]
         assert types == ["slot:filled", "slot:removed"]
 
+def test_swap_ws_broadcast(client):
+    ah = _admin(client)
+    token = ah["Authorization"].split()[1]
+    h1, _ = register_user(client, "swsws1", "甲")
+    h2, _ = register_user(client, "swsws2", "乙")
+    c1 = _mkchar(client, h1, "C1")
+    c2 = _mkchar(client, h2, "C2")
+    rid = make_raid(client, ah)["id"]
+    slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
+    sA = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
+    sB = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)
+    client.post(f"/api/raids/{rid}/slots/{sA['id']}/fill", headers=h1,
+                json={"character_id": c1})
+    client.post(f"/api/raids/{rid}/slots/{sB['id']}/fill", headers=h2,
+                json={"character_id": c2})
+    with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
+        client.post(f"/api/raids/{rid}/slots/{sA['id']}/move", headers=ah,
+                    json={"target_slot_id": sB["id"]})
+        types = sorted(ws.receive_json()["type"] for _ in range(2))
+        assert types == ["slot:filled", "slot:filled"]
+
 def test_admin_characters_endpoint(client):
     ah = _admin(client)
     h1, u1 = register_user(client, "ach1", "甲")
