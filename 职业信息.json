@@ -109,13 +109,13 @@
             {
                 "id": 0,
                 "name": "crusader_male",
-                "title": "神启·圣骑士",
+                "title": "光启·光明骑士",
                 "open": true,
                 "class": "GF.priest_male.crusader_male"
             },
-            {"id": 1, "name": "infighter", "title": "神启·蓝拳圣使", "class": "GF.priest_male.infighter"},
-            {"id": 2, "name": "exorcist", "title": "神启·驱魔师", "class": "GF.priest_male.exorcist"},
-            {"id": 3, "name": "avenger", "title": "神启·复仇者", "class": "GF.priest_male.avenger"},
+            {"id": 1, "name": "infighter", "title": "光启·蓝拳圣使", "class": "GF.priest_male.infighter"},
+            {"id": 2, "name": "exorcist", "title": "光启·驱魔师", "class": "GF.priest_male.exorcist"},
+            {"id": 3, "name": "avenger", "title": "光启·复仇者", "class": "GF.priest_male.avenger"},
             {"id": 4, "name": "empty", "title": ""}
         ]
     },
@@ -127,15 +127,15 @@
             {
                 "id": 0,
                 "name": "crusader_female",
-                "title": "神启·圣骑士",
+                "title": "光启·光明骑士",
                 "open": true,
                 "class": "GF.priest_female.crusader_female"
                 
             },
-            {"id": 1, "name": "inquistor", "title": "神启·异端审判者", "class": "GF.priest_female.inquistor"},
-            {"id": 2, "name": "sorceress", "title": "神启·巫女", "class": "GF.priest_female.sorceress"},
-            {"id": 3, "name": "mistress", "title": "神启·诱魔者", "class": "GF.priest_female.mistress"},
-            {"id": 4, "name": "infighter_female", "title": "神启·蓝拳圣使", "class": "GF.priest_female.infighter_female"}
+            {"id": 1, "name": "inquistor", "title": "光启·异端审判者", "class": "GF.priest_female.inquistor"},
+            {"id": 2, "name": "sorceress", "title": "光启·巫女", "class": "GF.priest_female.sorceress"},
+            {"id": 3, "name": "mistress", "title": "光启·诱魔者", "class": "GF.priest_female.mistress"},
+            {"id": 4, "name": "infighter_female", "title": "光启·蓝拳圣使", "class": "GF.priest_female.infighter_female"}
         ]
     },
     {
