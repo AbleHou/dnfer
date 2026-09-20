@@ -126,6 +126,9 @@ class FillIn(BaseModel):
 class DutyIn(BaseModel):
     duty: str
 
+class MoveIn(BaseModel):
+    target_slot_id: int
+
 class SlotMutationResult(BaseModel):
     slot: SlotOut
     warnings: list[str] = []

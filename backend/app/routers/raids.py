@@ -7,9 +7,9 @@ from .. import jobs as job_data
 from ..auth import get_current_user, require_admin
 from ..db import get_db
 from ..models import Character, Dungeon, Raid, Slot, User, Wave
-from ..schemas import (DutyIn, FillIn, FillResponse, RaidCreate, RaidDetail,
-                       RaidListItem, RaidUpdate, SlotMutationResult, SlotOut,
-                       WaveOut)
+from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, RaidCreate,
+                       RaidDetail, RaidListItem, RaidUpdate, SlotMutationResult,
+                       SlotOut, WaveOut)
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
                                        duty_valid_for_class)
@@ -303,3 +303,75 @@ async def change_duty(rid: int, slot_id: int, body: DutyIn,
     await manager.broadcast(rid, {"type": "slot:duty_changed",
                                   "slot": _slot_out(slot).model_dump()})
     return SlotMutationResult(slot=_slot_out(slot), warnings=warnings)
+
+def _validate_one_char_per_wave(db: Session, wave_ids: set[int]) -> None:
+    """跨波 move/swap 后：受影响波内同一玩家不得出现两个角色（双向校验）。"""
+    for wid in wave_ids:
+        seen: set[int] = set()
+        for s in db.query(Slot).filter(Slot.wave_id == wid):
+            if s.character_id is not None and s.character is not None:
+                uid = s.character.user_id
+                if uid in seen:
+                    raise HTTPException(400, "同一波次中一个玩家只能上一个角色")
+                seen.add(uid)
+
+
+@router.post("/{rid}/slots/{slot_id}/move", response_model=FillResponse)
+async def move_slot(rid: int, slot_id: int, body: MoveIn,
+                    admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    source = db.get(Slot, slot_id)
+    if source is None or source.wave.raid_id != rid:
+        raise HTTPException(404, "格子不存在")
+    if slot_id == body.target_slot_id:
+        raise HTTPException(400, "目标格不能是自身")
+    target = db.get(Slot, body.target_slot_id)
+    if target is None or target.wave.raid_id != rid:
+        raise HTTPException(404, "格子不存在")
+    if source.character_id is None:
+        raise HTTPException(400, "该格为空")
+    # 先在内存态完成 move/swap（autoflush=False，后续校验读的是内存态）
+    removed: list[Slot] = []
+    if target.character_id is None:
+        target.character = source.character
+        target.character_id = source.character_id
+        target.duty = source.duty
+        _clear_slot(source)
+        removed.append(source)
+    else:
+        src_char, src_duty = source.character, source.duty
+        tgt_char, tgt_duty = target.character, target.duty
+        source.character = tgt_char
+        source.character_id = tgt_char.id
+        source.duty = tgt_duty
+        target.character = src_char
+        target.character_id = src_char.id
+        target.duty = src_duty
+    # 校验：受影响小队组成规则（空小队跳过）+ 同波同玩家
+    squads = {(source.wave_id, source.squad_index), (target.wave_id, target.squad_index)}
+    warnings: list[str] = []
+    try:
+        for wid, sq in squads:
+            wave = db.get(Wave, wid)
+            if _squad_occupied(db, wave, sq):
+                warnings += _raise_if_hard(db, wave, sq)
+        _validate_one_char_per_wave(db, {source.wave_id, target.wave_id})
+    except HTTPException:
+        db.rollback()
+        raise
+    # 版本与审计
+    for s in (source, target):
+        if s.character_id is not None:
+            s.version += 1
+            s.updated_by = admin.id
+            s.updated_at = _now()
+    db.commit()
+    db.refresh(source)
+    db.refresh(target)
+    await manager.broadcast(rid, {"type": "slot:filled", "slot": _slot_out(target).model_dump()})
+    if removed:
+        await manager.broadcast(rid, {"type": "slot:removed", "slot_id": source.id})
+    else:
+        await manager.broadcast(rid, {"type": "slot:filled", "slot": _slot_out(source).model_dump()})
+    return FillResponse(slot=_slot_out(target), warnings=warnings,
+                        removed_slots=[_slot_out(s) for s in removed])
