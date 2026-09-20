@@ -86,6 +86,48 @@ describe('MyCharactersView job picker', () => {
     expect(body.job_name).toBe('crusader_male')
   })
 
+  it('edit form renders inline right below the edited card', async () => {
+    const charA = {
+      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 100,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+    }
+    const charB = {
+      id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+      parent_name: 'priest_male', class_type: '辅助', fame: 200,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000,
+    }
+    apiMock.get.mockResolvedValueOnce([charA, charB])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    const editBtns = wrapper.findAll('button').filter(b => b.text() === '编辑')
+    await editBtns[0].trigger('click')
+    await flushPromises()
+    const panels = wrapper.findAll('.dnf-panel')
+    const cardIdx = panels.findIndex(p => p.text().includes('剑魂'))
+    const next = panels[cardIdx + 1]
+    expect(next.classes()).toContain('create-form')
+    expect(next.text()).toContain('编辑角色')
+    expect(panels[cardIdx + 2].text()).toContain('奶')
+  })
+
+  it('create form renders below the header, not after the list', async () => {
+    const char = {
+      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 100,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+    }
+    apiMock.get.mockResolvedValueOnce([char])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    await wrapper.find('button').trigger('click')          // 添加角色
+    await flushPromises()
+    const panels = wrapper.findAll('.dnf-panel')
+    expect(panels[0].classes()).toContain('create-form')
+    expect(panels[0].text()).toContain('添加角色')
+    expect(panels[1].text()).toContain('剑魂')
+  })
+
   it('save without picking a job shows guard error and does not post', async () => {
     const wrapper = mount(MyCharactersView)
     await flushPromises()
