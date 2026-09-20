@@ -175,7 +175,7 @@ async def delete_wave(rid: int, index: int, user: User = Depends(get_current_use
         if raid.locked:
             raise HTTPException(403, "攻坚已锁定，仅管理员可编辑")
         filled = [s for s in wave.slots if s.character_id is not None]
-        if any(s.updated_by != user.id for s in filled):
+        if any(s.character.user_id != user.id for s in filled):
             raise HTTPException(403, "该波次包含他人角色，无权删除")
     db.delete(wave)
     db.commit()
@@ -264,7 +264,7 @@ async def remove_slot(rid: int, slot_id: int, user: User = Depends(get_current_u
     if not user.is_admin:
         if raid.locked:
             raise HTTPException(403, "攻坚已锁定，仅管理员可编辑")
-        if slot.updated_by != user.id:
+        if slot.character.user_id != user.id:
             raise HTTPException(403, "只能操作自己的格子")
     _clear_slot(slot)
     db.commit()
@@ -284,7 +284,7 @@ async def change_duty(rid: int, slot_id: int, body: DutyIn,
     if not user.is_admin:
         if raid.locked:
             raise HTTPException(403, "攻坚已锁定，仅管理员可编辑")
-        if slot.updated_by != user.id:
+        if slot.character.user_id != user.id:
             raise HTTPException(403, "只能操作自己的格子")
     char = db.get(Character, slot.character_id)
     if not duty_valid_for_class(body.duty, char.class_type):

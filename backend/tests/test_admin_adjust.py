@@ -47,3 +47,44 @@ def test_non_admin_cannot_fill_occupied_slot(client):
     r = client.post(f"/api/raids/{rid}/slots/{sA['id']}/fill", headers=h2,
                     json={"character_id": c2})
     assert r.status_code == 400
+
+def test_owner_can_manage_slot_admin_placed(client):
+    ah = _admin(client)
+    h1, u1 = register_user(client, "own1", "甲")
+    c1 = _mkchar(client, h1, "C1")
+    rid = make_raid(client, ah)["id"]
+    slot = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"][0]
+    # 管理员替甲放置 C1（管理员可用任意角色）
+    assert client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=ah,
+                       json={"character_id": c1}).status_code == 200
+    # 甲本人（非管理员）可改职责、可撤下
+    assert client.put(f"/api/raids/{rid}/slots/{slot['id']}/duty", headers=h1,
+                      json={"duty": "辅C"}).status_code == 200
+    assert client.delete(f"/api/raids/{rid}/slots/{slot['id']}", headers=h1).status_code == 200
+
+def test_non_owner_cannot_manage_others_slot(client):
+    ah = _admin(client)
+    h1, _ = register_user(client, "own2", "乙")
+    h2, _ = register_user(client, "own3", "丙")
+    c1 = _mkchar(client, h1, "C1")
+    rid = make_raid(client, ah)["id"]
+    slot = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"][0]
+    client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h1,
+                json={"character_id": c1})
+    # 丙无法操作乙的格子（即便该格不是乙放置的也无所谓）
+    assert client.delete(f"/api/raids/{rid}/slots/{slot['id']}", headers=h2).status_code == 403
+
+def test_owner_can_delete_wave_with_only_own_chars_admin_placed(client):
+    ah = _admin(client)
+    h1, _ = register_user(client, "own4", "丁")
+    c1 = _mkchar(client, h1, "C1")
+    rid = make_raid(client, ah)["id"]
+    # 加波 2，管理员在波 2 放丁的 C1
+    client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
+    w2 = next(w for w in client.get(f"/api/raids/{rid}", headers=ah).json()["waves"]
+              if w["index"] == 2)
+    s = w2["slots"][0]
+    assert client.post(f"/api/raids/{rid}/slots/{s['id']}/fill", headers=ah,
+                       json={"character_id": c1}).status_code == 200
+    # 丁可删除仅含自己角色的波 2
+    assert client.delete(f"/api/raids/{rid}/waves/2", headers=h1).status_code == 200
