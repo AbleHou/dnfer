@@ -40,6 +40,10 @@ class UserOut(BaseModel):
     nickname: str
     is_admin: bool
 
+class PlayerCharacters(BaseModel):
+    user: UserOut
+    characters: list[CharacterOut]
+
 class CodeCreate(BaseModel):
     single_use: bool = True
     expire_days: int | None = None

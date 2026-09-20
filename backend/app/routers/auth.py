@@ -1,14 +1,16 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth import (consume_code, create_access_token, get_current_user,
                     hash_password, make_code, require_admin, verify_password)
 from ..config import settings
 from ..db import get_db
-from ..models import RegistrationCode, User
-from ..schemas import CodeCreate, CodeOut, LoginIn, RegisterIn, UserOut
+from ..models import Character, RegistrationCode, User
+from ..schemas import CodeCreate, CodeOut, LoginIn, PlayerCharacters, RegisterIn, UserOut
+from .members import _character_out
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -52,3 +54,15 @@ def list_codes(admin: User = Depends(require_admin), db: Session = Depends(get_d
 @router.get("/admin/users", response_model=list[UserOut])
 def list_users(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     return db.query(User).all()
+
+@router.get("/admin/characters", response_model=list[PlayerCharacters])
+def list_all_characters(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    result = []
+    for u in db.scalars(select(User).order_by(User.nickname)).all():
+        chars = db.scalars(select(Character).where(Character.user_id == u.id)
+                           .order_by(Character.id)).all()
+        if not chars:
+            continue  # 过滤无角色玩家
+        result.append(PlayerCharacters(user=UserOut.model_validate(u),
+                                       characters=[_character_out(c) for c in chars]))
+    return result

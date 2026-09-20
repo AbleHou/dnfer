@@ -280,3 +280,21 @@ def test_move_ws_broadcast(client):
                     json={"target_slot_id": sB["id"]})
         types = [ws.receive_json()["type"] for _ in range(2)]
         assert types == ["slot:filled", "slot:removed"]
+
+def test_admin_characters_endpoint(client):
+    ah = _admin(client)
+    h1, u1 = register_user(client, "ach1", "甲")
+    h2, _ = register_user(client, "ach2", "乙")
+    c1 = client.post("/api/me/characters", headers=h1, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 52000}).json()
+    client.post("/api/me/characters", headers=h2, json={
+        "name": "奶", "job_name": "crusader_male", "fame": 1, "buff_amount": 9000})
+    # 非管理员 403
+    assert client.get("/api/admin/characters", headers=h1).status_code == 403
+    # 管理员拿到全量（含甲、乙，跳过无角色的管理员自己/其他无角色用户）
+    r = client.get("/api/admin/characters", headers=ah)
+    assert r.status_code == 200
+    by_nick = {p["user"]["nickname"]: p for p in r.json()}
+    assert set(by_nick) >= {"甲", "乙"}
+    assert {c["name"] for c in by_nick["甲"]["characters"]} == {"剑魂"}
+    assert by_nick["甲"]["user"]["id"] == u1["id"]
