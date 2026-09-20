@@ -54,4 +54,15 @@ describe('SlotCell admin interactions', () => {
     expect(wrapper.emitted('pick')).toBeUndefined()
     expect(wrapper.emitted('moveTo')).toBeTruthy()
   })
+
+  it('点击「撤下」链接只 emit remove，不 emit manage', async () => {
+    const s = occupied(1)
+    const wrapper = mount(SlotCell, { props: { slot: s, squadIndex: 0, editable: true, pickable: false, isAdmin: true } })
+    const links = wrapper.findAll('a')
+    const removeLink = links.find(a => a.text() === '撤下')
+    expect(removeLink).toBeTruthy()
+    await removeLink!.trigger('click')
+    expect((wrapper.emitted('remove')?.[0][0] as Slot).id).toBe(1)
+    expect(wrapper.emitted('manage')).toBeUndefined()
+  })
 })

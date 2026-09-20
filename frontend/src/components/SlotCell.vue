@@ -53,13 +53,13 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
              style="width:20px;height:20px;margin-left:6px;vertical-align:middle">
         <span v-if="slot.job_title" style="color:var(--dnf-text-muted);font-size:12px;margin-left:6px">{{ slot.job_title }}</span>
         <DutySelect v-if="editable" :class-type="slot.character_class!" :model-value="slot.duty"
-                    @update:model-value="(d) => emit('duty', slot, d)" />
+                    @click.stop @update:model-value="(d) => emit('duty', slot, d)" />
         <span v-else class="dnf-badge" style="font-size:11px;color:var(--dnf-gold-hi);border-color:var(--dnf-gold-deep)">{{ slot.duty }}</span>
       </div>
       <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
         {{ attrs }}
         <a v-if="editable" href="#" style="margin-left:8px;color:var(--dnf-danger)"
-           @click.prevent="emit('remove', slot)">撤下</a>
+           @click.prevent.stop="emit('remove', slot)">撤下</a>
       </div>
     </template>
     <button v-else-if="pickable" class="pick-btn" @click.stop="emit('pick', slot)">＋ 点击占位</button>
