@@ -191,7 +191,7 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
     slot = db.get(Slot, slot_id)
     if slot is None or slot.wave.raid_id != rid:
         raise HTTPException(404, "格子不存在")
-    if slot.character_id is not None:
+    if slot.character_id is not None and not user.is_admin:
         raise HTTPException(400, "该格已有人占位")
     char = db.get(Character, body.character_id)
     if char is None:
