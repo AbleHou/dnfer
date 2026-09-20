@@ -295,6 +295,6 @@ def test_admin_characters_endpoint(client):
     r = client.get("/api/admin/characters", headers=ah)
     assert r.status_code == 200
     by_nick = {p["user"]["nickname"]: p for p in r.json()}
-    assert set(by_nick) >= {"甲", "乙"}
+    assert set(by_nick) == {"甲", "乙"}  # 群主无角色，被过滤
     assert {c["name"] for c in by_nick["甲"]["characters"]} == {"剑魂"}
     assert by_nick["甲"]["user"]["id"] == u1["id"]
