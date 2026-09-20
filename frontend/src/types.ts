@@ -5,6 +5,7 @@ export interface User { id: number; username: string; nickname: string; is_admin
 export interface Character { id: number; name: string; job_name: string; job_title: string;
   parent_name: string; class_type: ClassType; fame: number;
   simulated_damage: number | null; sustained_dps: number | null; buff_amount: number | null }
+export interface PlayerCharacters { user: User; characters: Character[] }
 export interface Slot { id: number; squad_index: number; row_index: number;
   character_id: number | null; character_name: string | null;
   character_class: ClassType | null; job_name: string | null; job_title: string | null;
