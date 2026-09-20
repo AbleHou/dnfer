@@ -129,6 +129,12 @@ a { color: var(--dnf-gold-hi); }
 .slot-cell.pickable { cursor: pointer; color: var(--dnf-text-faint); }
 .slot-cell.pickable:hover { border-color: var(--dnf-gold-hi); }
 .slot-cell.empty { color: #4a3d28; }
+.slot-cell.manageable { cursor: pointer; }
+.slot-cell.manageable:hover { border-color: var(--dnf-gold-hi); box-shadow: 0 0 0 1px var(--dnf-gold-hi); }
+.slot-cell.move-target { cursor: copy; }
+.slot-cell.move-target:hover { border-color: var(--dnf-gold-hi); box-shadow: 0 0 0 1px var(--dnf-gold-hi); }
+.slot-cell.moving { border-color: var(--dnf-gold-hi); box-shadow: 0 0 8px rgba(212,165,60,.6); cursor: not-allowed; }
+.moving-badge { display:inline-block; color: var(--dnf-gold-hi); font-size: 11px; border: 1px solid var(--dnf-gold-deep); padding: 0 4px; border-radius: 4px; }
 .pick-btn { border: none; background: transparent; color: var(--dnf-text-faint); cursor: pointer; font-size: 14px; }
 .pick-btn:hover { color: var(--dnf-gold-hi); }
 

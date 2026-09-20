@@ -11,12 +11,16 @@ const props = defineProps<{
   isAdmin: boolean
   canDelete: boolean
   currentUserId: number | null
+  moveMode?: boolean
+  movingSlotId?: number | null
 }>()
 const emit = defineEmits<{
   (e: 'pick', slot: any): void
   (e: 'duty', slot: any, duty: string): void
   (e: 'remove', slot: any): void
   (e: 'deleteWave', index: number): void
+  (e: 'manage', slot: any): void
+  (e: 'moveTo', slot: any): void
 }>()
 
 const squads = computed(() => {
@@ -43,9 +47,11 @@ const totals = computed(() => squads.value.map(sumSquadDamage))
         <div class="squad-cells">
           <SlotCell v-for="slot in g" :key="slot.id" :slot="slot" :squad-index="i"
                     :editable="editable && (isAdmin || slot.owner_id === currentUserId)"
-                    :pickable="editable && slot.character_id == null"
+                    :pickable="editable && slot.character_id == null && !moveMode"
+                    :is-admin="isAdmin" :move-mode="moveMode" :moving="slot.id === movingSlotId"
                     @pick="emit('pick', $event)" @duty="(s, d) => emit('duty', s, d)"
-                    @remove="emit('remove', $event)" />
+                    @remove="emit('remove', $event)" @manage="emit('manage', $event)"
+                    @moveTo="emit('moveTo', $event)" />
         </div>
       </div>
     </div>

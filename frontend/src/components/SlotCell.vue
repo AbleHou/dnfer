@@ -9,14 +9,26 @@ const props = defineProps<{
   squadIndex: number
   editable: boolean
   pickable: boolean
+  isAdmin?: boolean
+  moveMode?: boolean
+  moving?: boolean
 }>()
 const emit = defineEmits<{
   (e: 'pick', slot: Slot): void
   (e: 'duty', slot: Slot, duty: string): void
   (e: 'remove', slot: Slot): void
+  (e: 'manage', slot: Slot): void
+  (e: 'moveTo', slot: Slot): void
 }>()
 
 const occupied = computed(() => props.slot.character_id != null)
+const manageable = computed(() => occupied.value && !!props.isAdmin && !props.moveMode)
+const isMoving = computed(() => !!props.moveMode && !!props.moving)
+
+function onCellClick() {
+  if (props.moveMode) { emit('moveTo', props.slot); return }
+  if (manageable.value) emit('manage', props.slot)
+}
 const attrs = computed(() => {
   const s = props.slot
   if (s.character_class === '输出') return `模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
@@ -29,10 +41,11 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 
 <template>
   <div class="slot-cell" :class="[
-    { occupied, pickable, empty: !occupied && !pickable },
+    { occupied, pickable, empty: !occupied && !pickable, manageable, 'move-target': moveMode && !isMoving, moving: isMoving },
     `squad-${squadIndex}`,
-  ]">
+  ]" @click="onCellClick">
     <template v-if="occupied">
+      <span v-if="isMoving" class="moving-badge">移动中</span>
       <div>
         <b style="color:var(--dnf-text)">{{ slot.owner_nickname }}</b>
         <span style="color:var(--dnf-text-muted);font-size:12px">（{{ slot.character_name }}）</span>
@@ -49,7 +62,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
            @click.prevent="emit('remove', slot)">撤下</a>
       </div>
     </template>
-    <button v-else-if="pickable" class="pick-btn" @click="emit('pick', slot)">＋ 点击占位</button>
+    <button v-else-if="pickable" class="pick-btn" @click.stop="emit('pick', slot)">＋ 点击占位</button>
     <span v-else>—</span>
   </div>
 </template>
