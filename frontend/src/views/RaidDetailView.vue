@@ -8,6 +8,8 @@ import { connectRaidWs } from '../api/ws'
 import WaveSection from '../components/WaveSection.vue'
 import { formatDateTime } from '../utils/datetime'
 import CharacterPickerModal from '../components/CharacterPickerModal.vue'
+import SlotActionModal from '../components/SlotActionModal.vue'
+import { useSlotMove } from '../composables/useSlotMove'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { Character, Duty, Slot } from '../types'
 
@@ -17,6 +19,8 @@ const store = useRaidStore()
 const rid = Number(route.params.id)
 
 const pickSlot = ref<Slot | null>(null)
+const manageSlot = ref<Slot | null>(null)
+const { movingSlot, pickUp, cancel, moveTo } = useSlotMove(rid, load)
 let disconnect: (() => void) | null = null
 
 const editable = computed(() => !store.raid?.locked || auth.isAdmin)
@@ -32,9 +36,21 @@ onMounted(() => {
   })
   void load()
 })
-onBeforeUnmount(() => disconnect?.())
+function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape' && movingSlot.value) cancel() }
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => { disconnect?.(); window.removeEventListener('keydown', onKeydown) })
 
 async function onPick(slot: Slot) { pickSlot.value = slot }
+function onManage(slot: Slot) { manageSlot.value = slot }
+function onReplace(slot: Slot) { manageSlot.value = null; pickSlot.value = slot }
+function onPickUp(slot: Slot) { manageSlot.value = null; pickUp(slot) }
+function onRemoveFromMenu(slot: Slot) { manageSlot.value = null; void onRemove(slot) }
+async function onMoveTo(target: Slot) {
+  try {
+    const r = await moveTo(target)
+    if (r.warnings.length) notifyWarning(r.warnings.join('；'))
+  } catch (e: any) { notifyError(e.message) }
+}
 async function onSelectCharacter(c: Character, duty: Duty) {
   if (!pickSlot.value) return
   try {
@@ -92,14 +108,24 @@ async function onDeleteWave(index: number) {
       </span>
     </div>
 
+    <div v-if="movingSlot" class="move-hint" style="display:flex;align-items:center;gap:10px;margin:10px 0">
+      <span style="color:var(--dnf-gold-hi)">移动中：{{ movingSlot.owner_nickname }}（{{ movingSlot.character_name }}）→ 点击目标格</span>
+      <button class="dnf-btn dnf-btn-sm" @click="cancel()">取消移动（Esc）</button>
+    </div>
+
     <WaveSection v-for="w in store.raid.waves" :key="w.id"
                  :wave="w" :editable="editable" :is-admin="auth.isAdmin"
                  :can-delete="auth.isAdmin || (store.raid.waves.length > 1)"
                  :current-user-id="auth.user?.id ?? null"
+                 :move-mode="movingSlot != null" :moving-slot-id="movingSlot?.id ?? null"
                  @pick="onPick" @duty="onDuty" @remove="onRemove"
-                 @delete-wave="onDeleteWave" />
+                 @delete-wave="onDeleteWave" @manage="onManage" @moveTo="onMoveTo" />
 
-    <CharacterPickerModal :open="pickSlot != null" @close="pickSlot = null"
-                          @select="onSelectCharacter" />
+    <SlotActionModal :open="manageSlot != null" :slot="manageSlot"
+                     @close="manageSlot = null" @replace="onReplace"
+                     @pickUp="onPickUp" @remove="onRemoveFromMenu" />
+
+    <CharacterPickerModal :open="pickSlot != null" :admin-mode="auth.isAdmin"
+                          @close="pickSlot = null" @select="onSelectCharacter" />
   </div>
 </template>
