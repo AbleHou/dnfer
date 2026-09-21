@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **机器人接口与 skill 支持按昵称**：`POST/GET /api/public/characters` 的 `account`/`nickname` 恰好二选一（昵称全局唯一，可无歧义定位用户），响应回填解析出的账号与昵称；AstrBot skill 默认昵称优先、404 回退账号，支持 `--by-nickname` / `--by-account` 强制模式
+
 ## [v1.5] - 2026-09-21
 
 昵称与头像：账号昵称全局唯一，支持 S3 头像上传与展示。
