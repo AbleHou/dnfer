@@ -1,8 +1,16 @@
+import os
 from sqlalchemy.pool import StaticPool
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+# 测试环境自洽：env 变量优先于 .env 文件（pydantic-settings 优先级），
+# 强制 api_token 用默认值、清空 S3 配置——避免测试读到开发者 .env 的真实凭据（含误传真实 OSS）。
+os.environ["DNFER_API_TOKEN"] = "change-me-bot-token"
+for _k in ("DNFER_S3_ENDPOINT", "DNFER_S3_ACCESS_KEY", "DNFER_S3_SECRET_KEY",
+           "DNFER_S3_BUCKET", "DNFER_S3_REGION", "DNFER_S3_PUBLIC_BASE"):
+    os.environ[_k] = ""
 
 from app.auth import hash_password
 from app.db import Base, get_db

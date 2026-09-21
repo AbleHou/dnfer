@@ -1,4 +1,11 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+# config.py 位于 backend/app/，上两级即仓库根；从代码位置解析 .env，与启动目录无关。
+# Docker 下不存在仓库根 .env（配置走环境变量），传 None 即跳过 dotenv 加载。
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_ENV_FILE = _REPO_ROOT / ".env"
 
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/dnfer.db"
@@ -21,6 +28,7 @@ class Settings(BaseSettings):
     s3_region: str = ""
     s3_public_base: str = ""
 
-    model_config = {"env_file": ".env", "env_prefix": "DNFER_"}
+    model_config = {"env_file": _ENV_FILE if _ENV_FILE.exists() else None,
+                    "env_prefix": "DNFER_"}
 
 settings = Settings()
