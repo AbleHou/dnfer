@@ -47,10 +47,10 @@ stdout 只输出 JSON，直接解析它。
 
 ## 录入示例
 
-群友消息：「我的账号 zhangsan」+ 一张角色截图（剑魂，名望 21 万）。
+群友消息：「我的账号 zhangsan」+ 一张角色截图（剑魂，名望 21 万）——明确给了账号，用 `--by-account`：
 
 ```bash
-python scripts/dnfer_api.py add zhangsan '[{"name":"剑魂","fame":210000}]'
+python scripts/dnfer_api.py add --by-account zhangsan '[{"name":"剑魂","fame":210000}]'
 ```
 
 群友消息：「帮张三添加角色，剑魂，名望 21 万」——只给了昵称，默认模式（昵称优先）即可：
@@ -80,6 +80,6 @@ stdout 返回：`{"account":"zhangsan","nickname":"张三","characters":[...]}`
   - 「剑魂 已录入（created），账号 zhangsan（昵称 张三）」
   - 「剑魂 已更新（updated），账号 zhangsan（昵称 张三）」
   - 「鬼泣 录入失败：职业不存在」
-- **查询后**：列出角色名、职业、名望（及数值）；账号/昵称存在但没有角色时回复「该账号还没有角色」。
+- **查询后**：列出角色名、职业、名望（及数值）；账号/昵称存在但没有角色时回复「该账号/昵称还没有角色」。
 - **账号/昵称不存在**（stdout 为 `{"ok":false,"status":404,...}`）：回复「这个账号/昵称还没在系统注册，请先用注册码注册（找管理员要码）。」
 - **Token/网络错误**（stdout 为 `{"ok":false,"error":...}`）：回复「系统暂时不可用，稍后再试。」
