@@ -18,7 +18,7 @@
 
 ## 2. 交付物 / 变更文件范围
 
-- `backend/app/schemas.py` — `BotCharactersIn` 增加可选 `nickname`，account/nickname 恰好二选一
+- `backend/app/schemas.py` — `BotCharactersIn` 增加可选 `nickname`（account/nickname 恰好二选一）；`BotCharactersOut` 增加 `nickname` 字段
 - `backend/app/routers/bot.py` — `_get_user` 支持按 nickname 查询；POST/GET 支持 nickname
 - `backend/tests/test_bot_characters.py` — 新增按昵称与校验用例
 - `skills/dnfer-characters/scripts/dnfer_api.py` — `add`/`list` 支持默认自动解析 + `--by-nickname`/`--by-account` 强制模式
@@ -34,13 +34,21 @@
 `BotCharactersIn` 的 `account` 由必填改为可选，新增可选 `nickname`，用 pydantic `model_validator` 强制**恰好二选一**（都缺或都填 → 422）：
 
 ```python
+from pydantic import model_validator
+
 class BotCharactersIn(BaseModel):
     account: str | None = Field(default=None, min_length=1, max_length=64)
     nickname: str | None = Field(default=None, min_length=1, max_length=64)
     characters: list[BotCharacterIn]
+
+    @model_validator(mode="after")
+    def _exactly_one_identity(self):
+        if (self.account is None) == (self.nickname is None):
+            raise ValueError("account 与 nickname 必须恰好提供一个")
+        return self
 ```
 
-`BotCharactersOut.account` 与 `BotCharacterList.account` 保持字段不变，但**回填解析出的 username**（按昵称录入/查询时，机器人也能知道落到了哪个账号）。
+- `BotCharactersOut` **新增 `nickname: str`**，`account` 与 `nickname` 均回填解析出的值（按昵称录入时，机器人能回显「账号 zhangsan（昵称 张三）」）。`BotCharacterList` 本就有 `account` + `nickname`，同样回填解析值。
 
 ### 3.2 bot.py
 
@@ -60,8 +68,8 @@ def _get_user(db, account=None, nickname=None) -> User:
     return user
 ```
 
-- `POST /characters`：`user = _get_user(db, body.account, body.nickname)`，响应 `BotCharactersOut(account=user.username, results=...)`
-- `GET /characters`：查询参数同时接受 `account` / `nickname`；两者都缺或都填 → 400「account 与 nickname 必须二选一」
+- `POST /characters`：`user = _get_user(db, body.account, body.nickname)`，响应 `BotCharactersOut(account=user.username, nickname=user.nickname, results=...)`
+- `GET /characters`：查询参数同时接受 `account` / `nickname`；两者都缺或都填 → 400「account 与 nickname 必须二选一」。响应**必须改为** `BotCharacterList(account=user.username, nickname=user.nickname, ...)`——不能把查询参数 `account` 直接透传，否则按昵称查询时 `account` 会错填成昵称
 
 ## 4. skill 设计
 
@@ -81,8 +89,10 @@ python scripts/dnfer_api.py add --by-account zhangsan '[...]'
 ```
 
 - 自动模式：先发 `nickname`，仅当 404（账号/昵称不存在）时回退重发 `account`；401 / 500 / 网络错误不重试
+- 自动模式下**两次都 404**：报告最后一次（账号回退）的 `{"ok":false,"status":404}`，模型按 SKILL.md 的 404 规则回复
 - `--by-nickname` / `--by-account`：只发对应字段，不做回退
-- 后端响应回填了解析出的 `account`（及 `nickname`），脚本 stderr 摘要沿用「账号 X（昵称 Y）共 N 个角色」格式，机器人可据此回显核对
+- 后端响应回填了解析出的 `account` 与 `nickname`。`list` 的 stderr 摘要沿用「账号 X（昵称 Y）共 N 个角色」；`add` 不新增 stderr 行，模型以 stdout JSON 里的 `account`/`nickname` 为回显依据
+- 查询参数 `nickname`（中文）须经 `urllib.parse.quote` 编码，与现有 `account` 的处理一致
 
 ### 4.2 SKILL.md
 
@@ -95,7 +105,7 @@ python scripts/dnfer_api.py add --by-account zhangsan '[...]'
 - 录入成功时向群友回显解析到的账号+昵称（例：「已录入到账号 zhangsan（昵称 张三）」）
 - 404 提示语更新为「这个账号/昵称还没在系统注册，请先用注册码注册（找管理员要码）。」
 
-命令示例、查询示例、回复规则同步更新。
+命令示例、查询示例、回复规则同步更新；frontmatter `description` 同步提及「按昵称录入/查询」，避免 AstrBot 按 description 选择 skill 时漏触发仅含昵称的消息（如「帮张三添加角色」）。
 
 ### 4.3 README.md
 
@@ -107,8 +117,8 @@ python scripts/dnfer_api.py add --by-account zhangsan '[...]'
 
 现有账号用例保持不动（向后兼容）；新增：
 
-- `POST` 按昵称创建 → `created`，响应 `account` 为解析出的 username
-- `GET` 按昵称查询 → 返回该用户角色
+- `POST` 按昵称创建 → `created`，响应 `account` 为解析出的 username 且 `nickname` 为该昵称
+- `GET` 按昵称查询 → 返回该用户角色，响应 `account` 为解析出的 username 且 `nickname` 为该昵称
 - `POST` 缺 account 且缺 nickname → 422；两者都填 → 422
 - `GET` 两者都缺 / 都填 → 400
 - 按不存在的昵称查 → 404
