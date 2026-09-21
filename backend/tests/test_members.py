@@ -69,5 +69,5 @@ def test_update_character_re_derives_class_type(client):
         "name": "剑魂", "job_name": "crusader_male", "fame": 1, "buff_amount": 9000})
     assert r.status_code == 200
     assert r.json()["class_type"] == "辅助"
-    assert r.json()["job_title"] == "神启·圣骑士"
+    assert r.json()["job_title"] == "光启·光明骑士"
     assert r.json()["parent_name"] == "priest_male"
