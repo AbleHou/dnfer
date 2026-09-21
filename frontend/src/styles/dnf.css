@@ -66,6 +66,9 @@ a { color: var(--dnf-gold-hi); }
 .dnf-nav a.nav-link { color: var(--dnf-text); text-decoration: none; }
 .dnf-nav a.nav-link.router-link-active { color: var(--dnf-gold-hi); }
 .dnf-nav .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.nav-user { display:inline-flex; align-items:center; gap:6px; background:none; border:none;
+  color:var(--dnf-text); cursor:pointer; padding:2px 6px; border-radius:6px; }
+.nav-user:hover { background:var(--dnf-panel-inner); }
 .dnf-nav .nav-exit { color: var(--dnf-text-muted); text-decoration: none; }
 .dnf-nav .nav-exit:hover { color: var(--dnf-gold-hi); }
 .dnf-nav .hamburger {

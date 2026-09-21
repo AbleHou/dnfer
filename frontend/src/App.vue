@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NConfigProvider, NDropdown, darkTheme } from 'naive-ui'
 import { useAuthStore } from './stores/auth'
 import { themeOverrides } from './styles/theme'
+import UserAvatar from './components/UserAvatar.vue'
+import ProfilePanel from './components/ProfilePanel.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
+const profileOpen = ref(false)
 
 // naive-ui 2.45 未在包根导出 DropdownMixedOption，回退为 any[]（唯一一处）
 const menuOptions = computed<any[]>(() => [
@@ -36,12 +39,17 @@ function onMenuSelect(key: string) {
       <router-link to="/characters" class="nav-link">我的角色</router-link>
       <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">管理</router-link>
       <span class="nav-right">
-        <span class="nav-username">{{ auth.user.nickname }}</span>
+        <button class="nav-user" title="个人信息" @click="profileOpen = true">
+          <UserAvatar v-if="auth.user" :nickname="auth.user.nickname"
+                      :avatar="auth.user.avatar" :size="26" />
+          <span class="nav-username">{{ auth.user?.nickname }}</span>
+        </button>
         <a href="#" class="nav-exit" @click.prevent="logout">退出</a>
         <n-dropdown :options="menuOptions" @select="onMenuSelect">
           <button class="hamburger" aria-label="菜单">☰</button>
         </n-dropdown>
       </span>
+      <ProfilePanel :open="profileOpen" @close="profileOpen = false" />
     </nav>
     <router-view :key="$route.fullPath" />
   </n-config-provider>
