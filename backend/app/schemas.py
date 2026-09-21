@@ -110,6 +110,7 @@ class SlotOut(BaseModel):
     buff_amount: int | None
     owner_id: int | None
     owner_nickname: str | None
+    owner_avatar: str | None
     duty: str | None
     version: int
 

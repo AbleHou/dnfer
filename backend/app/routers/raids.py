@@ -50,6 +50,7 @@ def _slot_out(slot: Slot) -> SlotOut:
         buff_amount=c.buff_amount if c else None,
         owner_id=c.owner.id if c else None,
         owner_nickname=c.owner.nickname if c else None,
+        owner_avatar=c.owner.avatar if c else None,
         duty=slot.duty, version=slot.version,
     )
 

@@ -304,3 +304,17 @@ def test_delete_raid_cascades(client):
 def test_delete_raid_not_found(client):
     ah = _admin(client)
     assert client.delete("/api/raids/999", headers=ah).status_code == 404
+
+def test_slot_out_includes_owner_avatar(client, admin_headers):
+    from .helpers import make_raid, register_user
+    h, u = register_user(client, "av1", "阿甲")
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
+    rid = make_raid(client, admin_headers)["id"]
+    slot = client.get(f"/api/raids/{rid}", headers=admin_headers) \
+        .json()["waves"][0]["slots"][0]
+    client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                json={"character_id": cid})
+    slot2 = client.get(f"/api/raids/{rid}", headers=admin_headers) \
+        .json()["waves"][0]["slots"][0]
+    assert slot2["owner_avatar"] is None  # 未上传头像时为 null
