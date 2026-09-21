@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     job_data_path: str = "../职业信息.json"
     images_dir: str = "../images/adventure"
 
+    # S3 头像存储（公开读桶）
+    s3_endpoint: str = ""
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_bucket: str = ""
+    s3_region: str = ""
+    s3_public_base: str = ""
+
     model_config = {"env_file": ".env", "env_prefix": "DNFER_"}
 
 settings = Settings()
