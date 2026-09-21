@@ -1,6 +1,8 @@
 """S3 兼容公开读桶：头像上传/删除。boto3 延迟导入，未配置/未安装不影响其余功能。"""
 from uuid import uuid4
 
+from botocore.config import Config
+
 from .config import settings
 
 _client = None
@@ -9,12 +11,23 @@ def _get_client():
     global _client
     if _client is None:
         import boto3
+        # 阿里云 OSS 兼容要点：
+        # 1) addressing_style=virtual —— 虚拟主机式访问（bucket.region.aliyuncs.com），
+        #    boto3 自定义 endpoint_url 默认路径式会被 OSS 拒绝（SecondLevelDomainForbidden）；
+        # 2) payload_signing_enabled=False —— 禁用 payload 流式签名，OSS 不支持
+        #    STREAMING-UNSIGNED-PAYLOAD-TRAILER（NotImplemented）；
+        # 3) request_checksum_calculation=when_required —— 避免默认给 put_object 附加
+        #    checksum trailer（OSS 不支持）。
         _client = boto3.client(
             "s3",
             endpoint_url=settings.s3_endpoint or None,
             aws_access_key_id=settings.s3_access_key,
             aws_secret_access_key=settings.s3_secret_key,
             region_name=settings.s3_region or None,
+            config=Config(
+                s3={"addressing_style": "virtual", "payload_signing_enabled": False},
+                request_checksum_calculation="when_required",
+            ),
         )
     return _client
 

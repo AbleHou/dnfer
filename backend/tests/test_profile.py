@@ -72,6 +72,17 @@ def test_avatar_unconfigured(client):
 
 # —— 代码质量审查补充：s3 模块 URL 拼接 / 删除逻辑的直接单测 ——
 
+def test_client_uses_virtual_addressing(monkeypatch):
+    # 阿里云 OSS 要求虚拟主机式访问；回归防护：boto3 client 必须带 virtual addressing
+    from app.config import settings
+    monkeypatch.setattr(settings, "s3_endpoint", "https://oss-cn-beijing.aliyuncs.com")
+    monkeypatch.setattr(settings, "s3_access_key", "ak")
+    monkeypatch.setattr(settings, "s3_secret_key", "sk")
+    monkeypatch.setattr(settings, "s3_region", "oss-cn-beijing")
+    monkeypatch.setattr(s3mod, "_client", None)
+    c = s3mod._get_client()
+    assert c.meta.config.s3.get("addressing_style") == "virtual"
+
 def test_upload_avatar_url_and_acl(monkeypatch):
     from app.config import settings
     calls = {}
