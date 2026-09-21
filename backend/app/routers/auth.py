@@ -65,14 +65,15 @@ def upload_avatar(file: UploadFile = File(...),
                   db: Session = Depends(get_db)):
     # 先做文件级校验（400），再判存储可用性（503）：
     # 未配置 S3 时非法文件仍应返回 400（测试依赖此顺序）
-    if not (file.content_type or "").startswith("image/"):
-        raise HTTPException(400, "仅支持图片文件")
+    # 仅白名单 png/jpg/webp，拒绝任意 image/*（如 svg/gif），避免存成误导性 .bin
+    if file.content_type not in _AVATAR_EXT:
+        raise HTTPException(400, "仅支持 PNG/JPG/WebP 图片")
     data = file.file.read()
     if len(data) > _MAX_AVATAR_BYTES:
         raise HTTPException(400, "图片不能超过 2MB")
     if not s3.s3_configured():
         raise HTTPException(503, "头像存储未配置")
-    ext = _AVATAR_EXT.get(file.content_type, "bin")
+    ext = _AVATAR_EXT[file.content_type]
     try:
         url = s3.upload_avatar(user.id, ext, data,
                                file.content_type or "application/octet-stream")

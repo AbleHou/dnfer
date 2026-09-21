@@ -54,6 +54,12 @@ def test_avatar_upload_rejects_non_image(client):
     h, _ = register_user(client, "prof6", "阿文")
     assert _upload(client, h, content_type="text/plain").status_code == 400
 
+def test_avatar_upload_rejects_unwhitelisted_image(client):
+    # 仅白名单 png/jpg/webp；svg/gif/bmp 等一律拒绝（避免任意 image/* 被存成 .bin）
+    h, _ = register_user(client, "prof9", "阿限")
+    for ct in ("image/svg+xml", "image/gif", "image/bmp", "image/avif"):
+        assert _upload(client, h, content_type=ct).status_code == 400, ct
+
 def test_avatar_upload_rejects_oversize(client):
     h, _ = register_user(client, "prof7", "阿大")
     big = b"x" * (2 * 1024 * 1024 + 1)
