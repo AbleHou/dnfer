@@ -151,3 +151,44 @@ def test_add_missing_both_identities(client):
     r = client.post("/api/public/characters", headers=TOKEN, json={
         "characters": [{"name": "剑魂"}]})
     assert r.status_code == 422
+
+def test_create_by_nickname(client):
+    h, _ = register_user(client, "n1", "昵称甲")
+    r = client.post("/api/public/characters", headers=TOKEN, json={
+        "nickname": "昵称甲", "characters": [{"name": "剑魂", "fame": 15000}]})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["account"] == "n1"
+    assert body["nickname"] == "昵称甲"
+    res = body["results"][0]
+    assert res["ok"] is True and res["action"] == "created"
+    assert res["character"]["fame"] == 15000
+    assert client.get("/api/me/characters", headers=h).json()[0]["name"] == "剑魂"
+
+def test_get_by_nickname(client):
+    register_user(client, "n2", "昵称乙")
+    client.post("/api/public/characters", headers=TOKEN, json={
+        "nickname": "昵称乙", "characters": [{"name": "鬼泣", "job_name": "soul_bender"}]})
+    r = client.get("/api/public/characters", params={"nickname": "昵称乙"}, headers=TOKEN)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["account"] == "n2"
+    assert body["nickname"] == "昵称乙"
+    assert [c["name"] for c in body["characters"]] == ["鬼泣"]
+
+def test_post_nonexistent_nickname(client):
+    r = client.post("/api/public/characters", headers=TOKEN, json={
+        "nickname": "不存在", "characters": [{"name": "剑魂"}]})
+    assert r.status_code == 404
+
+def test_get_nonexistent_nickname(client):
+    r = client.get("/api/public/characters", params={"nickname": "不存在"}, headers=TOKEN)
+    assert r.status_code == 404
+
+def test_get_missing_both_params(client):
+    assert client.get("/api/public/characters", headers=TOKEN).status_code == 400
+
+def test_get_both_params(client):
+    r = client.get("/api/public/characters", params={"account": "x", "nickname": "y"},
+                   headers=TOKEN)
+    assert r.status_code == 400

@@ -189,6 +189,7 @@ class BotCharacterResult(BaseModel):
 
 class BotCharactersOut(BaseModel):
     account: str
+    nickname: str
     results: list[BotCharacterResult]
 
 class BotCharacterList(BaseModel):
