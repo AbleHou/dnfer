@@ -196,7 +196,7 @@ def list_characters(account: str | None = None, nickname: str | None = None,
 - [ ] **Step 4: 运行验证通过 + 全量后端回归**
 
 Run: `cd backend && .venv/bin/pytest -q`
-Expected: 全部 PASS（现有 14 个 bot 用例 + 新增 7 个；其余测试文件不受影响）。
+Expected: 全部 PASS（现有 16 个 bot 用例 + 新增 6 个；其余测试文件不受影响）。
 
 - [ ] **Step 5: 提交**
 
