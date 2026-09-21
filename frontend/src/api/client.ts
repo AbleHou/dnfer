@@ -10,12 +10,16 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message) }
 }
 
-async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+async function request<T>(method: string, url: string, body?: unknown, isForm = false): Promise<T> {
+  const headers: Record<string, string> = {}
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
-  // 登录接口的 401 表示「账号或密码错误」，不应触发全局跳转（否则页面刷新丢失错误提示）
+  if (!isForm && body !== undefined) headers['Content-Type'] = 'application/json'
+  const res = await fetch(url, {
+    method, headers,
+    body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
+  })
+  // 登录接口 401 不触发全局跳转（原逻辑保留）
   if (res.status === 401 && !url.includes('/auth/')) {
     clearToken(); window.location.href = '/login'; throw new ApiError(401, '未登录')
   }
@@ -36,5 +40,10 @@ export const api = {
   post: <T>(url: string, body?: unknown) => request<T>('POST', url, body),
   put: <T>(url: string, body?: unknown) => request<T>('PUT', url, body),
   del: <T>(url: string) => request<T>('DELETE', url),
+  upload: <T>(url: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<T>('POST', url, form, true)
+  },
   getJobs: () => request<JobCategory[]>('GET', '/api/jobs'),
 }

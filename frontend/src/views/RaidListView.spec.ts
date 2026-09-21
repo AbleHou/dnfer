@@ -44,7 +44,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
 
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
@@ -62,7 +62,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
 
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
@@ -83,7 +83,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false }
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
 
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
@@ -94,7 +94,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       if (url === '/api/dungeons') return dungeons
@@ -116,7 +116,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       if (url === '/api/dungeons') return dungeons
@@ -134,7 +134,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false }
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       return []

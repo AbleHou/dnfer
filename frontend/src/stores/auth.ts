@@ -20,6 +20,7 @@ export const useAuthStore = defineStore('auth', {
       try { this.user = await api.get<User>('/api/auth/me') } catch { clearToken(); this.user = null }
       this.loaded = true
     },
+    updateProfile(user: User) { this.user = user },
     logout() { clearToken(); this.user = null; window.location.href = '/login' },
   },
 })

@@ -8,13 +8,13 @@ function occupied(id: number): Slot {
   return { id, squad_index: 0, row_index: 0, character_id: 1, character_name: '剑魂',
     character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 1,
     simulated_damage: 2, sustained_dps: 3, buff_amount: null,
-    owner_id: 1, owner_nickname: '甲', duty: '主C', version: 1 }
+    owner_id: 1, owner_nickname: '甲', owner_avatar: null, duty: '主C', version: 1 }
 }
 function empty(id: number): Slot {
   return { id, squad_index: 0, row_index: 0, character_id: null, character_name: null,
     character_class: null, job_name: null, job_title: null, fame: null,
     simulated_damage: null, sustained_dps: null, buff_amount: null,
-    owner_id: null, owner_nickname: null, duty: null, version: 0 }
+    owner_id: null, owner_nickname: null, owner_avatar: null, duty: null, version: 0 }
 }
 
 describe('SlotCell admin interactions', () => {
