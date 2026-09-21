@@ -25,7 +25,7 @@ DNfer 后端容器绑定 `127.0.0.1:8000`（仅宿主机可达）。AstrBot 须�
 
 ## 自测
 
-先启动 DNfer 后端，再直跑脚本：
+先启动 DNfer 后端，再直跑脚本（以下命令假设 `zhangsan` / `张三` 已在系统注册，未注册会返回 404）：
 
 ```bash
 cd dnfer-characters
@@ -39,6 +39,8 @@ DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_api.py add --by-account zhangsan '[{"name":"狂战","job_name":"berserker"}]'
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_api.py list 张三
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_api.py list --by-account zhangsan
 ```
 
 - stdout 为机器可读 JSON；stderr 为中文摘要。
