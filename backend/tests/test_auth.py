@@ -55,3 +55,23 @@ def test_admin_endpoint_forbids_member(client, admin_headers):
     h = {"Authorization": f"Bearer {r.json()['token']}"}
     assert client.post("/api/admin/codes", headers=h, json={"single_use": True}).status_code == 403
     assert client.get("/api/admin/users", headers=h).status_code == 403
+
+def test_register_rejects_duplicate_nickname(client, admin_headers):
+    code = client.post("/api/admin/codes", headers=admin_headers,
+                       json={"single_use": True}).json()["code"]
+    r = client.post("/api/auth/register", json={
+        "username": "p_dup_1", "password": "secret1", "nickname": "撞名", "code": code})
+    assert r.status_code == 200
+    code2 = client.post("/api/admin/codes", headers=admin_headers,
+                        json={"single_use": True}).json()["code"]
+    r = client.post("/api/auth/register", json={
+        "username": "p_dup_2", "password": "secret1", "nickname": "撞名", "code": code2})
+    assert r.status_code == 400
+
+def test_register_rejects_invalid_nickname(client, admin_headers):
+    code = client.post("/api/admin/codes", headers=admin_headers,
+                       json={"single_use": True}).json()["code"]
+    for bad in ("带空格 昵称", "带@符号", "带-横线", "带.句点"):
+        r = client.post("/api/auth/register", json={
+            "username": "p_inv", "password": "secret1", "nickname": bad, "code": code})
+        assert r.status_code == 422, bad

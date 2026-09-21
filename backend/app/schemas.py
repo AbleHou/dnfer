@@ -26,7 +26,8 @@ class CharacterOut(BaseModel):
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=64)
     password: str = Field(min_length=6, max_length=128)
-    nickname: str = Field(min_length=1, max_length=64)
+    nickname: str = Field(min_length=1, max_length=64,
+                          pattern="^[\u4e00-\u9fa5A-Za-z0-9]+$")
     code: str
 
 class LoginIn(BaseModel):

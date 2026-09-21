@@ -18,6 +18,8 @@ router = APIRouter(prefix="/api", tags=["auth"])
 def register(body: RegisterIn, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == body.username).first():
         raise HTTPException(400, "用户名已存在")
+    if db.query(User).filter(User.nickname == body.nickname).first():
+        raise HTTPException(400, "昵称已存在")
     rc = consume_code(db, body.code)
     user = User(username=body.username, password_hash=hash_password(body.password),
                 nickname=body.nickname, is_admin=False)
