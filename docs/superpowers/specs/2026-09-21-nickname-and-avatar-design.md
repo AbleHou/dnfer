@@ -71,7 +71,10 @@
 - 权限：`get_current_user`
 - multipart 字段 `file`
 - 校验：`content_type` 前缀 `image/`；大小 ≤ 2MB → 否则 400
-- S3 未配置（`S3_ENDPOINT`/`S3_BUCKET`/`S3_PUBLIC_BASE` 任一为空）→ 503「头像存储未配置」
+- **未配置判定**：`S3_ENDPOINT`/`S3_BUCKET`/`S3_PUBLIC_BASE`/`S3_ACCESS_KEY`/`S3_SECRET_KEY` 任一为空 → 503「头像存储未配置」
+- **上传异常兜底**：捕获 boto3 抛出的异常 → 503「头像存储暂不可用」（不返回 500）
+- `upload_avatar(user_id, ext, data, content_type)`：ext 由 content_type 映射（`image/png→png`、`image/jpeg→jpg`、`image/webp→webp`，其余 → `bin`）；key = `avatars/{user_id}/{uuid4().hex}.{ext}`
+- **重传清理**：上传成功后 best-effort 删除该用户旧头像对象（`S3_PUBLIC_BASE` 里的旧 key；删除失败忽略，不阻塞）
 - 上传成功 → `user.avatar = URL`，commit，返回 `UserOut`
 - 不做服务端压缩（原图上传，前端圆形裁剪显示）
 
@@ -79,7 +82,7 @@
 
 - `User` 加列 `avatar: Mapped[str | None]`（String(256)，nullable）
 - `UserOut` 加 `avatar: str | None`
-- `SlotOut` 加 `owner_avatar: str | None`；`raids._detail` 填 `owner_avatar=c.owner.avatar if c else None`
+- `SlotOut` 加 `owner_avatar: str | None`；`raids._slot_out()`（实际填充 owner 字段的函数，`_detail` 只调用它）填 `owner_avatar=c.owner.avatar if c else None`
 
 ### 3.6 迁移（`backend/app/migrations.py` + `db.init_db`）
 
@@ -96,7 +99,7 @@
 ### 4.2 昵称校验工具（新增 `src/utils/nickname.ts`）
 
 - `NICKNAME_RE = /^[\u4e00-\u9fa5A-Za-z0-9]+$/`
-- `validateNickname(nickname): string | null`（返回错误文案或 null）
+- `validateNickname(nickname): string | null`：同时校验长度 1–64 与字符集（返回错误文案或 null；避免超长昵称在前端通过、后端 422 时透出通用文案）
 
 ### 4.3 注册页（`src/views/RegisterView.vue`）
 
@@ -131,8 +134,9 @@
 
 ## 5. 兜底细节（已确认）
 
-- **未上传头像时**：显示「昵称首字符 + 昵称哈希底色」圆形占位（纯前端生成，无存储）
+- **未上传头像时**：顶栏与个人信息面板显示「昵称首字符 + 昵称哈希底色」圆形占位（纯前端生成，无存储）；**排表页占位格不显示占位**（无头像则仅昵称，保持格子简洁）
 - **不做服务端压缩**：原图上传，前端圆形 `object-fit:cover` 裁剪；大小限制前后端双重校验
+- **昵称/头像变更同步**：不推 WS 事件；已打开的排表页在其他用户改名/换头像后，刷新（或重进）才同步新昵称/新头像（小圈子工具可接受短暂旧数据）
 
 ## 6. 校验与边界
 
@@ -146,7 +150,8 @@
 | 修改昵称含非法字符 | 422 |
 | 上传非图片 / 超 2MB | 400 |
 | S3 未配置 | 503「头像存储未配置」 |
-| 无头像用户 | 前端首字符 + 哈希底色占位 |
+| 无头像用户 | 前端首字符 + 哈希底色占位（顶栏/面板；格子不显示） |
+| 他人改名/换头像后，已打开排表页 | 刷新后同步；不推 WS 事件（接受短暂旧数据） |
 
 ## 7. 测试
 
