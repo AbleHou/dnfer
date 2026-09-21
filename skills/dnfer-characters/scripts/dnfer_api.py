@@ -22,6 +22,7 @@ import argparse
 import json
 import os
 import sys
+from typing import Callable
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -69,7 +70,8 @@ def _request(method: str, url: str, body: dict | None = None) -> dict:
         return {"ok": False, "error": f"网络错误：{e.reason}"}
 
 
-def _resolve(by_nickname: bool, by_account: bool, identifier: str, lookup) -> dict:
+def _resolve(by_nickname: bool, by_account: bool, identifier: str,
+             lookup: Callable[[str, str], dict]) -> dict:
     """按模式解析身份并返回 API 结果。
 
     - 强制模式（--by-nickname / --by-account）：只查一次，不回退。
