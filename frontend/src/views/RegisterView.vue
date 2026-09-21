@@ -16,9 +16,10 @@ const nicknameError = ref('')
 const loading = ref(false)
 
 async function submit() {
+  error.value = ''  // 先清空服务端错误，非法昵称早退也不会残留上一次的报错
   nicknameError.value = validateNickname(nickname.value) ?? ''
   if (nicknameError.value) return
-  loading.value = true; error.value = ''
+  loading.value = true
   try {
     await auth.register({ username: username.value, password: password.value,
                           nickname: nickname.value, code: code.value })

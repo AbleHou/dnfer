@@ -14,4 +14,11 @@ describe('UserAvatar', () => {
     expect(w.find('.user-avatar-fallback').text()).toBe('阿')
     expect(w.find('img').exists()).toBe(false)
   })
+  it('图片加载失败回退到首字符占位', async () => {
+    const w = mount(UserAvatar, { props: { nickname: '阿丙', avatar: 'https://cdn/bad.png', size: 28 } })
+    expect(w.find('img').exists()).toBe(true)
+    await w.find('img').trigger('error')
+    expect(w.find('img').exists()).toBe(false)
+    expect(w.find('.user-avatar-fallback').text()).toBe('阿')
+  })
 })
