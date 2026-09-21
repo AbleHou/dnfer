@@ -1,6 +1,6 @@
 # dnfer-characters · AstrBot 技能
 
-让 AstrBot 机器人把群友发的「DNfer 账号 + 角色截图/文字描述」自动录入 DNfer 系统，并支持按账号查询角色。
+让 AstrBot 机器人把群友发的「DNfer 账号或昵称 + 角色截图/文字描述」自动录入 DNfer 系统，并支持按账号或昵称查询角色。
 
 要求 **AstrBot v4.13.0+**（支持 Anthropic Skills）。
 
@@ -32,7 +32,13 @@ cd dnfer-characters
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_api.py add zhangsan '[{"name":"剑魂","fame":210000}]'
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
-  python scripts/dnfer_api.py list zhangsan
+  python scripts/dnfer_api.py add 张三 '[{"name":"鬼泣","job_name":"soul_bender"}]'
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_api.py add --by-nickname 张三 '[{"name":"奶妈","job_name":"crusader_female"}]'
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_api.py add --by-account zhangsan '[{"name":"狂战","job_name":"berserker"}]'
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_api.py list 张三
 ```
 
 - stdout 为机器可读 JSON；stderr 为中文摘要。
