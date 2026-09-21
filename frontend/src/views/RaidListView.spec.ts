@@ -58,6 +58,27 @@ describe('RaidListView create form', () => {
     expect(wrapper.text()).toContain('规模锁定：16 人')
   })
 
+  it('keeps the selected start time after the datetime panel closes', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true }
+
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    await flushPromises()
+    await wrapper.find('[data-test="create-toggle"]').trigger('click')
+
+    const dp: any = wrapper.findComponent({ name: 'DatePicker' }).vm
+    const ts = new Date('2026-09-20T14:00:00').getTime()
+    // 复现 datetime 面板：点选日期只更新 pending，随后面板关闭才提交。
+    dp.handleTriggerClick({})
+    dp.handlePanelUpdateValue(ts, false)
+    dp.handlePanelClose(false)
+    await flushPromises()
+
+    expect(dp.formattedValue).toBe('2026-09-20T14:00:00')
+  })
+
   it('does not fetch dungeons for non-admin members', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

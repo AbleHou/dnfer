@@ -76,7 +76,7 @@ async function onDelete(r: RaidListItem) {
       </div>
       <div style="margin:8px 0">
         <n-date-picker data-test="starts-at" type="datetime" value-format="yyyy-MM-dd'T'HH:mm:ss"
-                       :actions="null" clearable placeholder="发起时间" v-model:formatted-value="startsAt" />
+                       :actions="null" clearable update-value-on-close placeholder="发起时间" v-model:formatted-value="startsAt" />
       </div>
       <div style="margin:8px 0">
         <n-input data-test="name-input" v-model:value="name" placeholder="攻坚名称（默认副本名）" />
