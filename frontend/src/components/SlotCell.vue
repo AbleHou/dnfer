@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Slot } from '../types'
 import DutySelect from './DutySelect.vue'
+import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps<{
   slot: Slot
@@ -47,6 +48,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
     <template v-if="occupied">
       <span v-if="isMoving" class="moving-badge">移动中</span>
       <div>
+        <UserAvatar v-if="slot.owner_nickname" :nickname="slot.owner_nickname"
+                    :avatar="slot.owner_avatar" :size="20" />
         <b style="color:var(--dnf-text)">{{ slot.owner_nickname }}</b>
         <span style="color:var(--dnf-text-muted);font-size:12px">（{{ slot.character_name }}）</span>
         <img v-if="slot.job_name" :src="jobIcon(slot.job_name)" @error="onIconError"
