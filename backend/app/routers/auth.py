@@ -1,15 +1,17 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import s3
 from ..auth import (consume_code, create_access_token, get_current_user,
                     hash_password, make_code, require_admin, verify_password)
 from ..config import settings
 from ..db import get_db
 from ..models import Character, RegistrationCode, User
-from ..schemas import CodeCreate, CodeOut, LoginIn, PlayerCharacters, RegisterIn, UserOut
+from ..schemas import (CodeCreate, CodeOut, LoginIn, PlayerCharacters,
+                       ProfileUpdate, RegisterIn, UserOut)
 from .members import _character_out
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -40,6 +42,47 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
 
 @router.get("/auth/me")
 def me(user: User = Depends(get_current_user)):
+    return UserOut.model_validate(user)
+
+_AVATAR_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+_MAX_AVATAR_BYTES = 2 * 1024 * 1024
+
+@router.put("/me/profile", response_model=UserOut)
+def update_profile(body: ProfileUpdate, user: User = Depends(get_current_user),
+                   db: Session = Depends(get_db)):
+    dup = db.query(User).filter(User.nickname == body.nickname,
+                                User.id != user.id).first()
+    if dup:
+        raise HTTPException(400, "昵称已存在")
+    user.nickname = body.nickname
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
+
+@router.post("/me/avatar", response_model=UserOut)
+def upload_avatar(file: UploadFile = File(...),
+                  user: User = Depends(get_current_user),
+                  db: Session = Depends(get_db)):
+    # 先做文件级校验（400），再判存储可用性（503）：
+    # 未配置 S3 时非法文件仍应返回 400（测试依赖此顺序）
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(400, "仅支持图片文件")
+    data = file.file.read()
+    if len(data) > _MAX_AVATAR_BYTES:
+        raise HTTPException(400, "图片不能超过 2MB")
+    if not s3.s3_configured():
+        raise HTTPException(503, "头像存储未配置")
+    ext = _AVATAR_EXT.get(file.content_type, "bin")
+    try:
+        url = s3.upload_avatar(user.id, ext, data,
+                               file.content_type or "application/octet-stream")
+    except Exception:
+        raise HTTPException(503, "头像存储暂不可用")
+    if user.avatar:
+        s3.delete_avatar(user.avatar)
+    user.avatar = url
+    db.commit()
+    db.refresh(user)
     return UserOut.model_validate(user)
 
 @router.post("/admin/codes", response_model=CodeOut)

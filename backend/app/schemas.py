@@ -34,11 +34,16 @@ class LoginIn(BaseModel):
     username: str
     password: str
 
+class ProfileUpdate(BaseModel):
+    nickname: str = Field(min_length=1, max_length=64,
+                          pattern="^[\u4e00-\u9fa5A-Za-z0-9]+$")
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     username: str
     nickname: str
+    avatar: str | None = None
     is_admin: bool
 
 class PlayerCharacters(BaseModel):
