@@ -24,6 +24,7 @@ async function saveNickname() {
   const err = validateNickname(nickname.value)
   nicknameError.value = err ?? ''
   if (err || !auth.user) return
+  if (nickname.value === auth.user.nickname) return  // 昵称未变化，不发请求
   saving.value = true
   try {
     const user = await api.put<User>('/api/me/profile', { nickname: nickname.value })
@@ -69,7 +70,7 @@ async function onFileChange(e: Event) {
         <p v-if="nicknameError" class="form-error" style="margin:4px 0 0">{{ nicknameError }}</p>
       </div>
       <button class="dnf-btn dnf-btn-primary save-nickname" style="width:100%"
-              :disabled="saving" @click="saveNickname">保存昵称</button>
+              :disabled="saving" @click="saveNickname">保存</button>
     </div>
   </n-modal>
 </template>

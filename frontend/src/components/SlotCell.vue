@@ -49,7 +49,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
       <span v-if="isMoving" class="moving-badge">移动中</span>
       <div>
         <UserAvatar v-if="slot.owner_nickname" :nickname="slot.owner_nickname"
-                    :avatar="slot.owner_avatar" :size="20" />
+                    :avatar="slot.owner_avatar" :size="20"
+                    style="margin-right:4px;vertical-align:middle" />
         <b style="color:var(--dnf-text)">{{ slot.owner_nickname }}</b>
         <span style="color:var(--dnf-text-muted);font-size:12px">（{{ slot.character_name }}）</span>
         <img v-if="slot.job_name" :src="jobIcon(slot.job_name)" @error="onIconError"

@@ -39,6 +39,20 @@ describe('ProfilePanel', () => {
     expect(apiMock.put).toHaveBeenCalledWith('/api/me/profile', { nickname: '新名' })
   })
 
+  it('昵称未变化时不调用接口', async () => {
+    const w = mount(ProfilePanel, { props: { open: true }, global: { stubs: { teleport: true } } })
+    await flushPromises()
+    // 默认昵称即 auth.user.nickname（阿甲），未改动直接点保存
+    await w.find('button.save-nickname').trigger('click')
+    await flushPromises()
+    expect(apiMock.put).not.toHaveBeenCalled()
+  })
+
+  it('按钮文案为「保存」', () => {
+    const w = mount(ProfilePanel, { props: { open: true }, global: { stubs: { teleport: true } } })
+    expect(w.find('button.save-nickname').text()).toBe('保存')
+  })
+
   it('上传头像成功后更新用户并提示', async () => {
     const updated = { id: 1, username: 'a', nickname: '阿甲', is_admin: false, avatar: 'https://cdn/a.png' }
     apiMock.upload.mockResolvedValue(updated)
