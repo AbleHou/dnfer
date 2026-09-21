@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { NModal, NInput } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -15,8 +15,12 @@ const nickname = ref(auth.user?.nickname ?? '')
 const nicknameError = ref('')
 const saving = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const uploading = ref(false)
+
+watch(() => props.open, (o) => { if (o) nickname.value = auth.user?.nickname ?? '' })
 
 async function saveNickname() {
+  if (saving.value) return
   const err = validateNickname(nickname.value)
   nicknameError.value = err ?? ''
   if (err || !auth.user) return
@@ -32,12 +36,16 @@ async function saveNickname() {
 async function onFileChange(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
   if (!f) return
+  uploading.value = true
   try {
     const user = await api.upload<User>('/api/me/avatar', f)
     auth.updateProfile(user)
     notifySuccess('头像已更新')
   } catch (e: any) { notifyError(e.message) }
-  finally { if (fileInput.value) fileInput.value.value = '' }
+  finally {
+    uploading.value = false
+    if (fileInput.value) fileInput.value.value = ''
+  }
 }
 </script>
 
@@ -46,7 +54,7 @@ async function onFileChange(e: Event) {
            @update:show="(s: boolean) => { if (!s) emit('close') }">
     <div v-if="auth.user" style="display:flex;flex-direction:column;gap:14px;align-items:center">
       <button class="dnf-btn" style="padding:4px;border-radius:50%" title="点击更换头像"
-              @click="fileInput?.click()">
+              :disabled="uploading" @click="fileInput?.click()">
         <UserAvatar :nickname="auth.user.nickname" :avatar="auth.user.avatar" :size="72" />
       </button>
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange">
