@@ -141,3 +141,13 @@ def test_round_trip(client):
     assert c["name"] == "奶妈"
     assert c["class_type"] == "辅助"
     assert c["buff_amount"] == 2000
+
+def test_add_both_account_and_nickname(client):
+    r = client.post("/api/public/characters", headers=TOKEN, json={
+        "account": "x", "nickname": "y", "characters": [{"name": "剑魂"}]})
+    assert r.status_code == 422
+
+def test_add_missing_both_identities(client):
+    r = client.post("/api/public/characters", headers=TOKEN, json={
+        "characters": [{"name": "剑魂"}]})
+    assert r.status_code == 422

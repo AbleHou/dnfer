@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 class CharacterIn(BaseModel):
     name: str = Field(min_length=1, max_length=64)
@@ -170,8 +170,15 @@ class BotCharacterIn(BaseModel):
     buff_amount: int | None = None
 
 class BotCharactersIn(BaseModel):
-    account: str = Field(min_length=1, max_length=64)
+    account: str | None = Field(default=None, min_length=1, max_length=64)
+    nickname: str | None = Field(default=None, min_length=1, max_length=64)
     characters: list[BotCharacterIn]
+
+    @model_validator(mode="after")
+    def _exactly_one_identity(self):
+        if (self.account is None) == (self.nickname is None):
+            raise ValueError("account 与 nickname 必须恰好提供一个")
+        return self
 
 class BotCharacterResult(BaseModel):
     name: str
