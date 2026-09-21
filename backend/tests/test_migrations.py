@@ -56,3 +56,17 @@ def test_migrate_jobs_wipes_legacy_characters():
         slot = conn.execute(text("SELECT character_id, duty FROM slots")).fetchone()
         assert slot[0] is None and slot[1] is None
     migrate_jobs(engine)  # 幂等：再次运行不报错、不重复清空
+
+def test_migrate_avatars_adds_column():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE users (
+            id INTEGER PRIMARY KEY, username VARCHAR(64) UNIQUE,
+            password_hash VARCHAR(128), nickname VARCHAR(64),
+            is_admin BOOLEAN, created_at DATETIME)"""))
+    from app.migrations import migrate_avatars
+    migrate_avatars(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).all()}
+        assert "avatar" in cols
+    migrate_avatars(engine)  # 幂等：再次运行不报错

@@ -44,6 +44,18 @@ def migrate_dungeons(engine: Engine) -> None:
         conn.execute(text("UPDATE raids SET starts_at = created_at WHERE starts_at IS NULL"))
 
 
+def migrate_avatars(engine: Engine) -> None:
+    """为存量库补建 users.avatar 列（幂等）。"""
+    from . import models  # noqa: F401  确保模型注册
+    from .db import Base
+
+    Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(users)")).all()}
+        if "avatar" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN avatar VARCHAR(256)"))
+
+
 def migrate_jobs(engine: Engine) -> None:
     """为存量库补建 characters.job_name，并清空存量角色与占位（幂等）。
 
