@@ -424,7 +424,7 @@ async def _remove_signup(db: Session, raid: Raid, user_id: int) -> dict:
     """删除报名行 + 撤下该用户全部占位，并广播。"""
     db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
                                 RaidSignup.user_id == user_id).delete()
-    removed = db.query(Slot).options(selectinload(Slot.character)) \
+    removed = db.query(Slot) \
         .filter(Slot.wave.has(raid_id=raid.id),
                 Slot.character.has(user_id=user_id)).all()
     for s in removed:

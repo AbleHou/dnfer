@@ -161,3 +161,32 @@ def test_delete_raid_with_signups(client):
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/signup", headers=h)
     assert client.delete(f"/api/raids/{rid}", headers=ah).status_code == 200
+
+
+def test_signup_ws_broadcast(client):
+    ah = _admin(client)
+    token = ah["Authorization"].split()[1]
+    rid = make_raid(client, ah)["id"]
+    h, u = register_user(client, "sigws1", "甲")
+    with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
+        assert client.post(f"/api/raids/{rid}/signup", headers=h).status_code == 200
+        ev = ws.receive_json()
+        assert ev["type"] == "raid:signup"
+        assert ev["user"]["id"] == u["id"]
+        assert ev["created_at"]
+
+
+def test_cancel_ws_broadcast_slot_and_signup(client):
+    ah = _admin(client)
+    token = ah["Authorization"].split()[1]
+    h, _ = register_user(client, "sigws2", "乙")
+    cid = _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                json={"character_id": cid})
+    with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
+        assert client.delete(f"/api/raids/{rid}/signup", headers=h).status_code == 200
+        types = [ws.receive_json()["type"] for _ in range(2)]
+        assert types == ["slot:removed", "raid:signup_removed"]
