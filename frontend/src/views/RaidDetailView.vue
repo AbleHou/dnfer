@@ -62,10 +62,11 @@ async function onCancelUser(s: RaidSignup) {
   catch (e: any) { notifyError(e.message) }
 }
 async function onPick(slot: Slot) {
-  if (!auth.isAdmin && !mySignedUp.value && !store.raid?.locked) {
+  if (!store.raid) return
+  if (!auth.isAdmin && !mySignedUp.value && !store.raid.locked) {
     const ok = await confirmDialog({ content: '你还没有报名本次攻坚，是否先报名？' })
     if (!ok) return
-    try { await api.post(`/api/raids/${rid}/signup`); await load() }
+    try { await api.post(`/api/raids/${store.raid.id}/signup`); await load() }
     catch (e: any) { notifyError(e.message); return }
   }
   pickSlot.value = slot
@@ -152,7 +153,7 @@ async function onDeleteWave(index: number) {
           <span v-if="s.created_at === null" class="dnf-badge dnf-badge-ok">团长</span>
           <button v-if="auth.isAdmin && s.created_at !== null" class="dnf-btn dnf-btn-sm"
                   @click="onCancelUser(s)">取消报名</button>
-          <button v-else-if="s.user.id === auth.user?.id && !store.raid.locked"
+          <button v-else-if="s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
                   class="dnf-btn dnf-btn-sm" @click="onCancelSelf">取消报名</button>
         </div>
       </div>
