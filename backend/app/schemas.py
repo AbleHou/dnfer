@@ -196,3 +196,6 @@ class BotCharacterList(BaseModel):
     account: str
     nickname: str
     characters: list[CharacterOut]
+
+class BotRegisterIn(BaseModel):
+    identifier: str = Field(min_length=1)

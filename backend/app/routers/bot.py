@@ -1,13 +1,16 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import jobs as job_data
-from ..auth import require_api_token
+from ..auth import hash_password, require_api_token
 from ..db import get_db
 from ..models import Character, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
-                       BotCharactersOut)
+                       BotCharactersOut, BotRegisterIn)
 from .members import _character_out
 
 router = APIRouter(prefix="/api/public", tags=["bot"],
@@ -15,6 +18,8 @@ router = APIRouter(prefix="/api/public", tags=["bot"],
 
 DEFAULT_JOB = "weapon_master"   # 极诣·剑魂
 DEFAULT_FAME = 100000
+
+_QQ_RE = re.compile(r"^\d{6,64}$")
 
 def _get_user(db: Session, account: str | None = None,
               nickname: str | None = None) -> User:
@@ -87,3 +92,23 @@ def list_characters(account: str | None = None, nickname: str | None = None,
                        .order_by(Character.id)).all()
     return BotCharacterList(account=user.username, nickname=user.nickname,
                             characters=[_character_out(c) for c in chars])
+
+@router.post("/register")
+def register(body: BotRegisterIn, db: Session = Depends(get_db)):
+    """按 QQ 号免码注册：账号=密码=昵称=QQ号。网页端注册仍走注册码。"""
+    identifier = body.identifier
+    if _QQ_RE.fullmatch(identifier) is None:
+        raise HTTPException(400, "QQ号仅支持 6-64 位纯数字")
+    if db.scalars(select(User).where(User.username == identifier)).first():
+        raise HTTPException(400, "用户名已存在")
+    if db.scalars(select(User).where(User.nickname == identifier)).first():
+        raise HTTPException(400, "昵称已存在")
+    user = User(username=identifier, password_hash=hash_password(identifier),
+                nickname=identifier, is_admin=False)
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(400, "用户名已存在")
+    return {"account": identifier, "nickname": identifier}
