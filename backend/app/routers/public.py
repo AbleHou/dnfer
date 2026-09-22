@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 from ..auth import require_api_token
 from ..db import get_db
 from ..models import Raid, Wave
-from ..schemas import RaidListItem
+from ..schemas import RaidDetail, RaidListItem
 from ..routers.raids import _detail
 
 router = APIRouter(prefix="/api/public", tags=["public"],
@@ -32,3 +32,10 @@ def public_wave(rid: int, index: int, db: Session = Depends(get_db)):
         if w.index == index:
             return w
     raise HTTPException(404, "波次不存在")
+
+@router.get("/raids/{rid}", response_model=RaidDetail)
+def public_raid(rid: int, db: Session = Depends(get_db)):
+    raid = db.get(Raid, rid)
+    if raid is None:
+        raise HTTPException(404, "攻坚不存在")
+    return _detail(db, raid)
