@@ -4,6 +4,7 @@
 用法：
   DNFER_API_TOKEN=xxx python dnfer_api.py add <identifier> '<characters_json>'
   DNFER_API_TOKEN=xxx python dnfer_api.py list <identifier>
+  DNFER_API_TOKEN=xxx python dnfer_api.py register <QQ号>
 
 身份解析（identifier 可为账号 username 或昵称）：
   默认：昵称优先，404 回退账号
@@ -131,6 +132,17 @@ def cmd_list(identifier: str, by_nickname: bool, by_account: bool) -> int:
     return 0
 
 
+def cmd_register(identifier: str) -> int:
+    result = _request("POST", f"{_base()}/api/public/register",
+                      {"identifier": identifier})
+    print(json.dumps(result, ensure_ascii=False))
+    if result.get("ok") is False:
+        print(f"[dnfer] 注册失败：{result.get('error')}", file=sys.stderr)
+        return 1
+    print(f"[dnfer] 注册成功：{result.get('account')}", file=sys.stderr)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="DNfer 机器人 API 助手")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -153,12 +165,17 @@ def main() -> int:
                           help="强制按账号 username 查询")
     p_list.add_argument("identifier", help="DNfer 账号 username 或昵称")
 
+    p_register = sub.add_parser("register", help="按 QQ 号免码注册（账号=密码=昵称=QQ号）")
+    p_register.add_argument("identifier", help="纯数字 QQ 号，如 872557240")
+
     args = parser.parse_args()
     if args.cmd == "add":
         return cmd_add(args.identifier, args.characters_json,
                        args.by_nickname, args.by_account)
     if args.cmd == "list":
         return cmd_list(args.identifier, args.by_nickname, args.by_account)
+    if args.cmd == "register":
+        return cmd_register(args.identifier)
     return 2
 
 
