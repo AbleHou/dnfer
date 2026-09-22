@@ -16,7 +16,7 @@
 - **默认目标团选择**：消息带时间 → 按时间匹配；不带时间 → 取 `starts_at` 离当前时间最近的一场（绝对差值，兼容「开团前查前几波」「进行中查下一波」「开团前几天查团信息」三类场景）。
 - **回复粒度**：波次详情每人一行「昵称 · 角色名 · 职责」（不含伤害数值），按红/黄/绿/蓝/紫小队分组；概览用单行式。
 - **确定性脚本**：脚本负责取数、时间匹配、选团、切波等**确定性**逻辑；模型只负责中文解析（含时间表达式）、调用脚本、组装回复。脚本沿用 `dnfer_api.py` 约定：**stdout 只输出 JSON，人读摘要写 stderr，非 2xx 输出 `{"ok":false,"status":...,"error":...}`**；纯 stdlib，零第三方依赖。
-- **时区固定 Asia/Shanghai（UTC+8）**：库里 `starts_at` 为 naive UTC，脚本统一按 UTC 读取、转 +8 展示与匹配。
+- **时区固定 Asia/Shanghai（UTC+8）**：库里 `starts_at` 为 naive UTC，脚本统一按 UTC 读取、加固定 +8 偏移（`timedelta(hours=8)`；中国无夏令时，不引入 `zoneinfo`，避免 Windows 上 tzdata 依赖）后展示与匹配。
 - 环境变量 `DNFER_API_BASE`（默认 `http://127.0.0.1:8000`）与 `DNFER_API_TOKEN`（必填）由运行环境提供，脚本不硬编码。
 
 ## 2. 后端接口（`backend/app/routers/public.py`）
@@ -34,7 +34,7 @@ GET /api/public/raids/{rid}
 
 ## 3. 脚本 `skills/dnfer-raids/scripts/dnfer_raid.py`
 
-纯 stdlib（`urllib.request` / `argparse` / `json` / `os` / `sys` / `zoneinfo`）。环境变量与 `dnfer_api.py` 同款。
+纯 stdlib（`urllib.request` / `argparse` / `json` / `os` / `sys` / `datetime`）。环境变量与 `dnfer_api.py` 同款。
 
 ### 子命令
 
