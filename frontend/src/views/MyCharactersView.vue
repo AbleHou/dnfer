@@ -30,6 +30,10 @@ function startCreate() { editing.value = null; showForm.value = true }
 function startEdit(c: Character) { editing.value = c; showForm.value = true }
 async function onSaved() { showForm.value = false; editing.value = null; await load() }
 function onCancel() { showForm.value = false; editing.value = null }
+function onCardClick() {
+  // 编辑框打开时点卡片 = 取消（移动端无需划到底部点取消按钮）
+  if (showForm.value && editing.value) onCancel()
+}
 
 async function remove(c: Character) {
   const ok = await confirmDialog({ content: `删除角色 ${c.name}？` })
@@ -54,7 +58,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
                    @saved="onSaved" @cancel="onCancel" />
 
     <template v-for="c in list" :key="c.id">
-      <div class="dnf-panel" style="padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px">
+      <div class="dnf-panel" style="padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px"
+           @click="onCardClick">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
           <div>
@@ -67,8 +72,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
             </div>
           </div>
         </div>
-        <button class="dnf-btn dnf-btn-sm" @click="startEdit(c)">编辑</button>
-        <button class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="remove(c)">删除</button>
+        <button class="dnf-btn dnf-btn-sm" @click.stop="startEdit(c)">编辑</button>
+        <button class="dnf-btn dnf-btn-sm dnf-btn-danger" @click.stop="remove(c)">删除</button>
       </div>
       <CharacterForm v-if="showForm && editing?.id === c.id" :categories="categories" :editing="c"
                      @saved="onSaved" @cancel="onCancel" />

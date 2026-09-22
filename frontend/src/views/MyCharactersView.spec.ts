@@ -111,6 +111,32 @@ describe('MyCharactersView job picker', () => {
     expect(panels[cardIdx + 2].text()).toContain('奶')
   })
 
+  it('clicking a character card closes the open edit form (same as cancel)', async () => {
+    const char = {
+      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 100,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+    }
+    apiMock.get.mockResolvedValueOnce([char])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    const editBtn = wrapper.findAll('button').find(b => b.text() === '编辑')
+    await editBtn!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('编辑角色')  // 编辑框已打开
+    // 点卡片（编辑按钮所在外层 .dnf-panel）→ 关闭编辑框
+    const card = wrapper.findAll('.dnf-panel').find(p => p.text().includes('剑魂'))!
+    await card.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('编辑角色')
+    // 点「编辑」按钮不会立即关闭（.stop 防冒泡），仍可重新打开
+    const editBtn2 = wrapper.findAll('button').find(b => b.text() === '编辑')
+    expect(editBtn2).toBeTruthy()
+    await editBtn2!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('编辑角色')
+  })
+
   it('create form renders below the header, not after the list', async () => {
     const char = {
       id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
