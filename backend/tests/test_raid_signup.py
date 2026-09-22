@@ -34,7 +34,7 @@ def test_raid_signup_model_roundtrip_unique_cascade(db):
     db.rollback()
 
     # 删团级联清 signups（Raid.signups cascade="all, delete-orphan"）
-    r = db.query(Raid).get(r.id)
+    r = db.get(Raid, r.id)
     db.delete(r)
     db.commit()
     assert db.query(RaidSignup).count() == 0
