@@ -6,12 +6,13 @@ import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
 import { connectRaidWs } from '../api/ws'
 import WaveSection from '../components/WaveSection.vue'
+import UserAvatar from '../components/UserAvatar.vue'
 import { formatDateTime } from '../utils/datetime'
 import CharacterPickerModal from '../components/CharacterPickerModal.vue'
 import SlotActionModal from '../components/SlotActionModal.vue'
 import { useSlotMove } from '../composables/useSlotMove'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
-import type { Character, Duty, Slot } from '../types'
+import type { Character, Duty, RaidSignup, Slot } from '../types'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -24,6 +25,9 @@ const { movingSlot, pickUp, cancel, moveTo } = useSlotMove(rid, load)
 let disconnect: (() => void) | null = null
 
 const editable = computed(() => !store.raid?.locked || auth.isAdmin)
+const mySignedUp = computed(() =>
+  store.raid?.signups.some(s => s.user.id === auth.user?.id) ?? false)
+const signupUserIds = computed(() => store.raid?.signups.map(s => s.user.id) ?? [])
 
 async function load() { await store.load(rid) }
 
@@ -40,7 +44,32 @@ function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape' && movingSlot.valu
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => { disconnect?.(); window.removeEventListener('keydown', onKeydown) })
 
-async function onPick(slot: Slot) { pickSlot.value = slot }
+async function onSignup() {
+  if (!store.raid) return
+  try { await api.post(`/api/raids/${store.raid.id}/signup`); notifySuccess('报名成功'); await load() }
+  catch (e: any) { notifyError(e.message) }
+}
+async function onCancelSelf() {
+  if (!store.raid) return
+  try { await api.del(`/api/raids/${store.raid.id}/signup`); notifySuccess('已取消报名'); await load() }
+  catch (e: any) { notifyError(e.message) }
+}
+async function onCancelUser(s: RaidSignup) {
+  if (!store.raid) return
+  const ok = await confirmDialog({ content: `确认取消「${s.user.nickname}」的报名？将撤下其已占位的角色` })
+  if (!ok) return
+  try { await api.del(`/api/raids/${store.raid.id}/signups/${s.user.id}`); await load() }
+  catch (e: any) { notifyError(e.message) }
+}
+async function onPick(slot: Slot) {
+  if (!auth.isAdmin && !mySignedUp.value && !store.raid?.locked) {
+    const ok = await confirmDialog({ content: '你还没有报名本次攻坚，是否先报名？' })
+    if (!ok) return
+    try { await api.post(`/api/raids/${rid}/signup`); await load() }
+    catch (e: any) { notifyError(e.message); return }
+  }
+  pickSlot.value = slot
+}
 function onManage(slot: Slot) { manageSlot.value = slot }
 function onReplace(slot: Slot) { manageSlot.value = null; pickSlot.value = slot }
 function onPickUp(slot: Slot) { manageSlot.value = null; pickUp(slot) }
@@ -108,6 +137,27 @@ async function onDeleteWave(index: number) {
       </span>
     </div>
 
+    <div class="dnf-panel" style="margin:10px 0">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <b>已报名</b>
+        <span style="color:var(--dnf-text-faint)">{{ store.raid.signups.length }} 人（含团长）</span>
+        <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
+                style="margin-left:auto" @click="onSignup">报名</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        <div v-for="s in store.raid.signups" :key="s.user.id"
+             style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--dnf-border);border-radius:4px">
+          <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
+          <span>{{ s.user.nickname }}</span>
+          <span v-if="s.created_at === null" class="dnf-badge dnf-badge-ok">团长</span>
+          <button v-if="auth.isAdmin && s.created_at !== null" class="dnf-btn dnf-btn-sm"
+                  @click="onCancelUser(s)">取消报名</button>
+          <button v-else-if="s.user.id === auth.user?.id && !store.raid.locked"
+                  class="dnf-btn dnf-btn-sm" @click="onCancelSelf">取消报名</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="movingSlot" class="move-hint" style="display:flex;align-items:center;gap:10px;margin:10px 0">
       <span style="color:var(--dnf-gold-hi)">移动中：{{ movingSlot.owner_nickname }}（{{ movingSlot.character_name }}）→ 点击目标格</span>
       <button class="dnf-btn dnf-btn-sm" @click="cancel()">取消移动（Esc）</button>
@@ -126,6 +176,7 @@ async function onDeleteWave(index: number) {
                      @pickUp="onPickUp" @remove="onRemoveFromMenu" />
 
     <CharacterPickerModal :open="pickSlot != null" :admin-mode="auth.isAdmin"
+                          :signup-user-ids="signupUserIds"
                           @close="pickSlot = null" @select="onSelectCharacter" />
   </div>
 </template>

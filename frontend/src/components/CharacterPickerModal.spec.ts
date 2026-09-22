@@ -25,7 +25,7 @@ describe('CharacterPickerModal admin mode', () => {
       return []
     })
     const wrapper = mount(CharacterPickerModal, {
-      props: { open: true, adminMode: true },
+      props: { open: true, adminMode: true, signupUserIds: [1, 9] },
       global: { stubs: { teleport: true } }, // NModal teleports to body; stub renders content inline
     })
     await flushPromises()
@@ -42,7 +42,7 @@ describe('CharacterPickerModal admin mode', () => {
       return []
     })
     const wrapper = mount(CharacterPickerModal, {
-      props: { open: true, adminMode: true },
+      props: { open: true, adminMode: true, signupUserIds: [1, 9] },
       global: { stubs: { teleport: true } }, // NModal teleports to body; stub renders content inline
     })
     await flushPromises()
@@ -51,5 +51,20 @@ describe('CharacterPickerModal admin mode', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('剑魂')
     expect(wrapper.text()).toContain('极诣·剑魂')
+  })
+
+  it('filters out players not in signupUserIds', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/admin/characters') return [playerA, mine]
+      return []
+    })
+    const wrapper = mount(CharacterPickerModal, {
+      props: { open: true, adminMode: true, signupUserIds: [9] },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    // 只有团长（id 9）在列；小红（id 1）被过滤
+    expect(wrapper.text()).toContain('奶')
+    expect(wrapper.text()).not.toContain('剑魂')
   })
 })

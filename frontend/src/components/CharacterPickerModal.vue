@@ -7,7 +7,7 @@ import { defaultDuty, dutyOptions } from '../lib/duty'
 import { jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Character, Duty, PlayerCharacters } from '../types'
 
-const props = defineProps<{ open: boolean; adminMode?: boolean }>()
+const props = defineProps<{ open: boolean; adminMode?: boolean; signupUserIds?: number[] }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'select', c: Character, duty: Duty): void }>()
 const auth = useAuthStore()
 const characters = ref<Character[]>([])
@@ -19,7 +19,9 @@ const duty = ref<Duty>('主C')
 watch(() => props.open, async (open) => {
   if (!open) { selected.value = null; return }
   if (props.adminMode) {
-    players.value = await api.get<PlayerCharacters[]>('/api/admin/characters')
+    const ids = new Set(props.signupUserIds ?? [])
+    players.value = (await api.get<PlayerCharacters[]>('/api/admin/characters'))
+      .filter(p => ids.has(p.user.id))
     const mine = players.value.find(p => p.user.id === auth.user?.id) ?? players.value[0]
     playerId.value = mine?.user.id ?? null
     characters.value = mine?.characters ?? []
@@ -47,7 +49,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
   <n-modal :show="open" preset="card" title="选择角色" style="width:min(420px,92vw)"
            @update:show="(s: boolean) => { if (!s) emit('close') }">
     <div style="max-height:60vh;overflow:auto">
-      <n-select v-if="adminMode" class="player-select" size="small" filterable
+      <p v-if="adminMode && !players.length" style="color:var(--dnf-text-faint)">还没有人报名</p>
+      <n-select v-else-if="adminMode" class="player-select" size="small" filterable
                 :options="playerOptions" :value="playerId"
                 @update:value="onPlayerChange" placeholder="选择玩家"
                 style="margin-bottom:10px" />
