@@ -30,7 +30,7 @@ GET /api/public/raids/{rid}
 - 鉴权沿用路由级 `Depends(require_api_token)`。
 - `rid` 不存在 → `HTTPException(404, "攻坚不存在")`。
 - 实现：`db.get(Raid, rid)` + 复用 `raids.py:_detail(db, raid)`（与现有 `public_wave` 一致），`response_model=RaidDetail`。
-- 返回完整 `RaidDetail`：id、name、dungeon_id、dungeon_name、size、locked、starts_at、全部 waves → 每波 slots → 每格 character_name/job_title/class_type/fame/owner_nickname/duty 等。
+- 返回完整 `RaidDetail`：id、name、dungeon_id、dungeon_name、size、locked、starts_at、全部 waves → 每波 slots → 每格 character_name/character_class/job_title/fame/owner_nickname/duty 等（字段名与 `schemas.SlotOut` 一致）。
 
 ## 3. 脚本 `skills/dnfer-raids/scripts/dnfer_raid.py`
 
@@ -42,11 +42,21 @@ GET /api/public/raids/{rid}
 |---|---|---|
 | `raids` | `GET /api/public/raids` | 每场：id、name、dungeon_name、size、locked、wave_count、`starts_at`（已转 +8 的 `YYYY-MM-DD HH:MM 周X`） |
 | `pick` | 选一场团；默认取 starts_at 离当前时间最近（绝对差值）；可选 `--weekday/--period` 或 `--from/--to` 过滤 | 选中 raid 的 id 与概览 + 匹配说明（`matched_by: closest` / `weekday=..,period=..` / `range=..`）；时间过滤无命中时回退最近一场并标 `"fallback": true` 与命中的时间范围 |
-| `detail <id> [--wave n \| --waves n \| --all]` | 拉一次 `GET /api/public/raids/{rid}` 完整详情，**本地切波**（单波 / 前 n 波 / 全部，缺省 `--all`） | 该场完整信息 + 请求波次；每波按 squad_index 分组，每格输出 `squad_name`（红/黄/绿/蓝/紫）、`owner_nickname`、`character_name`、`duty`、`job_title`、`is_empty` |
+| `detail <id> [--wave n \| --waves n \| --all]` | 拉一次 `GET /api/public/raids/{rid}` 完整详情，**本地切波**（单波 / 前 n 波 / 全部，缺省 `--all`） | 该场完整信息 + 请求波次；每波按 squad_index 分组，每格输出 `squad_name`（红/黄/绿/蓝/紫）、`owner_nickname`、`character_name`、`duty`、`job_title`、`is_empty`（空位 = `character_name` 为 null） |
+
+波次 index 从 1 开始（与后端 `raid_builder.create_wave` 一致，即「第 n 波」「前 n 波」均为 1-based）。
 
 - `--period` 窗口：`morning` 06:00–12:00 / `afternoon` 12:00–18:00 / `evening` 18:00–24:00（半开区间 `[start, end)`）。
-- `--weekday`：0=周一 … 6=周日（Python `weekday()` 语义）；解析为「下一个出现的该星期」，若该星期就是今天且窗口起点未过则取今天，否则下一周。
-- `--from/--to`：显式本地 `YYYY-MM-DD HH:MM`，与 `--weekday/--period` 互斥，优先级最高。
+- `--weekday`：0=周一 … 6=周日（Python `weekday()` 语义）；解析为「下一个出现的该星期」，若该星期就是今天且窗口起点未过则取今天，否则下一周。单独使用（不带 `--period`）时窗口为当天 00:00–24:00 匹配整天。
+- `--from/--to`：显式本地 `YYYY-MM-DD HH:MM`，可单边提供（只给 `--from` 或只给 `--to`），都给时取闭区间；与 `--weekday/--period` 互斥，优先级最高。
+- 时间过滤命中多场时，**筛选后仍取 starts_at 离当前时间最近者**（与默认规则一致）。
+- `squad_name`：脚本本地将 `squad_index` 映射为红/黄/绿/蓝/紫（`index % 5`，对应后端 `raid_builder` 调色板，与前端 `colors.ts` 一致）。
+- 空列表行为（stdout 仍为合法 JSON，不抛异常）：
+  - `raids` 零团 → `{"ok":true,"raids":[]}`
+  - `pick` 零团 → `{"ok":true,"selected":null,"reason":"no_raids"}`（模型据此回复「当前还没有攻坚计划」）
+- 越界行为：
+  - `--wave n` 且 `n > wave_count` → `{"ok":false,"status":400,"error":"该团只有 n 波"}`
+  - `--waves n` 且 `n > wave_count` → 钳制为全部波次（「前 n 波」超量即全给）
 - 输出约定与错误包装完全对齐 `dnfer_api.py`（stdout 仅 JSON；401/404/网络错误分别落到 `status` / `error`）。
 
 ## 4. SKILL.md（`skills/dnfer-raids/SKILL.md`）
