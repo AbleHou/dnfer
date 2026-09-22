@@ -51,7 +51,7 @@ stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`�
 
 ## 回复格式
 
-- **概览**单行式：`名称（副本）｜时间｜规模｜n 波｜已锁定/未锁定`（时间用 `pick`/`detail` 给的 `YYYY-MM-DD HH:MM 周X`，可转述为「周六 14:30」）。
+- **概览**单行式：`名称（副本）｜时间｜规模｜n 波｜已锁定/未锁定`（时间用 `pick`/`raids` 的 `starts_at_local`、`detail` 的 `starts_at`，均为 `YYYY-MM-DD HH:MM 周X`，可转述为「周六 14:30」；**别用 `pick`/`raids` 里的裸 UTC 字段 `starts_at`**）。
 - **波次详情**：每波一个小节 `【第 n 波】`，按 `squad_name`（红/黄/绿/蓝/紫）分组，每人一行：
   - 有角色：`昵称 · 角色名 · 职责`（如 `张三 · 剑魂 · 主C`）
   - 空位：`（空）`
@@ -62,8 +62,10 @@ stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`�
 | stdout | 回复 |
 |---|---|
 | `{"ok":true,"selected":null,"reason":"no_raids"}` | 「当前还没有攻坚计划」 |
-| `pick` 输出 `"fallback":true` | 「没有匹配《range 里的时间》的团，最近的一场是《selected.name》（《starts_at》）」 |
+| `pick` 输出 `"fallback":true` | 「没有匹配《range 里的时间》的团，最近的一场是《selected.name》（《selected.starts_at_local》）」；随后照常 `detail <id> --all` 给出该团概览 |
 | `detail` 返回 `{"ok":false,"status":400,"error":"该团只有 N 波"}` | 「该团只有 N 波」 |
 | `{"ok":false,"status":404,"error":"攻坚不存在"}` | 「这个团不存在或已删除」 |
 | `{"ok":false,"error":...}`（无 status，Token/网络） | 「系统暂时不可用，稍后再试」 |
 | `{"ok":false,"status":401,...}` | 「机器人还没配好 Token，找管理员」 |
+
+- 若 stdout 为 `--from/--to 格式应为...` / `--weekday/--period 与 --from/--to 不能同时使用` / `--from 不能晚于 --to` 这类**参数错误**：是模型自己解析时间表达式出错，应重新推导时间后再调 `pick`，不要回复「系统暂时不可用」。
