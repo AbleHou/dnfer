@@ -1,4 +1,4 @@
-from .helpers import make_raid, register_user
+from .helpers import make_raid, register_user, signup
 
 TOKEN = {"Authorization": "Bearer change-me-bot-token"}
 
@@ -18,6 +18,7 @@ def test_public_raid_detail(client):
     ah = _admin(client)
     rid = make_raid(client, ah, name="巴卡尔", size=12)["id"]
     h, _ = register_user(client, "p1", "甲")
+    signup(client, rid, h)
     cid = client.post("/api/me/characters", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 1}).json()["id"]
     slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]

@@ -1,4 +1,4 @@
-from .helpers import make_raid, register_user
+from .helpers import make_raid, register_user, signup
 
 def _admin(client):
     r = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
@@ -15,6 +15,8 @@ def test_admin_can_replace_occupied_slot(client):
     c1 = _mkchar(client, h1, "C1")
     c2 = _mkchar(client, h2, "C2")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
+    signup(client, rid, h2)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = slots[0]
     # 甲先占 sA
@@ -40,6 +42,7 @@ def test_non_admin_cannot_fill_occupied_slot(client):
     c1 = _mkchar(client, h1, "C1")
     c2 = _mkchar(client, h2, "C2")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = slots[0]
     client.post(f"/api/raids/{rid}/slots/{sA['id']}/fill", headers=h1,
@@ -53,6 +56,7 @@ def test_owner_can_manage_slot_admin_placed(client):
     h1, u1 = register_user(client, "own1", "甲")
     c1 = _mkchar(client, h1, "C1")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
     slot = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"][0]
     # 管理员替甲放置 C1（管理员可用任意角色）
     assert client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=ah,
@@ -68,6 +72,7 @@ def test_non_owner_cannot_manage_others_slot(client):
     h2, _ = register_user(client, "own3", "丙")
     c1 = _mkchar(client, h1, "C1")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
     slot = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"][0]
     client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h1,
                 json={"character_id": c1})
@@ -79,6 +84,7 @@ def test_owner_can_delete_wave_with_only_own_chars_admin_placed(client):
     h1, _ = register_user(client, "own4", "丁")
     c1 = _mkchar(client, h1, "C1")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
     # 加波 2，管理员在波 2 放丁的 C1
     client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
     w2 = next(w for w in client.get(f"/api/raids/{rid}", headers=ah).json()["waves"]
@@ -94,6 +100,7 @@ def test_move_to_empty_slot(client):
     h1, _ = register_user(client, "mv1", "甲")
     c1 = _mkchar(client, h1, "C1")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
     sB = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)
@@ -116,6 +123,8 @@ def test_swap_two_slots(client):
     c1 = _mkchar(client, h1, "C1")
     c2 = _mkchar(client, h2, "C2")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
+    signup(client, rid, h2)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
     sB = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)
@@ -135,6 +144,7 @@ def test_move_across_waves(client):
     h1, _ = register_user(client, "mv4", "丙")
     c1 = _mkchar(client, h1, "C1")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
     client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
     w1, w2 = [w for w in client.get(f"/api/raids/{rid}", headers=ah).json()["waves"]
               if w["index"] in (1, 2)]
@@ -159,6 +169,8 @@ def test_swap_cross_wave_duplicate_player_blocked(client):
     c2 = _mkchar(client, h2, "W")   # 戊的 W
     c3 = _mkchar(client, h2, "Y")   # 戊的 Y
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
+    signup(client, rid, h2)
     client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
     w1, w2 = [w for w in client.get(f"/api/raids/{rid}", headers=ah).json()["waves"]
               if w["index"] in (1, 2)]
@@ -187,6 +199,7 @@ def test_move_bad_inputs(client):
     c1 = _mkchar(client, h1, "C1")
     raid1 = make_raid(client, ah)
     rid = raid1["id"]
+    signup(client, rid, h1)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = slots[0]
     # 目标=源格 → 400
@@ -216,6 +229,9 @@ def test_move_main_healer_limit_rollback(client):
     c2 = _mkchar(client, h2, "C2")
     c3 = _mkchar(client, h3, "奶3", job="crusader_male")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
+    signup(client, rid, h2)
+    signup(client, rid, h3)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
     sB = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)
@@ -245,6 +261,8 @@ def test_move_full_squad_composition_rollback(client):
     sup = _mkchar(client, hs[3], "S", job="crusader_male")
     out5 = _mkchar(client, hs[4], "O5")
     rid = make_raid(client, ah)["id"]
+    for h in hs:
+        signup(client, rid, h)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     squad0 = [s for s in slots if s["squad_index"] == 0]
     for i, s in enumerate(squad0[:3]):
@@ -270,6 +288,7 @@ def test_move_ws_broadcast(client):
     h1, _ = register_user(client, "mvws", "癸")
     c1 = _mkchar(client, h1, "C1")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
     sB = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)
@@ -289,6 +308,8 @@ def test_swap_ws_broadcast(client):
     c1 = _mkchar(client, h1, "C1")
     c2 = _mkchar(client, h2, "C2")
     rid = make_raid(client, ah)["id"]
+    signup(client, rid, h1)
+    signup(client, rid, h2)
     slots = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"]
     sA = next(s for s in slots if s["squad_index"] == 0 and s["row_index"] == 0)
     sB = next(s for s in slots if s["squad_index"] == 1 and s["row_index"] == 0)

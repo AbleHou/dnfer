@@ -190,3 +190,45 @@ def test_cancel_ws_broadcast_slot_and_signup(client):
         assert client.delete(f"/api/raids/{rid}/signup", headers=h).status_code == 200
         types = [ws.receive_json()["type"] for _ in range(2)]
         assert types == ["slot:removed", "raid:signup_removed"]
+
+
+def test_fill_requires_signup_for_regular_user(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "sigf1", "甲")
+    cid = _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    r = client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                    json={"character_id": cid})
+    assert r.status_code == 403
+    assert r.json()["detail"] == "请先报名再占位"
+    # 报名后可占位
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                       json={"character_id": cid}).status_code == 200
+
+
+def test_fill_admin_placing_unregistered_user_blocked(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sigf2", "乙")
+    cid = _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    slot = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"][0]
+    r = client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=ah,
+                    json={"character_id": cid})
+    assert r.status_code == 403
+    assert r.json()["detail"] == "该用户未报名，无法排表"
+    # 该用户报名后管理员可放
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=ah,
+                       json={"character_id": cid}).status_code == 200
+
+
+def test_fill_creator_always_participates(client):
+    ah = _admin(client)
+    cid = _mkchar(client, ah, "团长C")
+    rid = make_raid(client, ah)["id"]
+    slot = client.get(f"/api/raids/{rid}", headers=ah).json()["waves"][0]["slots"][0]
+    # 团长（管理员、未报名）可放自己角色
+    assert client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=ah,
+                       json={"character_id": cid}).status_code == 200

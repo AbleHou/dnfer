@@ -1,4 +1,4 @@
-from .helpers import make_raid, register_user
+from .helpers import make_raid, register_user, signup
 
 def _admin(client):
     r = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
@@ -13,6 +13,7 @@ def test_public_list_and_wave(client):
     rid = make_raid(client, ah, name="巴卡尔")["id"]
     # 填一个角色
     h, _ = register_user(client, "p1", "甲")
+    signup(client, rid, h)
     cid = client.post("/api/me/characters", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 1}).json()["id"]
     slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]

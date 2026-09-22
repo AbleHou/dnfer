@@ -222,6 +222,10 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
         raise HTTPException(404, "角色不存在")
     if not user.is_admin and char.user_id != user.id:
         raise HTTPException(400, "只能使用自己的角色")
+    if not _participates(db, raid, char.user_id):
+        if user.is_admin:
+            raise HTTPException(403, "该用户未报名，无法排表")
+        raise HTTPException(403, "请先报名再占位")
     removed: list[Slot] = []
     if body.replace:
         # 冲突即替换：同一角色已在其他格（任意波）或同玩家同波已有角色时，

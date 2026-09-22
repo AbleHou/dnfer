@@ -20,3 +20,7 @@ def make_raid(client, ah, dungeon_id=None, name="x", size=12, starts_at="2026-09
                     json={"name": name, "dungeon_id": dungeon_id, "starts_at": starts_at})
     assert r.status_code == 200
     return r.json()
+
+def signup(client, rid, headers):
+    r = client.post(f"/api/raids/{rid}/signup", headers=headers)
+    assert r.status_code == 200
