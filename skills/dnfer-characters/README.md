@@ -41,10 +41,14 @@ DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_api.py list 张三
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_api.py list --by-account zhangsan
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_api.py register 872557240
 ```
 
 - stdout 为机器可读 JSON；stderr 为中文摘要。
 - 命令失败时退出码非 0，stdout 为 `{"ok":false,...}`。
+
+注册成功后，该 QQ 号即账号=密码=昵称，可用上述 add/list 命令直接录入/查询角色。
 
 ## 目录结构
 
