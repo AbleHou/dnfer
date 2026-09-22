@@ -122,22 +122,24 @@ class RaidSignupOut(BaseModel):
     created_at: datetime | None  # 团长固定行（无真实报名记录）为 None
 ```
 
-`RaidListItem` 追加字段：
+`RaidListItem` 追加字段（**带默认值**，保证 Task 2 之前既有构造点不 500）：
 
 ```python
 class RaidListItem(BaseModel):
     ...
-    signup_count: int
-    my_signed_up: bool
+    signup_count: int = 0
+    my_signed_up: bool = False
 ```
 
-`RaidDetail` 追加字段：
+`RaidDetail` 追加字段（带默认空列表，Task 2 之前 `_detail` 不填也不报错）：
 
 ```python
 class RaidDetail(BaseModel):
     ...
-    signups: list[RaidSignupOut]
+    signups: list[RaidSignupOut] = []
 ```
+
+> 时序说明：`_detail`/`list_raids` 的真实取值在 Task 2 才补上；本任务给三个字段默认值，避免「Task 1 加必填字段 → 详情接口 500」的中间态。Task 2 实现后传参会覆盖默认值，行为不变。
 
 **同步修改 `backend/app/routers/public.py` 的 `public_raids`**（它直接构造 `RaidListItem`，新字段为必填，不改会 500）：在 `backend/app/routers/public.py` 顶部 import `RaidListItem` 已存在，将 `public_raids` 的构造补上：
 
@@ -618,6 +620,7 @@ export interface RaidSignup { user: User; created_at: string | null }
       raid.signups.push({ user: ev.user, created_at: ev.created_at })
       break
     case 'raid:signup_removed':
+      raid.signups ??= []
       raid.signups = raid.signups.filter(s => s.user.id !== ev.user_id)
       break
 ```
@@ -784,11 +787,10 @@ const props = defineProps<{ open: boolean; adminMode?: boolean; signupUserIds?: 
 
 - [ ] **Step 2: `RaidDetailView.vue` 加已报名面板与占位询问**
 
-脚本区新增：
+脚本区新增（注意：`notify` 与类型 import 在 `RaidDetailView.vue` 已存在，**不要重复加**，只把 `RaidSignup` 并进既有的类型 import）：
 
 ```typescript
-import type { Character, Duty, RaidSignup, Slot } from '../types'
-import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
+import type { Character, Duty, RaidSignup, Slot } from '../types'   // 既有 import 行补 RaidSignup
 
 const mySignedUp = computed(() =>
   store.raid?.signups.some(s => s.user.id === auth.user?.id) ?? false)
