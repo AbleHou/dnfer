@@ -1,6 +1,6 @@
 ---
 name: dnfer-characters
-description: 录入与查询 DNF 角色到 DNfer 系统。当群友发送账号或昵称及角色截图/文字描述请求记录角色，或要求按账号/昵称查询角色时使用。
+description: 录入与查询 DNF 角色到 DNfer 系统，或按 QQ 号自助注册。当群友发送账号或昵称及角色截图/文字描述请求记录角色、要求按账号/昵称查询角色、或发送「QQ号注册」请求自助注册时使用。
 ---
 
 # DNfer 角色录入与查询
@@ -29,9 +29,29 @@ python scripts/dnfer_api.py add --by-account <账号> '<角色数组json>'
 python scripts/dnfer_api.py list <昵称或账号>
 python scripts/dnfer_api.py list --by-nickname <昵称>
 python scripts/dnfer_api.py list --by-account <账号>
+
+# 按 QQ 号免码注册（账号=密码=昵称=QQ号）
+python scripts/dnfer_api.py register <QQ号>
 ```
 
 stdout 只输出 JSON，直接解析它。
+
+## 注册
+
+群友发送「QQ号注册」或「注册 QQ号」（QQ 号为纯数字）时，按 QQ 号免注册码自助开户：**账号=密码=昵称=该 QQ 号**。注册后即可用该 QQ 号（账号或昵称）录入/查询角色。
+
+```bash
+python scripts/dnfer_api.py register 872557240
+```
+
+stdout 成功：`{"account":"872557240","nickname":"872557240"}`
+
+- 成功 → 回复「注册成功，账号=密码=昵称=872557240，可用 QQ 号登录网站」
+- 消息里没有数字 → 回复「请发送你的 QQ 号，格式如 872557240注册」
+- 已注册（stdout `{"ok":false,"status":400,"error":"用户名已存在"}`）→ 「这个 QQ 号已经注册过，直接使用即可」
+- 昵称被占（`... error:"昵称已存在"`）→ 「这个昵称已被占用，请联系管理员」
+- 格式非法（`... error:"QQ号仅支持 6-64 位纯数字"`）→ 「请发送有效的 QQ 号」
+- Token/网络错误（stdout `{"ok":false,"error":...}`，无 status）→ 「系统暂时不可用，稍后再试」
 
 ## 角色解析规则
 
@@ -81,5 +101,5 @@ stdout 返回：`{"account":"zhangsan","nickname":"张三","characters":[...]}`
   - 「剑魂 已更新（updated），账号 zhangsan（昵称 张三）」
   - 「鬼泣 录入失败：职业不存在」
 - **查询后**：列出角色名、职业、名望（及数值）；账号/昵称存在但没有角色时回复「该账号/昵称还没有角色」。
-- **账号/昵称不存在**（stdout 为 `{"ok":false,"status":404,...}`）：回复「这个账号/昵称还没在系统注册，请先用注册码注册（找管理员要码）。」
+- **账号/昵称不存在**（stdout 为 `{"ok":false,"status":404,...}`）：回复「这个账号/昵称还没注册，请发送『你的QQ号注册』自助注册。」
 - **Token/网络错误**（stdout 为 `{"ok":false,"error":...}`）：回复「系统暂时不可用，稍后再试。」
