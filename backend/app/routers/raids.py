@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from .. import jobs as job_data
@@ -416,7 +417,11 @@ async def signup(rid: int, user: User = Depends(get_current_user), db: Session =
         raise HTTPException(400, "你已报名")
     rs = RaidSignup(raid_id=rid, user_id=user.id)
     db.add(rs)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # 并发重复报名兜底：唯一约束命中 → 视为已报名
+        db.rollback()
+        raise HTTPException(400, "你已报名")
     db.refresh(rs)
     await manager.broadcast(rid, {"type": "raid:signup",
                                   "user": UserOut.model_validate(user).model_dump(),

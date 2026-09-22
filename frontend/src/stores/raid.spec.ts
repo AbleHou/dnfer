@@ -41,10 +41,12 @@ describe('raid store', () => {
     setActivePinia(createPinia())
     const store = useRaidStore()
     store.raid = makeRaid()
+    store.raid!.waves[0].slots[0].owner_avatar = 'http://avatar/x.png'
     applyEvent(store, { type: 'slot:removed', slot_id: 1 })
     expect(store.raid!.waves[0].slots[0].character_id).toBeNull()
     expect(store.raid!.waves[0].slots[0].job_name).toBeNull()
     expect(store.raid!.waves[0].slots[0].job_title).toBeNull()
+    expect(store.raid!.waves[0].slots[0].owner_avatar).toBeNull()
   })
 
   it('applies slot:duty_changed', () => {

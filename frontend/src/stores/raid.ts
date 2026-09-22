@@ -44,7 +44,7 @@ export function applyEvent(store: ReturnType<typeof useRaidStore>, ev: WsEvent) 
       if (slot) { slot.character_id = null; slot.character_name = null; slot.character_class = null;
         slot.job_name = null; slot.job_title = null;
         slot.fame = null; slot.simulated_damage = null; slot.sustained_dps = null; slot.buff_amount = null;
-        slot.owner_id = null; slot.owner_nickname = null; slot.duty = null }
+        slot.owner_id = null; slot.owner_nickname = null; slot.owner_avatar = null; slot.duty = null }
       break
     }
     case 'raid:locked': raid.locked = true; break
