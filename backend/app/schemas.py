@@ -85,6 +85,10 @@ class RaidUpdate(BaseModel):
     name: str | None = None
     starts_at: datetime | None = None
 
+class RaidSignupOut(BaseModel):
+    user: UserOut
+    created_at: datetime | None  # 团长固定行（无真实报名记录）为 None
+
 class RaidListItem(BaseModel):
     id: int
     name: str
@@ -94,6 +98,8 @@ class RaidListItem(BaseModel):
     locked: bool
     starts_at: datetime
     wave_count: int
+    signup_count: int = 0
+    my_signed_up: bool = False
 
 class SlotOut(BaseModel):
     id: int
@@ -128,6 +134,7 @@ class RaidDetail(BaseModel):
     locked: bool
     starts_at: datetime
     waves: list[WaveOut]
+    signups: list[RaidSignupOut] = []
 
 class FillIn(BaseModel):
     character_id: int

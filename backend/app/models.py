@@ -63,6 +63,8 @@ class Raid(Base):
     dungeon: Mapped[Dungeon] = relationship()
     waves: Mapped[list["Wave"]] = relationship(back_populates="raid",
                                                order_by="Wave.index", cascade="all, delete-orphan")
+    signups: Mapped[list["RaidSignup"]] = relationship(
+        back_populates="raid", cascade="all, delete-orphan")
 
 class Wave(Base):
     __tablename__ = "waves"
@@ -88,3 +90,13 @@ class Slot(Base):
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     wave: Mapped[Wave] = relationship(back_populates="slots")
     character: Mapped[Character | None] = relationship()
+
+class RaidSignup(Base):
+    __tablename__ = "raid_signups"
+    __table_args__ = (UniqueConstraint("raid_id", "user_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    raid_id: Mapped[int] = mapped_column(ForeignKey("raids.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    raid: Mapped[Raid] = relationship(back_populates="signups")
+    user: Mapped[User] = relationship()

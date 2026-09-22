@@ -2,7 +2,7 @@ import os
 from sqlalchemy.pool import StaticPool
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 # 测试环境自洽：env 变量优先于 .env 文件（pydantic-settings 优先级），
@@ -23,6 +23,10 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_fk(dbapi_connection, _):  # pragma: no cover
+    dbapi_connection.execute("PRAGMA foreign_keys=ON")
 
 @pytest.fixture()
 def db():

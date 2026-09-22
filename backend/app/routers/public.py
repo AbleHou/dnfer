@@ -15,7 +15,8 @@ def public_raids(db: Session = Depends(get_db)):
     return [RaidListItem(id=r.id, name=r.name, dungeon_id=r.dungeon_id,
                          dungeon_name=r.dungeon.name, size=r.size,
                          locked=r.locked, starts_at=r.starts_at,
-                         wave_count=len(r.waves))
+                         wave_count=len(r.waves),
+                         signup_count=0, my_signed_up=False)
             for r in db.query(Raid).options(selectinload(Raid.dungeon))
                     .order_by(Raid.created_at.desc()).all()]
 
