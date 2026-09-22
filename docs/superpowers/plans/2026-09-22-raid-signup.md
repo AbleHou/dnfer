@@ -141,7 +141,7 @@ class RaidDetail(BaseModel):
 
 > 时序说明：`_detail`/`list_raids` 的真实取值在 Task 2 才补上；本任务给三个字段默认值，避免「Task 1 加必填字段 → 详情接口 500」的中间态。Task 2 实现后传参会覆盖默认值，行为不变。
 
-**同步修改 `backend/app/routers/public.py` 的 `public_raids`**（它直接构造 `RaidListItem`，新字段为必填，不改会 500）：在 `backend/app/routers/public.py` 顶部 import `RaidListItem` 已存在，将 `public_raids` 的构造补上：
+**同步修改 `backend/app/routers/public.py` 的 `public_raids`**（它直接构造 `RaidListItem`；新字段虽有默认值，但按 spec §9 显式给出公开列表口径）：在 `backend/app/routers/public.py` 顶部 import `RaidListItem` 已存在，将 `public_raids` 的构造补上：
 
 ```python
 @router.get("/raids", response_model=list[RaidListItem])
@@ -456,7 +456,7 @@ Expected: PASS —— 10 tests passed（Task 1 的 1 个 + 本任务 9 个）。
 - [ ] **Step 8: 跑存量测试确认无回归**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_raids.py tests/test_public.py tests/test_public_raids.py -q`
-Expected: PASS（这些测试尚不占位，未触发 fill_slot 新校验）。
+Expected: PASS（这些测试虽在占位，但 fill_slot 的参与校验要到 Task 3 才加，故当前不红）。
 
 - [ ] **Step 9: Commit**
 
