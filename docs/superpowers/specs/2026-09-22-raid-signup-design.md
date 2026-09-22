@@ -151,7 +151,7 @@ if not _participates(db, rid, char.user_id, raid):
 - 取消报名成功后除依赖 WS 事件外，**再触发一次 `load()`** 全量刷新：既有 `applyEvent` 的 `slot:removed` 处理不会清 `owner_avatar`（存量小缺陷），全量刷新可保证被撤占位的格子头像也清干净。
 - **占位询问**：`onPick` 中，仅当 `!auth.isAdmin && 未报名 && 未锁定`（非管理员放置自己的角色，管理员放他人不触发）→ `confirmDialog('你还没有报名本次攻坚，是否先报名？')`；确认 → 先 `POST /api/raids/{rid}/signup` 并 `load()`，再打开选人弹窗；取消 → 不打开。
 - 传给 `CharacterPickerModal` 的 `signupUserIds` 由 `store.raid.signups.map(s => s.user.id)` 计算。
-- 注意口径：列表的「已报名 N 人」（`signup_count`，不含团长）与详情面板的行数（含团长固定行）**天然差 1**，属设计使然；详情面板不另显示计数，避免对不上的困惑。
+- 注意口径：列表的「已报名 N 人」（`signup_count`，不含团长）与详情面板的 `signups.length`（含团长固定行）**天然差 1**，属设计使然。实现时详情面板计数标注「N 人（含团长）」以消除歧义（列表不含团长、面板含团长）。
 
 ### 6.5 `CharacterPickerModal.vue`
 
