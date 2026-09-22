@@ -14,10 +14,10 @@
 - **新增独立表 `raid_signups`**（raid_id + user_id 唯一），`Base.metadata.create_all` 自动建表，无 ALTER 迁移。
 - **仅未锁定（`locked=False`）的攻坚可报名**；锁定后不可报名、不可自行取消（管理员取消他人不受锁定限制）。
 - **团长（`raid.created_by`）默认参加**：固定显示在已报名列表首位（`created_at=None`）、始终可被排表、`fill_slot` 免报名校验。**其他用户（含非团长的管理员，若有）一律需报名才能被排表**——「无需报名」的特权仅授予团长一人。
-- **管理员排表可选范围收窄**：选人面板（CharacterPickerModal 管理员模式）只显示「团长 ∪ 已报名用户 ∪ 当前排表管理员自己」。
+- **管理员排表可选范围收窄**：选人面板（CharacterPickerModal 管理员模式）只显示「团长 ∪ 已报名用户」。
 - **取消报名时自动撤下该用户全部占位**（清空所有波次中该用户的格子）。
 - **允许自行取消**：未锁定时用户可取消自己的报名（同样撤下自身占位）。
-- **占位询问**：未报名用户进入详情页并尝试占位时，先询问是否报名，确认后才打开选人弹窗。
+- **占位询问**：非管理员用户进入详情页并尝试放置自己角色（此时本人未报名）时，先询问是否报名，确认后才打开选人弹窗；管理员放置他人角色不触发（由后端 403 兜底，见 §4.6）。
 - 后端 `fill_slot` 强制校验「被放置角色的用户必须已报名或为团长 → 否则 403」，前端询问仅是 UX 增强，规则单一可靠。
 
 ## 2. 数据模型（`backend/app/models.py`）
@@ -149,8 +149,9 @@ if not _participates(db, rid, char.user_id, raid):
   - 当前用户为本人（非团长）且未锁定 → 该行「取消报名」按钮（`DELETE /api/raids/{rid}/signup`）。
 - 未锁定 & 未报名（`my_signed_up` 为 false，团长恒为 true 不触发）→ 面板给「报名」按钮，点击 `POST /api/raids/{rid}/signup`，成功后 `load()`。
 - 取消报名成功后除依赖 WS 事件外，**再触发一次 `load()`** 全量刷新：既有 `applyEvent` 的 `slot:removed` 处理不会清 `owner_avatar`（存量小缺陷），全量刷新可保证被撤占位的格子头像也清干净。
-- **占位询问**：`onPick` 中，若未报名 & 未锁定 → `confirmDialog('你还没有报名本次攻坚，是否先报名？')`；确认 → 先 `POST /api/raids/{rid}/signup` 并 `load()`，再打开选人弹窗；取消 → 不打开。
+- **占位询问**：`onPick` 中，仅当 `!auth.isAdmin && 未报名 && 未锁定`（非管理员放置自己的角色，管理员放他人不触发）→ `confirmDialog('你还没有报名本次攻坚，是否先报名？')`；确认 → 先 `POST /api/raids/{rid}/signup` 并 `load()`，再打开选人弹窗；取消 → 不打开。
 - 传给 `CharacterPickerModal` 的 `signupUserIds` 由 `store.raid.signups.map(s => s.user.id)` 计算。
+- 注意口径：列表的「已报名 N 人」（`signup_count`，不含团长）与详情面板的行数（含团长固定行）**天然差 1**，属设计使然；详情面板不另显示计数，避免对不上的困惑。
 
 ### 6.5 `CharacterPickerModal.vue`
 
@@ -174,7 +175,7 @@ if not _participates(db, rid, char.user_id, raid):
 - `fill_slot`：普通用户未报名 → 403「请先报名再占位」；报名后 → 成功。
 - `fill_slot`：管理员放**未报名**用户角色 → 403「该用户未报名，无法排表」；放团长角色 → 成功。
 - `fill_slot`：非团长管理员（未报名）放置自己角色 → 403「请先报名再占位」；报名后 → 成功（团长恒可自放）。
-- **删除带报名的攻坚 → 成功**（`raid_signups` 级联清理，不触发外键错误）。
+- **删除带报名的攻坚 → 成功**（`raid_signups` 级联清理）。**前提：`conftest.py` 的测试引擎需启用 `PRAGMA foreign_keys=ON`**（当前 `conftest.py` 自建 `sqlite://` 引擎未挂 `db.py` 的事件监听，SQLite 默认不查外键，测试将失去对级联的验证意义）——为 `conftest.py` 的引擎补与 `db.py` 一致的外键 pragma，再断言删除后 `raid_signups` 无残留行。
 - 列表：含 `signup_count`、`my_signed_up`（团长为 true）。
 - 详情：`signups` 团长在首位。
 
@@ -194,6 +195,7 @@ if not _participates(db, rid, char.user_id, raid):
 - `backend/app/schemas.py` — 新增 `RaidSignupOut`；扩展 `RaidListItem` / `RaidDetail`
 - `backend/app/routers/raids.py` — 新增 3 个报名端点、`_detail`/列表补字段、`fill_slot` 强制校验
 - `backend/tests/test_raid_signup.py` — 新增
+- `backend/tests/conftest.py` — 测试引擎补 `PRAGMA foreign_keys=ON`（让删除级联测试有验证意义）
 - `frontend/src/types.ts` — `Raid` / `RaidListItem` / `RaidSignup`
 - `frontend/src/stores/raid.ts` — WS 事件处理
 - `frontend/src/views/RaidListView.vue` — 报名按钮 / 人数
