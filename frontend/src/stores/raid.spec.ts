@@ -6,7 +6,7 @@ import type { Raid } from '../types'
 function makeRaid(): Raid {
   return {
     id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: '2026-09-20T14:00:00',
-    size: 12, locked: false,
+    size: 12, locked: false, signups: [],
     waves: [{ id: 1, index: 1, slots: Array.from({ length: 12 }, (_, i) => ({
       id: i + 1, squad_index: Math.floor(i / 4), row_index: i % 4,
       character_id: null, character_name: null, character_class: null, job_name: null, job_title: null, fame: null,
@@ -76,5 +76,20 @@ describe('raid store', () => {
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null,
       owner_id: 9, owner_nickname: '甲', owner_avatar: null, duty: '主奶', version: 1 } })
     expect(store.raid!.waves[0].slots[0].duty).toBe('主C')
+  })
+
+  it('applies raid:signup and raid:signup_removed', () => {
+    setActivePinia(createPinia())
+    const store = useRaidStore()
+    store.raid = makeRaid()
+    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null }
+    applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00' })
+    expect(store.raid!.signups).toHaveLength(1)
+    expect(store.raid!.signups[0].user.id).toBe(9)
+    // 同用户重复事件 → 去重
+    applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:01:00' })
+    expect(store.raid!.signups).toHaveLength(1)
+    applyEvent(store, { type: 'raid:signup_removed', user_id: 9 })
+    expect(store.raid!.signups).toHaveLength(0)
   })
 })

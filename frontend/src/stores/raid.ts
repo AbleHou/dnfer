@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
-import type { Raid, Slot } from '../types'
+import type { Raid, RaidSignup, Slot, User } from '../types'
 
 export type WsEvent =
   | { type: 'slot:filled'; slot: Slot }
@@ -10,6 +10,8 @@ export type WsEvent =
   | { type: 'wave:removed'; index: number }
   | { type: 'raid:locked' }
   | { type: 'raid:unlocked' }
+  | { type: 'raid:signup'; user: User; created_at: string | null }
+  | { type: 'raid:signup_removed'; user_id: number }
 
 export const useRaidStore = defineStore('raid', {
   state: () => ({ raid: null as Raid | null, needRefresh: false }),
@@ -50,5 +52,14 @@ export function applyEvent(store: ReturnType<typeof useRaidStore>, ev: WsEvent) 
     case 'wave:added':
     case 'wave:removed':
       store.needRefresh = true; break
+    case 'raid:signup':
+      raid.signups ??= []
+      raid.signups = raid.signups.filter(s => s.user.id !== ev.user.id)
+      raid.signups.push({ user: ev.user, created_at: ev.created_at })
+      break
+    case 'raid:signup_removed':
+      raid.signups ??= []
+      raid.signups = raid.signups.filter(s => s.user.id !== ev.user_id)
+      break
   }
 }
