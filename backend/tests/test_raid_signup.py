@@ -5,6 +5,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models import Dungeon, Raid, RaidSignup, User
 
+from .helpers import make_raid, register_user
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -38,3 +40,124 @@ def test_raid_signup_model_roundtrip_unique_cascade(db):
     db.delete(r)
     db.commit()
     assert db.query(RaidSignup).count() == 0
+
+
+def _admin(client):
+    r = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    return {"Authorization": f"Bearer {r.json()['token']}"}
+
+
+def _mkchar(client, h, name="C", job="weapon_master"):
+    return client.post("/api/me/characters", headers=h, json={
+        "name": name, "job_name": job, "fame": 1}).json()["id"]
+
+
+def test_signup_success_and_detail(client):
+    login = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    ah = {"Authorization": f"Bearer {login.json()['token']}"}
+    admin_id = login.json()["user"]["id"]
+    rid = make_raid(client, ah)["id"]
+    h, u = register_user(client, "sig1", "甲")
+    r = client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert r.status_code == 200
+    assert r.json() == {"ok": True}
+    # 列表字段
+    item = [x for x in client.get("/api/raids", headers=h).json() if x["id"] == rid][0]
+    assert item["signup_count"] == 1
+    assert item["my_signed_up"] is True
+    # 详情：团长（创建者=管理员）在首位（created_at=None），报名者在后
+    detail = client.get(f"/api/raids/{rid}", headers=h).json()
+    assert detail["signups"][0]["created_at"] is None
+    assert detail["signups"][0]["user"]["id"] == admin_id
+    assert detail["signups"][1]["user"]["id"] == u["id"]
+    assert detail["signups"][1]["created_at"] is not None
+
+
+def test_signup_creator_blocked(client):
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    r = client.post(f"/api/raids/{rid}/signup", headers=ah)
+    assert r.status_code == 400
+    assert r.json()["detail"] == "团长无需报名"
+
+
+def test_signup_locked_blocked(client):
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    h, _ = register_user(client, "sig2", "乙")
+    client.post(f"/api/raids/{rid}/lock", headers=ah)
+    r = client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert r.status_code == 400
+    assert r.json()["detail"] == "攻坚已锁定，无法报名"
+
+
+def test_signup_duplicate_blocked(client):
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    h, _ = register_user(client, "sig3", "丙")
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    r = client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert r.status_code == 400
+    assert r.json()["detail"] == "你已报名"
+
+
+def test_self_cancel_removes_placements(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "sig4", "丁")
+    cid = _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    assert client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                       json={"character_id": cid}).status_code == 200
+    r = client.delete(f"/api/raids/{rid}/signup", headers=h)
+    assert r.status_code == 200
+    detail = client.get(f"/api/raids/{rid}", headers=h).json()
+    assert len(detail["signups"]) == 1  # 仅剩团长固定行
+    assert all(s["character_id"] is None for s in detail["waves"][0]["slots"])
+
+
+def test_self_cancel_locked_blocked(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "sig5", "戊")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    client.post(f"/api/raids/{rid}/lock", headers=ah)
+    r = client.delete(f"/api/raids/{rid}/signup", headers=h)
+    assert r.status_code == 403
+    assert r.json()["detail"] == "攻坚已锁定，无法取消报名"
+
+
+def test_admin_cancel_other_removes_placements(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig6", "己")
+    cid = _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                json={"character_id": cid})
+    # 锁定后管理员仍可取消
+    client.post(f"/api/raids/{rid}/lock", headers=ah)
+    r = client.delete(f"/api/raids/{rid}/signups/{u['id']}", headers=ah)
+    assert r.status_code == 200
+    detail = client.get(f"/api/raids/{rid}", headers=ah).json()
+    assert len(detail["signups"]) == 1
+    assert all(s["character_id"] is None for s in detail["waves"][0]["slots"])
+
+
+def test_admin_cancel_not_signed_up_400(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig7", "庚")
+    rid = make_raid(client, ah)["id"]
+    r = client.delete(f"/api/raids/{rid}/signups/{u['id']}", headers=ah)
+    assert r.status_code == 400
+    assert r.json()["detail"] == "该用户尚未报名"
+
+
+def test_delete_raid_with_signups(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "sig8", "辛")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert client.delete(f"/api/raids/{rid}", headers=ah).status_code == 200

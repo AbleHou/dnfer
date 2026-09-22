@@ -1,15 +1,16 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from .. import jobs as job_data
 from ..auth import get_current_user, require_admin
 from ..db import get_db
-from ..models import Character, Dungeon, Raid, Slot, User, Wave
+from ..models import Character, Dungeon, Raid, RaidSignup, Slot, User, Wave
 from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, RaidCreate,
-                       RaidDetail, RaidListItem, RaidUpdate, SlotMutationResult,
-                       SlotOut, WaveOut)
+                       RaidDetail, RaidListItem, RaidSignupOut, RaidUpdate,
+                       SlotMutationResult, SlotOut, UserOut, WaveOut)
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
                                        duty_valid_for_class)
@@ -54,14 +55,30 @@ def _slot_out(slot: Slot) -> SlotOut:
         duty=slot.duty, version=slot.version,
     )
 
+def _participates(db: Session, raid: Raid, user_id: int) -> bool:
+    """用户是否参与本场攻坚：团长恒参与，其余须有报名行。"""
+    if user_id == raid.created_by:
+        return True
+    return db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
+                                       RaidSignup.user_id == user_id).first() is not None
+
 def _detail(db: Session, raid: Raid) -> RaidDetail:
     waves = []
     for w in raid.waves:
         waves.append(WaveOut(id=w.id, index=w.index,
                              slots=[_slot_out(s) for s in w.slots]))
+    signups = [RaidSignupOut(user=UserOut.model_validate(db.get(User, raid.created_by)),
+                             created_at=None)]
+    for rs in db.query(RaidSignup).options(selectinload(RaidSignup.user)) \
+            .filter(RaidSignup.raid_id == raid.id,
+                    RaidSignup.user_id != raid.created_by) \
+            .order_by(RaidSignup.created_at).all():
+        signups.append(RaidSignupOut(user=UserOut.model_validate(rs.user),
+                                     created_at=rs.created_at))
     return RaidDetail(id=raid.id, name=raid.name, dungeon_id=raid.dungeon_id,
                       dungeon_name=raid.dungeon.name, size=raid.size,
-                      locked=raid.locked, starts_at=raid.starts_at, waves=waves)
+                      locked=raid.locked, starts_at=raid.starts_at, waves=waves,
+                      signups=signups)
 
 def _squad_occupied(db: Session, wave: Wave, squad_index: int) -> list[tuple[str, str]]:
     return [(s.duty, s.character.class_type) for s in wave.slots
@@ -92,12 +109,18 @@ def _raise_if_hard(db: Session, wave: Wave, squad_index: int) -> list[str]:
 
 @router.get("", response_model=list[RaidListItem])
 def list_raids(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    counts = dict(db.query(RaidSignup.raid_id,
+                           func.count(RaidSignup.id)).group_by(RaidSignup.raid_id).all())
+    my_ids = {rs.raid_id for rs in db.query(RaidSignup)
+              .filter(RaidSignup.user_id == user.id).all()}
     items = []
     for r in db.query(Raid).options(selectinload(Raid.dungeon)).order_by(Raid.created_at.desc()).all():
         items.append(RaidListItem(id=r.id, name=r.name, dungeon_id=r.dungeon_id,
                                   dungeon_name=r.dungeon.name, size=r.size,
                                   locked=r.locked, starts_at=r.starts_at,
-                                  wave_count=len(r.waves)))
+                                  wave_count=len(r.waves),
+                                  signup_count=counts.get(r.id, 0),
+                                  my_signed_up=(r.created_by == user.id) or r.id in my_ids))
     return items
 
 @router.post("")
@@ -376,3 +399,59 @@ async def move_slot(rid: int, slot_id: int, body: MoveIn,
         await manager.broadcast(rid, {"type": "slot:filled", "slot": _slot_out(source).model_dump()})
     return FillResponse(slot=_slot_out(target), warnings=warnings,
                         removed_slots=[_slot_out(s) for s in removed])
+
+@router.post("/{rid}/signup")
+async def signup(rid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if user.id == raid.created_by:
+        raise HTTPException(400, "团长无需报名")
+    if raid.locked:
+        raise HTTPException(400, "攻坚已锁定，无法报名")
+    if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                   RaidSignup.user_id == user.id).first():
+        raise HTTPException(400, "你已报名")
+    rs = RaidSignup(raid_id=rid, user_id=user.id)
+    db.add(rs)
+    db.commit()
+    db.refresh(rs)
+    await manager.broadcast(rid, {"type": "raid:signup",
+                                  "user": UserOut.model_validate(user).model_dump(),
+                                  "created_at": rs.created_at.isoformat()})
+    return {"ok": True}
+
+
+async def _remove_signup(db: Session, raid: Raid, user_id: int) -> dict:
+    """删除报名行 + 撤下该用户全部占位，并广播。"""
+    db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
+                                RaidSignup.user_id == user_id).delete()
+    removed = db.query(Slot).options(selectinload(Slot.character)) \
+        .filter(Slot.wave.has(raid_id=raid.id),
+                Slot.character.has(user_id=user_id)).all()
+    for s in removed:
+        _clear_slot(s)
+    db.commit()
+    for s in removed:
+        await manager.broadcast(raid.id, {"type": "slot:removed", "slot_id": s.id})
+    await manager.broadcast(raid.id, {"type": "raid:signup_removed", "user_id": user_id})
+    return {"ok": True}
+
+
+@router.delete("/{rid}/signup")
+async def cancel_self(rid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if raid.locked:
+        raise HTTPException(403, "攻坚已锁定，无法取消报名")
+    if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                   RaidSignup.user_id == user.id).first() is None:
+        raise HTTPException(400, "你尚未报名")
+    return await _remove_signup(db, raid, user.id)
+
+
+@router.delete("/{rid}/signups/{user_id}")
+async def cancel_other(rid: int, user_id: int, admin: User = Depends(require_admin),
+                       db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                   RaidSignup.user_id == user_id).first() is None:
+        raise HTTPException(400, "该用户尚未报名")
+    return await _remove_signup(db, raid, user_id)
