@@ -194,6 +194,7 @@ if not _participates(db, rid, char.user_id, raid):
 - `backend/app/models.py` — 新增 `RaidSignup`；`Raid` 补 `signups` 关系（`cascade="all, delete-orphan"`，保证删团时级联清理）
 - `backend/app/schemas.py` — 新增 `RaidSignupOut`；扩展 `RaidListItem` / `RaidDetail`
 - `backend/app/routers/raids.py` — 新增 3 个报名端点、`_detail`/列表补字段、`fill_slot` 强制校验
+- `backend/app/routers/public.py` — `public_raids` 直接构造 `RaidListItem`，补 `signup_count=0`、`my_signed_up=False`（公开列表无用户上下文）
 - `backend/tests/test_raid_signup.py` — 新增
 - `backend/tests/conftest.py` — 测试引擎补 `PRAGMA foreign_keys=ON`（让删除级联测试有验证意义）
 - `frontend/src/types.ts` — `Raid` / `RaidListItem` / `RaidSignup`

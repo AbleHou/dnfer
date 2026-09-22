@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-22-raid-signup-design.md`
 
-**测试环境：** 后端 `cd backend && .venv/bin/python -m pytest <file> -v`；前端 `cd frontend && npx vitest run <file>`。仓库工作流直接提交到 `main` 分支，不做 worktree。后端全量现有 117 passed。
+**测试环境：** 后端 `cd backend && .venv/bin/python -m pytest <file> -v`；前端 `cd frontend && npx vitest run <file>`。仓库工作流直接提交到 `main` 分支，不做 worktree。后端全量现有 120 passed（新增 13 个用例后为 133）。
 
 **注意（既有测试受 `fill_slot` 新校验影响）：** Task 3 会在 `fill_slot` 加「被放置角色主人须参与」校验，凡是在既有测试里占位/放置角色的用户都需要先报名。helpers.py 会新增 `signup(client, rid, headers)` 辅助函数，Task 3 逐文件补调用（具体清单见 Task 3 Step 5）。
 
@@ -21,6 +21,7 @@
 **Files:**
 - Modify: `backend/app/models.py`（新增 `RaidSignup`；`Raid` 补 `signups` 关系）
 - Modify: `backend/app/schemas.py`（新增 `RaidSignupOut`；扩展 `RaidListItem`/`RaidDetail`）
+- Modify: `backend/app/routers/public.py`（`public_raids` 补新必填字段）
 - Modify: `backend/tests/conftest.py`（测试引擎挂外键 pragma）
 - Create: `backend/tests/test_raid_signup.py`
 
@@ -138,20 +139,36 @@ class RaidDetail(BaseModel):
     signups: list[RaidSignupOut]
 ```
 
+**同步修改 `backend/app/routers/public.py` 的 `public_raids`**（它直接构造 `RaidListItem`，新字段为必填，不改会 500）：在 `backend/app/routers/public.py` 顶部 import `RaidListItem` 已存在，将 `public_raids` 的构造补上：
+
+```python
+@router.get("/raids", response_model=list[RaidListItem])
+def public_raids(db: Session = Depends(get_db)):
+    return [RaidListItem(id=r.id, name=r.name, dungeon_id=r.dungeon_id,
+                         dungeon_name=r.dungeon.name, size=r.size,
+                         locked=r.locked, starts_at=r.starts_at,
+                         wave_count=len(r.waves),
+                         signup_count=0, my_signed_up=False)
+            for r in db.query(Raid).options(selectinload(Raid.dungeon))
+                    .order_by(Raid.created_at.desc()).all()]
+```
+
+（公开/机器人列表无用户上下文，`signup_count=0`、`my_signed_up=False`。）
+
 - [ ] **Step 6: 运行测试确认通过**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_raid_signup.py -v`
 Expected: PASS —— 1 test passed（roundtrip / 唯一约束 / 级联三断言）。
 
-- [ ] **Step 7: 跑存量模型相关测试确认无回归**
+- [ ] **Step 7: 跑存量相关测试确认无回归**
 
-Run: `cd backend && .venv/bin/python -m pytest tests/test_migrations.py tests/test_raids.py -q`
-Expected: PASS。
+Run: `cd backend && .venv/bin/python -m pytest tests/test_migrations.py tests/test_raids.py tests/test_public.py -q`
+Expected: PASS（`test_public.py` 验证 `public_raids` 补字段后不再 500）。
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add backend/app/models.py backend/app/schemas.py backend/tests/conftest.py backend/tests/test_raid_signup.py
+git add backend/app/models.py backend/app/schemas.py backend/app/routers/public.py backend/tests/conftest.py backend/tests/test_raid_signup.py
 git commit -m "feat: 攻坚报名数据模型 RaidSignup + Raid.signups 级联 + schema 字段"
 ```
 
@@ -552,7 +569,7 @@ def signup(client, rid, headers):
 - [ ] **Step 6: 后端全量测试**
 
 Run: `cd backend && .venv/bin/python -m pytest -q`
-Expected: 130 passed（117 存量 + 13 新增；存量占位用例补报名后不破坏原断言）。
+Expected: 133 passed（120 存量 + 13 新增；存量占位用例补报名后不破坏原断言）。
 
 - [ ] **Step 7: Commit**
 
@@ -596,6 +613,7 @@ export interface RaidSignup { user: User; created_at: string | null }
 
 ```typescript
     case 'raid:signup':
+      raid.signups ??= []
       raid.signups = raid.signups.filter(s => s.user.id !== ev.user.id)
       raid.signups.push({ user: ev.user, created_at: ev.created_at })
       break
@@ -925,7 +943,7 @@ git commit -m "docs: 攻坚报名的接口/自测/CHANGELOG"
 - [ ] **Step 1: 后端全量测试**
 
 Run: `cd backend && .venv/bin/python -m pytest -q`
-Expected: 130 passed，无失败。
+Expected: 133 passed，无失败。
 
 - [ ] **Step 2: 前端全量测试**
 
