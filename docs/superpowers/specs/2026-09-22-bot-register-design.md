@@ -63,7 +63,8 @@ python scripts/dnfer_api.py register <数字>
 ```
 
 - POST 到 `{base}/api/public/register`，请求体 `{"identifier": <数字>}`。
-- stdout 沿用既有约定：成功输出 API 返回的 JSON；失败沿用 `_request` 包装的 `{"ok":false,"status":...,"error":...}`；stderr 输出中文摘要（成功「注册成功：872557240」/ 失败原因）。
+- 模块 docstring 的用法示例同步补 `register` 一行（当前仅 `add`/`list`，避免文档过期）。
+- 显式 I/O 约定（与 `cmd_add`/`cmd_list` 一致）：stdout 输出结果 JSON；stderr 输出中文摘要（成功「注册成功：872557240」/ 失败原因）；退出码成功 0、失败 1（`_token()` 缺失走其自身的 exit 2）。
 
 ## 5. SKILL.md 变更（`skills/dnfer-characters/SKILL.md`）
 
@@ -76,7 +77,7 @@ python scripts/dnfer_api.py register <数字>
     - `status:400, error:"用户名已存在"` → 「这个 QQ 号已经注册过，直接使用即可」
     - `status:400, error:"昵称已存在"` → 「这个昵称已被占用，请联系管理员」
     - `status:400, error:"QQ号仅支持 6-64 位纯数字"` → 「请发送有效的 QQ 号」
-    - `error:"系统暂时不可用"` 类 → 「系统暂时不可用，稍后再试」
+    - `stdout` 为 `{"ok":false,"error":...}`（无 `status`，即 Token/网络类错误，如 `网络错误：…`）→ 「系统暂时不可用，稍后再试」
 - 「回复群友」第 3 条（账号/昵称不存在）改文案：由「请先用注册码注册（找管理员要码）」改为「这个账号/昵称还没注册，请发送『你的QQ号注册』自助注册」。
 
 ## 6. 文档与变更日志
