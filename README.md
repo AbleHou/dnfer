@@ -95,6 +95,7 @@ npm run dev
 |---|---|
 | `GET /api/public/raids` | 列出攻坚计划（id、名称、副本、规模、波次数、锁定状态） |
 | `GET /api/public/raids/{id}/waves/{index}` | 第 n 波配置：各小队每格含群昵称、角色名、职责、属性 |
+| `GET /api/public/raids/{id}` | 完整攻坚详情：名称、副本、规模、锁定状态、时间、全部波次（每格含群昵称、角色名、职责、职业） |
 | `POST /api/public/characters` | 按账号批量添加/编辑角色（名称必填；职业缺省极诣·剑魂、名望缺省 100000；编辑仅更新提供的字段；返回逐角色结果） |
 | `GET /api/public/characters?account={账号}` | 查询账号（username）的全部角色 |
 | `POST /api/public/register` | 按 QQ 号免码注册：账号=密码=昵称=QQ号（纯数字 6-64 位，网页端注册仍走注册码） |
@@ -102,6 +103,7 @@ npm run dev
 ```bash
 curl -H "Authorization: Bearer $DNFER_API_TOKEN" http://127.0.0.1:8000/api/public/raids
 curl -H "Authorization: Bearer $DNFER_API_TOKEN" http://127.0.0.1:8000/api/public/raids/1/waves/1
+curl -H "Authorization: Bearer $DNFER_API_TOKEN" http://127.0.0.1:8000/api/public/raids/1
 curl -X POST -H "Authorization: Bearer $DNFER_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"account":"zhangsan","characters":[{"name":"剑魂"}]}' \

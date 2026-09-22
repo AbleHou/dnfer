@@ -8,6 +8,7 @@
 
 - **机器人接口与 skill 支持按昵称**：`POST/GET /api/public/characters` 的 `account`/`nickname` 恰好二选一（昵称全局唯一，可无歧义定位用户），响应回填解析出的账号与昵称；AstrBot skill 默认昵称优先、404 回退账号，支持 `--by-nickname` / `--by-account` 强制模式
 - **机器人自助注册**：`POST /api/public/register` 按 QQ 号免码注册（账号=密码=昵称=QQ号，纯数字 6-64 位）；AstrBot skill 支持「QQ号注册 / 注册 QQ号」消息
+- **机器人攻坚信息查询**：`GET /api/public/raids/{id}` 返回完整攻坚详情；AstrBot skill「dnfer-raids」支持「打团信息 / 排表信息 / 第 n 波 / 前 n 波 / 查找某时间（周X/上午下午晚上）的团」，按时间匹配或取离当前最近的一场，回复按小队分组的昵称·角色·职责
 
 ## [v1.5] - 2026-09-21
 
