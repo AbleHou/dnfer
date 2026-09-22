@@ -59,7 +59,11 @@ def _request(method: str, url: str, body: dict | None = None):
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             raw = resp.read().decode("utf-8")
-            return json.loads(raw) if raw else {}
+            try:
+                return json.loads(raw) if raw else {}
+            except ValueError:
+                # 200 但非 JSON（如 nginx UA 拦截返回 HTML）→ 不抛异常，保 stdout JSON 契约
+                return {"ok": False, "error": "响应不是合法 JSON"}
     except urllib.error.HTTPError as e:
         try:
             detail = json.loads(e.read().decode("utf-8"))
@@ -213,6 +217,10 @@ def cmd_pick(args) -> int:
         return _fail(result)
     else:
         return _fail({"ok": False, "error": "响应格式异常"})
+    if out.get("selected") is not None:
+        # 与 raids/detail 一致：给选中团补 +8 本地时间，模型直接回显，不用裸 UTC
+        out["selected"]["starts_at_local"] = _fmt_local(
+            _to_local(_parse_iso(out["selected"]["starts_at"])))
     print(json.dumps(out, ensure_ascii=False))
     if out.get("selected") is None:
         print("[dnfer-raid] 当前没有任何攻坚计划", file=sys.stderr)
