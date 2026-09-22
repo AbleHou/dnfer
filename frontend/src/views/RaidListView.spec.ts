@@ -27,7 +27,8 @@ vi.mock('../lib/notify', () => ({
 
 const dungeons: Dungeon[] = [{ id: 7, name: '巴卡尔', size: 16, description: '', created_at: '' }]
 const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
-  size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1 }
+  size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1,
+  signup_count: 0, my_signed_up: false }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -143,5 +144,36 @@ describe('RaidListView create form', () => {
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
     expect(wrapper.text()).not.toContain('删除')
+  })
+
+  it('non-admin sees 报名 button and signs up', async () => {
+    const pinia = createPinia(); setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [raid] as RaidListItem[]
+      return []
+    })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('已报名 0 人')
+    await wrapper.find('[data-test="signup"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/3/signup')
+  })
+
+  it('shows 已报名 badge instead of button when signed up', async () => {
+    const pinia = createPinia(); setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
+    const signed: RaidListItem = { ...raid, my_signed_up: true, signup_count: 3 }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [signed] as RaidListItem[]
+      return []
+    })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('已报名 3 人')
+    expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
   })
 })

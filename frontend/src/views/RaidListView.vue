@@ -4,7 +4,7 @@ import { NSelect, NDatePicker, NInput } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
-import { confirmDialog, notifyError } from '../lib/notify'
+import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
 import type { Dungeon, RaidListItem } from '../types'
 
 const auth = useAuthStore()
@@ -57,6 +57,14 @@ async function onDelete(r: RaidListItem) {
   try { await api.del(`/api/raids/${r.id}`); await load() }
   catch (e: any) { notifyError(e.message) }
 }
+
+async function onSignup(r: RaidListItem) {
+  try {
+    await api.post(`/api/raids/${r.id}/signup`)
+    notifySuccess('报名成功')
+    await load()
+  } catch (e: any) { notifyError(e.message) }
+}
 </script>
 
 <template>
@@ -93,6 +101,14 @@ async function onDelete(r: RaidListItem) {
       <span class="dnf-badge" :class="r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
         {{ r.locked ? '已锁定' : '未锁定' }}
       </span>
+      <span class="raid-meta" style="color:var(--dnf-text-faint)">
+        已报名 {{ r.signup_count }} 人
+      </span>
+      <button v-if="!r.locked && !r.my_signed_up" class="dnf-btn dnf-btn-sm dnf-btn-primary"
+              data-test="signup" style="margin-left:auto"
+              @click="onSignup(r)">报名</button>
+      <span v-else-if="!r.locked && r.my_signed_up" class="dnf-badge dnf-badge-ok"
+            style="margin-left:auto">已报名</span>
       <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" style="margin-left:auto" @click="onDelete(r)">删除</button>
     </div>
     <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
