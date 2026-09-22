@@ -64,7 +64,7 @@ def test_raid_signup_model_roundtrip_unique_cascade(db):
     db.rollback()
 
     # 删团级联清 signups（Raid.signups cascade="all, delete-orphan"）
-    r = db.query(Raid).get(r.id)
+    r = db.get(Raid, r.id)
     db.delete(r)
     db.commit()
     assert db.query(RaidSignup).count() == 0
@@ -114,7 +114,7 @@ class RaidSignup(Base):
 
 - [ ] **Step 5: `schemas.py` 新增 schema 与字段**
 
-在 `backend/app/schemas.py` 的 `MoveIn` 之后追加：
+在 `backend/app/schemas.py` 的 `RaidListItem` **之前**追加 `RaidSignupOut`（注意：`MoveIn` 在文件后部、`RaidDetail` 之后，而 `RaidDetail.signups` 在类定义时就引用 `RaidSignupOut`，故必须放在 `RaidListItem` 之前才能避免 NameError）：
 
 ```python
 class RaidSignupOut(BaseModel):
