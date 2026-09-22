@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-22-raid-signup-design.md`
 
-**测试环境：** 后端 `cd backend && .venv/bin/python -m pytest <file> -v`；前端 `cd frontend && npx vitest run <file>`。仓库工作流直接提交到 `main` 分支，不做 worktree。后端全量现有 120 passed（新增 13 个用例后为 133）。
+**测试环境：** 后端 `cd backend && .venv/bin/python -m pytest <file> -v`；前端 `cd frontend && npx vitest run <file>`。仓库工作流直接提交到 `main` 分支，不做 worktree。后端全量最终为 135 passed（120 存量 + Task1 模型 1 + Task2 端点 9 + WS 契约 2 + Task3 fill 校验 3）。
 
 **注意（既有测试受 `fill_slot` 新校验影响）：** Task 3 会在 `fill_slot` 加「被放置角色主人须参与」校验，凡是在既有测试里占位/放置角色的用户都需要先报名。helpers.py 会新增 `signup(client, rid, headers)` 辅助函数，Task 3 逐文件补调用（具体清单见 Task 3 Step 5）。
 
@@ -945,7 +945,7 @@ git commit -m "docs: 攻坚报名的接口/自测/CHANGELOG"
 - [ ] **Step 1: 后端全量测试**
 
 Run: `cd backend && .venv/bin/python -m pytest -q`
-Expected: 133 passed，无失败。
+Expected: 135 passed，无失败。（注：基线含 Task 2 补的 2 个 WS 契约用例，132+3=135。）
 
 - [ ] **Step 2: 前端全量测试**
 
