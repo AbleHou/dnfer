@@ -976,7 +976,7 @@ Expected: 新用例 FAIL（无 `data-test="signup-plus"` / `data-test="edit-raid
 `frontend/src/views/RaidDetailView.vue`：
 
 脚本区：
-- import 追加：`import { buildPlacementMap } from '../lib/placement'`、`import MemberCharactersModal from '../components/MemberCharactersModal.vue'`、`import SignupMemberPicker from '../components/SignupMemberPicker.vue'`、`import { NDatePicker, NInput } from 'naive-ui'`。
+- import 追加：`import { buildPlacementMap } from '../lib/placement'`、`import MemberCharactersModal from '../components/MemberCharactersModal.vue'`、`import SignupMemberPicker from '../components/SignupMemberPicker.vue'`、`import { NModal, NDatePicker, NInput } from 'naive-ui'`（**注意：应用未全局注册 naive-ui，需显式 import `NModal`**，其余弹窗组件均如此）。
 - 类型 import 追加 `User`、`CharacterPlacement`。
 - 新增状态：
 
@@ -1021,11 +1021,15 @@ async function onSaveRaid() {
 
 2. **报名面板**：`<div class="dnf-panel" style="margin:10px 0">` → `style="margin:10px 0;padding:12px"`（第 5 点）。
 
-3. **面板头部行**加号按钮：
+3. **面板头部行**加号按钮——与「报名」按钮一起包进右对齐容器（避免两个 `margin-left:auto` 把加号挤到中间）：
 
 ```vue
-<button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
-        data-test="signup-plus" style="margin-left:auto" @click="showMemberPicker = true">＋</button>
+<span style="margin-left:auto;display:flex;gap:8px">
+  <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
+          @click="onSignup">报名</button>
+  <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+          data-test="signup-plus" @click="showMemberPicker = true">＋</button>
+</span>
 ```
 
 4. **报名行头像可点**（把 `UserAvatar` 包一层 button）：
@@ -1060,14 +1064,15 @@ async function onSaveRaid() {
     </div>
     <div>
       <div style="margin-bottom:4px">时间</div>
-      <n-date-picker v-model:value="editStartsAt" type="datetime"
+      <!-- 注意：naive-ui 的 date-picker 设 value-format 后，字符串在 formatted-value（value 是时间戳数字）→ 用 v-model:formatted-value（对齐 RaidListView 创建表单） -->
+      <n-date-picker v-model:formatted-value="editStartsAt" type="datetime"
                      value-format="yyyy-MM-dd'T'HH:mm:ss" style="width:100%" />
     </div>
   </div>
   <template #footer>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="dnf-btn" @click="showEditRaid = false">取消</button>
-      <button class="dnf-btn dnf-btn-primary" @click="onSaveRaid">保存</button>
+      <button class="dnf-btn dnf-btn-primary" data-test="save-raid" @click="onSaveRaid">保存</button>
     </div>
   </template>
 </n-modal>
