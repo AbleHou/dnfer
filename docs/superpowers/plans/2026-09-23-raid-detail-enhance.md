@@ -280,30 +280,41 @@ EOF
 - Modify: `backend/app/routers/raids.py`
 - Test: `backend/tests/test_raid_signup.py`
 
-- [ ] **Step 1: 写失败的测试**
+- [ ] **Step 1: 写失败的测试（mock broadcast，快速失败）**
 
-`backend/tests/test_raid_signup.py` 末尾追加：
+> 红阶段不用 WS 集成测试——当前 PUT 不广播时 `ws.receive_json()` 会挂死（仓库已知陷阱）。改用 monkeypatch `manager.broadcast` 断言，绿阶段再补 WS 集成测试。
+
+`backend/tests/test_raid_signup.py` 顶部 import 追加：
 
 ```python
-def test_update_raid_ws_broadcast(client):
+from unittest.mock import AsyncMock
+
+import app.routers.raids as raids_mod
+```
+
+末尾追加：
+
+```python
+def test_update_raid_broadcasts_raid_updated(client, monkeypatch):
     ah = _admin(client)
-    token = ah["Authorization"].split()[1]
     rid = make_raid(client, ah)["id"]
-    with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
-        r = client.put(f"/api/raids/{rid}", headers=ah,
-                       json={"name": "改后", "starts_at": "2026-09-21T20:00:00"})
-        assert r.status_code == 200
-        assert r.json()["name"] == "改后"
-        ev = ws.receive_json()
-        assert ev["type"] == "raid:updated"
-        assert ev["name"] == "改后"
-        assert ev["starts_at"] == "2026-09-21T20:00:00"
+    called = AsyncMock()
+    monkeypatch.setattr(raids_mod.manager, "broadcast", called)
+    r = client.put(f"/api/raids/{rid}", headers=ah,
+                   json={"name": "改后", "starts_at": "2026-09-21T20:00:00"})
+    assert r.status_code == 200
+    assert r.json()["name"] == "改后"
+    called.assert_awaited_once()
+    payload = called.await_args.args[1]  # broadcast(rid, payload)
+    assert payload["type"] == "raid:updated"
+    assert payload["name"] == "改后"
+    assert payload["starts_at"] == "2026-09-21T20:00:00"
 ```
 
 - [ ] **Step 2: 运行确认失败**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_raid_signup.py -k update_raid -v`
-Expected: FAIL（当前 PUT 不广播，WS 收不到 `raid:updated`，`receive_json` 挂死/超时）
+Expected: FAIL——`AssertionError: Expected 'broadcast' to have been awaited once.`（当前 PUT 不广播）
 
 - [ ] **Step 3: 实现**
 
@@ -325,12 +336,34 @@ async def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_
     return _detail(db, raid)
 ```
 
-- [ ] **Step 4: 运行确认通过**
+- [ ] **Step 4: 运行确认通过（mock 测试）**
+
+Run: `cd backend && .venv/bin/python -m pytest tests/test_raid_signup.py -k update_raid -v`
+Expected: PASS
+
+- [ ] **Step 5: 补 WS 集成测试并验证**
+
+`backend/tests/test_raid_signup.py` 末尾追加（绿阶段验证真实广播链路）：
+
+```python
+def test_update_raid_ws_broadcast(client):
+    ah = _admin(client)
+    token = ah["Authorization"].split()[1]
+    rid = make_raid(client, ah)["id"]
+    with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
+        r = client.put(f"/api/raids/{rid}", headers=ah,
+                       json={"name": "改后", "starts_at": "2026-09-21T20:00:00"})
+        assert r.status_code == 200
+        ev = ws.receive_json()
+        assert ev["type"] == "raid:updated"
+        assert ev["name"] == "改后"
+        assert ev["starts_at"] == "2026-09-21T20:00:00"
+```
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_raid_signup.py -v`
 Expected: 全部 PASS（含既有用例，确认无回归）
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
 git add backend/app/routers/raids.py backend/tests/test_raid_signup.py
@@ -570,6 +603,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 
 `frontend/src/components/CharacterPickerModal.vue`：
 - import `CharacterCard` 与 `CharacterPlacement` 类型。
+- **移除**已不再使用的 `import { jobIcon, handleIconError as onIconError } from '../lib/job'`（卡片渲染迁入 CharacterCard）。
 - props 改为 `withDefaults` 并加 `placed`：
 
 ```ts
@@ -693,7 +727,7 @@ watch(() => props.open, async (open) => {
       `/api/raids/${props.rid}/signups/${props.user.id}/characters`)
     characters.value = res.characters
   } catch { /* 只读查看失败静默，可关闭重试 */ }
-})
+}, { immediate: true }) // immediate：测试挂载 open:true 即触发 fetch（与 CharacterPickerModal 一致）
 </script>
 
 <template>
@@ -822,7 +856,7 @@ watch(() => props.open, async (open) => {
   if (!open) return
   busy.value = false
   users.value = await api.get<User[]>('/api/admin/users')
-})
+}, { immediate: true }) // immediate：测试挂载 open:true 即触发 fetch（与 CharacterPickerModal 一致）
 
 async function onPick(u: User) {
   const ok = await confirmDialog({ content: `确认帮「${u.nickname}」报名？` })
@@ -1006,7 +1040,15 @@ async function onSaveRaid() {
   ...
 ```
 
-5. **文件末尾**（`CharacterPickerModal` 之后）追加三个弹窗：
+5. **既有占位弹窗**（第 179-181 行的 `<CharacterPickerModal>`）补 `:placed="placed"`，让占位弹窗标记已占位角色（第 3 点必需）：
+
+```vue
+<CharacterPickerModal :open="pickSlot != null" :admin-mode="auth.isAdmin"
+                      :signup-user-ids="signupUserIds" :placed="placed"
+                      @close="pickSlot = null" @select="onSelectCharacter" />
+```
+
+6. **文件末尾**（`CharacterPickerModal` 之后）追加三个弹窗：
 
 ```vue
 <n-modal :show="showEditRaid" preset="card" title="修改攻坚" style="width:min(360px,92vw)"
