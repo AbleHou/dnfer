@@ -41,6 +41,10 @@ DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_raid.py detail 1 --wave 1
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_raid.py detail 1 --waves 2
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_raid.py signup 872557240
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_raid.py unsign 872557240
 ```
 
 - stdout 为机器可读 JSON；stderr 为中文摘要。

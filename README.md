@@ -103,6 +103,8 @@ npm run dev
 | `POST /api/public/characters` | 按账号或昵称批量添加/编辑角色（`account`/`nickname` 恰好二选一；名称必填；职业缺省极诣·剑魂、名望缺省 100000；编辑仅更新提供的字段；返回逐角色结果） |
 | `GET /api/public/characters?account={账号}` | 查询账号（username）的全部角色；`?nickname={昵称}` 等价查询 |
 | `POST /api/public/register` | 按 QQ 号免码注册：账号=密码=昵称=QQ号（纯数字 6-64 位，网页端注册仍走注册码） |
+| `POST /api/public/raids/{rid}/signup` | 替玩家报名（body `{"account" 或 "nickname"}`，目标团由调用方选定） |
+| `POST /api/public/raids/{rid}/signup/cancel` | 替玩家取消报名（body 同上，自动撤下该玩家全部占位） |
 
 ```bash
 curl -H "Authorization: Bearer $DNFER_API_TOKEN" http://127.0.0.1:8000/api/public/raids
@@ -118,6 +120,12 @@ curl -X POST -H "Authorization: Bearer $DNFER_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"identifier":"872557240"}' \
   http://127.0.0.1:8000/api/public/register
+curl -X POST https://<域名>/api/public/raids/1/signup \
+     -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+     -d '{"account":"872557240"}'
+curl -X POST https://<域名>/api/public/raids/1/signup/cancel \
+     -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+     -d '{"nickname":"龙应藏进云里"}'
 ```
 
 ## 测试
