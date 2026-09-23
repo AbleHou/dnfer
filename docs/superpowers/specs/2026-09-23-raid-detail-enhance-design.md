@@ -29,23 +29,25 @@
 
 - 鉴权：`require_admin`。
 - body：`SignupUserIn { user_id: int }`（`schemas.py` 新增）。
+- `db.get(User, body.user_id)` 不存在 → `404 "用户不存在"`（避免 FK 违例落入误导性的「已报名」兜底）。
 - `raid.locked` → `400 "攻坚已锁定，无法报名"`。
 - `user_id == raid.created_by` → `400 "团长无需报名"`。
 - 已存在报名行 → `400 "该用户已报名"`。
-- 新增 `RaidSignup`，`commit`；`IntegrityError` 兜底（并发重复报名）→ 回滚 + `400 "该用户已报名"`。
-- 广播 `raid:signup { user: UserOut, created_at: <iso> }`（created_at 需 `.isoformat()` 字符串化）。
+- 新增 `RaidSignup`，`commit` 后 `db.refresh(rs)`（确保服务端默认 `created_at` 落库后广播非空，与既有自报名端点一致）；`IntegrityError` 兜底（并发重复报名）→ 回滚 + `400 "该用户已报名"`。
+- 广播 `raid:signup { user: <目标用户的 UserOut>, created_at: <iso> }`——注意是**被报名的目标用户**，不是操作的管理员（与既有自报名广播的 `user` 取请求者不同）；created_at 需 `.isoformat()` 字符串化。
 - 返回 `{"ok": True}`。
 
 ### 2.2 查看参与者角色 `GET /api/raids/{rid}/signups/{user_id}/characters`
 
 - 鉴权：`get_current_user`（任何登录用户）。
 - 校验：目标用户须为参与者——`user_id == raid.created_by` **或**存在报名行；否则 `404 "该用户未参与本场攻坚"`。
-- 返回 `PlayerCharacters { user: UserOut, characters: list[CharacterOut] }`，角色复用 `auth.py` 的 `_character_out`（需从 `routers/auth.py` 导出或在 raids.py 内实现等价转换）。
+- 返回 `PlayerCharacters { user: UserOut, characters: list[CharacterOut] }`，角色复用 `from ..routers.members import _character_out`（`_character_out` 定义在 `members.py` 模块级、已可导入；`auth.py`/`bot.py` 即如此引用）。
 - 无角色时返回 `characters: []`（与 `/api/admin/characters` 的「过滤无角色玩家」不同——此处明确返回空列表，前端据此显示「还没有角色」）。
 
 ### 2.3 修改攻坚 `PUT /api/raids/{rid}`
 
 - 逻辑不变（`name` / `starts_at` 可为空，`require_admin`）。
+- **注意**：`update_raid` 现为同步 `def`，加广播需改为 `async def`（`manager.broadcast` 是 async）。
 - commit 后广播：
   ```python
   await manager.broadcast(rid, {"type": "raid:updated",
@@ -74,12 +76,13 @@ export function buildPlacementMap(raid: Raid): Record<number, CharacterPlacement
 ```
 - 遍历 `raid.waves` 的每个 slot，`slot.character_id != null` 时写入 `map[slot.character_id] = { wave_index: slot 所在 wave.index, squad_index: slot.squad_index, duty: slot.duty }`。
 - 角色全局唯一（`fill_slot` 有角色去重规则），天然一对一，无需处理冲突。
+- **类型注意**：`Slot.duty` 前端类型为 `Duty | null`，而 `CharacterPlacement.duty` 为 `Duty`；已占位格 duty 必有值，函数内对 `slot.duty` 做非空断言（如 `slot.duty ?? '主C'` 或 `as Duty`），避免 vue-tsc 报错（vitest 不查类型，`npm run build` 才暴露）。
 - 纯函数，便于单测。
 
 ### 3.4 `frontend/src/components/CharacterCard.vue`（新，共享卡片）
 
 - props：`character: Character`、`placement: CharacterPlacement | null`、`active?: boolean`。
-- 渲染现 `CharacterPickerModal` 中的角色行（职业图标 + 名称 + `job_title · class_type · 名望` + 输出/增益行）。
+- 渲染现 `CharacterPickerModal` 中的角色行（职业图标 + 名称 + `job_title · class_type · 名望` + 输出/增益行）。**`fmtDps`/`fmtBuff` 格式化助手从 `CharacterPickerModal.vue` 移入本组件**，避免两处漂移。
 - 当 `placement` 非空：卡片右上角渲染角标 `已占位 · 第{wave_index}波 · {SQUAD_NAMES[squad_index]}`（样式醒目但可辨识，如金色描边）。
 - 点击透出 `click` 事件（由父级决定是否可点）。
 
@@ -125,8 +128,9 @@ export function buildPlacementMap(raid: Raid): Record<number, CharacterPlacement
 
 ### 后端 `backend/tests/test_raid_signup.py`（扩展）
 
-- `POST /{rid}/signups`：管理员帮普通用户报名成功（`raid_signups` 有行、返回 `{"ok": True}`）；锁定 → 400；团长 → 400；重复 → 400。
+- `POST /{rid}/signups`：管理员帮普通用户报名成功（`raid_signups` 有行、返回 `{"ok": True}`）；锁定 → 400；团长 → 400；重复 → 400；`user_id` 不存在 → 404「用户不存在」；非管理员 → 403。
 - `GET /{rid}/signups/{user_id}/characters`：参与者（含团长）可查、返回 `PlayerCharacters`；非参与者 → 404。
+- `PUT /{rid}`：改动 `name` / `starts_at` 后广播 `raid:updated`（断言广播 payload 含新 name / iso 格式 starts_at）。
 
 ### 前端
 
@@ -142,8 +146,7 @@ export function buildPlacementMap(raid: Raid): Record<number, CharacterPlacement
 ## 7. 变更文件范围
 
 - `backend/app/schemas.py` — 新增 `SignupUserIn`
-- `backend/app/routers/raids.py` — 新增 2 端点、`PUT` 补广播
-- `backend/app/routers/auth.py` — 导出 `_character_out`（或 raids.py 内等价实现）
+- `backend/app/routers/raids.py` — 新增 2 端点、`PUT` 补广播（改 `async def`）、`from ..routers.members import _character_out`
 - `backend/tests/test_raid_signup.py` — 新增用例
 - `frontend/src/types.ts` — 新增 `CharacterPlacement`
 - `frontend/src/stores/raid.ts` — `raid:updated` WS 处理
