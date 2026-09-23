@@ -102,7 +102,7 @@ async function onSignup(r: RaidListItem) {
         {{ r.locked ? '已锁定' : '未锁定' }}
       </span>
       <span class="raid-meta" style="color:var(--dnf-text-faint)">
-        已报名 {{ r.signup_count }} 人
+        已报名 {{ r.signup_count + 1 }} 人
       </span>
       <button v-if="!r.locked && !r.my_signed_up" class="dnf-btn dnf-btn-sm dnf-btn-primary"
               data-test="signup" style="margin-left:auto"

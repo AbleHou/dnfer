@@ -156,7 +156,7 @@ describe('RaidListView create form', () => {
     })
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
-    expect(wrapper.text()).toContain('已报名 0 人')
+    expect(wrapper.text()).toContain('已报名 1 人') // 报名人数含团长（与详情一致）
     await wrapper.find('[data-test="signup"]').trigger('click')
     await flushPromises()
     expect(apiMock.post).toHaveBeenCalledWith('/api/raids/3/signup')
@@ -173,7 +173,7 @@ describe('RaidListView create form', () => {
     })
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
-    expect(wrapper.text()).toContain('已报名 3 人')
+    expect(wrapper.text()).toContain('已报名 4 人') // 含团长
     expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
   })
 })
