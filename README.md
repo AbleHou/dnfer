@@ -120,12 +120,12 @@ curl -X POST -H "Authorization: Bearer $DNFER_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"identifier":"872557240"}' \
   http://127.0.0.1:8000/api/public/register
-curl -X POST https://<域名>/api/public/raids/1/signup \
-     -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-     -d '{"account":"872557240"}'
-curl -X POST https://<域名>/api/public/raids/1/signup/cancel \
-     -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-     -d '{"nickname":"龙应藏进云里"}'
+curl -X POST -H "Authorization: Bearer $DNFER_API_TOKEN" \
+  -H "Content-Type: application/json" -d '{"account":"872557240"}' \
+  http://127.0.0.1:8000/api/public/raids/1/signup
+curl -X POST -H "Authorization: Bearer $DNFER_API_TOKEN" \
+  -H "Content-Type: application/json" -d '{"nickname":"龙应藏进云里"}' \
+  http://127.0.0.1:8000/api/public/raids/1/signup/cancel
 ```
 
 ## 测试
