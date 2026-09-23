@@ -68,3 +68,33 @@ describe('CharacterPickerModal admin mode', () => {
     expect(wrapper.text()).not.toContain('剑魂')
   })
 })
+
+describe('CharacterPickerModal placed badge', () => {
+  it('渲染已占位角色的角标', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/admin/characters') return [playerA, mine]
+      return []
+    })
+    const wrapper = mount(CharacterPickerModal, {
+      props: { open: true, adminMode: true, signupUserIds: [1, 9],
+               placed: { 12: { wave_index: 2, squad_index: 1, duty: '主奶' } } },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    // 默认选中管理员自己，角色「奶」id=12 已占位 → 有角标（SQUAD_NAMES[1] === '黄队'）
+    expect(wrapper.text()).toContain('已占位 · 第2波 · 黄队')
+  })
+
+  it('未占位角色无角标', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/admin/characters') return [playerA, mine]
+      return []
+    })
+    const wrapper = mount(CharacterPickerModal, {
+      props: { open: true, adminMode: true, signupUserIds: [1, 9], placed: {} },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('已占位')
+  })
+})
