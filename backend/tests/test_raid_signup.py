@@ -364,3 +364,13 @@ def test_member_characters_empty_roster(client):
     r = client.get(f"/api/raids/{rid}/signups/{u['id']}/characters", headers=h)
     assert r.status_code == 200
     assert r.json()["characters"] == []
+
+
+def test_member_characters_user_not_found(client):
+    ah = _admin(client)
+    h, u = register_user(client, "mch7", "庚")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    r = client.get(f"/api/raids/{rid}/signups/99999/characters", headers=h)
+    assert r.status_code == 404
+    assert r.json()["detail"] == "用户不存在"
