@@ -8,8 +8,8 @@
       [--from 'YYYY-MM-DD HH:MM'] [--to 'YYYY-MM-DD HH:MM']
   DNFER_API_TOKEN=xxx python dnfer_raid.py detail <raid_id> [--wave n | --waves n | --all]
 
-时区：后端 starts_at 为 naive UTC，脚本统一按 UTC 读取并转为固定 +8
-（Asia/Shanghai，中国无夏令时）进行展示与匹配。
+时区：后端 starts_at 存的是本地时间（前端直传 naive 本地串，如 2026-09-26T14:00:00），
+脚本按本地时间直接读取、比较与展示；`_now_local` 取当前中国本地时间（UTC+8）用于匹配。
 
 输出约定：stdout 只输出机器可读 JSON（模型据此解析）；人读中文摘要写到 stderr。
 非 2xx / 网络错误时 stdout 为 {"ok": false, "status": ..., "error": ...}。
@@ -78,12 +78,8 @@ def _request(method: str, url: str, body: dict | None = None):
 # ---------- 时间（纯函数，now 可注入便于测试） ----------
 
 def _now_local() -> datetime:
-    # 服务器存 naive UTC，取当前 UTC 再转 +8 得到本地 naive
+    # 当前中国本地时间（UTC+8 固定，无夏令时），用于与库值（本地时间）比较
     return datetime.now(timezone.utc).replace(tzinfo=None) + TZ_OFFSET
-
-
-def _to_local(dt_utc: datetime) -> datetime:
-    return dt_utc + TZ_OFFSET
 
 
 def _parse_iso(value: str) -> datetime:
@@ -123,7 +119,7 @@ def _pick_core(raids: list, weekday: int | None, period: str | None,
                from_dt: datetime | None, to_dt: datetime | None,
                now: datetime) -> tuple[dict | None, dict]:
     """确定性选团核心（纯函数）。返回 (选中 raid 或 None, 输出 meta)。"""
-    items = [{"raid": r, "dt": _to_local(_parse_iso(r["starts_at"]))} for r in raids]
+    items = [{"raid": r, "dt": _parse_iso(r["starts_at"])} for r in raids]
     if not items:
         return None, {"ok": True, "selected": None, "reason": "no_raids"}
 
@@ -189,7 +185,7 @@ def cmd_raids(args) -> int:
     result = _request("GET", f"{_base()}/api/public/raids")
     if isinstance(result, list):
         for r in result:
-            r["starts_at_local"] = _fmt_local(_to_local(_parse_iso(r["starts_at"])))
+            r["starts_at_local"] = _fmt_local(_parse_iso(r["starts_at"]))
         out = {"ok": True, "raids": result}
     elif isinstance(result, dict) and result.get("ok") is False:
         return _fail(result)
@@ -218,9 +214,9 @@ def cmd_pick(args) -> int:
     else:
         return _fail({"ok": False, "error": "响应格式异常"})
     if out.get("selected") is not None:
-        # 与 raids/detail 一致：给选中团补 +8 本地时间，模型直接回显，不用裸 UTC
+        # 与 raids/detail 一致：给选中团补本地时间展示串，模型直接回显
         out["selected"]["starts_at_local"] = _fmt_local(
-            _to_local(_parse_iso(out["selected"]["starts_at"])))
+            _parse_iso(out["selected"]["starts_at"]))
     print(json.dumps(out, ensure_ascii=False))
     if out.get("selected") is None:
         print("[dnfer-raid] 当前没有任何攻坚计划", file=sys.stderr)
@@ -255,7 +251,7 @@ def cmd_detail(args) -> int:
            "raid": {"id": raid["id"], "name": raid["name"],
                     "dungeon_name": raid["dungeon_name"], "size": raid["size"],
                     "locked": raid["locked"],
-                    "starts_at": _fmt_local(_to_local(_parse_iso(raid["starts_at"]))),
+                    "starts_at": _fmt_local(_parse_iso(raid["starts_at"])),
                     "wave_count": wave_count},
            "waves": [_shape_wave(w) for w in waves]}
     print(json.dumps(out, ensure_ascii=False))
