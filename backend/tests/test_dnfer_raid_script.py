@@ -128,3 +128,44 @@ def test_signup_target_none():
     now = datetime(2026, 9, 23, 10, 0)
     raids = [_raid(1, "2026-09-20T14:00:00", locked=True)]
     assert dnfer_raid._pick_signup_target(raids, now) == (None, None)
+
+
+def test_signup_call_nickname_404_falls_back_to_account(monkeypatch):
+    calls = []
+    def fake_request(method, url, body=None):
+        calls.append((method, url, body))
+        if body and "nickname" in body:
+            return {"ok": False, "status": 404, "error": "账号或昵称不存在"}
+        return {"ok": True, "user": {"account": "872557240", "nickname": "帅哥"}}
+    monkeypatch.setattr(dnfer_raid, "_request", fake_request)
+    result = dnfer_raid._signup_call(7, "872557240", "signup")
+    assert result["ok"] is True
+    assert len(calls) == 2
+    assert calls[0][1].endswith("/api/public/raids/7/signup")
+    assert calls[0][2] == {"nickname": "872557240"}
+    assert calls[1][2] == {"account": "872557240"}
+
+
+def test_signup_call_nickname_400_no_fallback(monkeypatch):
+    calls = []
+    def fake_request(method, url, body=None):
+        calls.append((method, url, body))
+        return {"ok": False, "status": 400, "error": "该用户已报名"}
+    monkeypatch.setattr(dnfer_raid, "_request", fake_request)
+    result = dnfer_raid._signup_call(7, "872557240", "signup")
+    assert result == {"ok": False, "status": 400, "error": "该用户已报名"}
+    assert len(calls) == 1
+    assert calls[0][2] == {"nickname": "872557240"}
+
+
+def test_signup_call_unsign_uses_cancel_suffix(monkeypatch):
+    calls = []
+    def fake_request(method, url, body=None):
+        calls.append((method, url, body))
+        return {"ok": True, "user": {"account": "longying", "nickname": "龙应藏进云里"}}
+    monkeypatch.setattr(dnfer_raid, "_request", fake_request)
+    result = dnfer_raid._signup_call(7, "龙应藏进云里", "unsign")
+    assert result["ok"] is True
+    assert len(calls) == 1
+    assert calls[0][1].endswith("/api/public/raids/7/signup/cancel")
+    assert calls[0][2] == {"nickname": "龙应藏进云里"}

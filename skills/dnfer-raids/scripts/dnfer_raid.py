@@ -179,17 +179,17 @@ def _pick_signup_target(raids: list, now: datetime) -> tuple[dict | None, str | 
     """报名/取消报名的目标团：只看未锁定团。
     优先「当前时间下一次的团」（starts_at >= now 取最早）；
     无未来未锁定团时回退「当天未锁定的团」（同日期取最早）；
-    再无 → (None, None)。"""
+    同时间并列按 raid id 取小保证确定性；再无 → (None, None)。"""
     items = [{"raid": r, "dt": _parse_iso(r["starts_at"])} for r in raids if not r["locked"]]
     if not items:
         return None, None
     future = [it for it in items if it["dt"] >= now]
     if future:
-        sel = min(future, key=lambda it: it["dt"])
+        sel = min(future, key=lambda it: (it["dt"], it["raid"]["id"]))
         return sel["raid"], "next"
     today = [it for it in items if it["dt"].date() == now.date()]
     if today:
-        sel = min(today, key=lambda it: it["dt"])
+        sel = min(today, key=lambda it: (it["dt"], it["raid"]["id"]))
         return sel["raid"], "today_unlocked"
     return None, None
 
