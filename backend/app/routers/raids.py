@@ -142,14 +142,17 @@ def get_raid(rid: int, user: User = Depends(get_current_user), db: Session = Dep
     return _detail(db, _raid_or_404(db, rid))
 
 @router.put("/{rid}")
-def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_admin),
-                db: Session = Depends(get_db)):
+async def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_admin),
+                      db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
     if body.name is not None:
         raid.name = body.name
     if body.starts_at is not None:
         raid.starts_at = body.starts_at
     db.commit()
+    await manager.broadcast(rid, {"type": "raid:updated",
+                                  "name": raid.name,
+                                  "starts_at": raid.starts_at.isoformat()})
     return _detail(db, raid)
 
 @router.delete("/{rid}")

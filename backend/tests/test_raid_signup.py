@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+import app.routers.raids as raids_mod
 from app.models import Dungeon, Raid, RaidSignup, User
 
 from .helpers import make_raid, register_user
@@ -374,3 +376,33 @@ def test_member_characters_user_not_found(client):
     r = client.get(f"/api/raids/{rid}/signups/99999/characters", headers=h)
     assert r.status_code == 404
     assert r.json()["detail"] == "用户不存在"
+
+
+def test_update_raid_broadcasts_raid_updated(client, monkeypatch):
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    called = AsyncMock()
+    monkeypatch.setattr(raids_mod.manager, "broadcast", called)
+    r = client.put(f"/api/raids/{rid}", headers=ah,
+                   json={"name": "改后", "starts_at": "2026-09-21T20:00:00"})
+    assert r.status_code == 200
+    assert r.json()["name"] == "改后"
+    called.assert_awaited_once()
+    payload = called.await_args.args[1]  # broadcast(rid, payload)
+    assert payload["type"] == "raid:updated"
+    assert payload["name"] == "改后"
+    assert payload["starts_at"] == "2026-09-21T20:00:00"
+
+
+def test_update_raid_ws_broadcast(client):
+    ah = _admin(client)
+    token = ah["Authorization"].split()[1]
+    rid = make_raid(client, ah)["id"]
+    with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
+        r = client.put(f"/api/raids/{rid}", headers=ah,
+                       json={"name": "改后", "starts_at": "2026-09-21T20:00:00"})
+        assert r.status_code == 200
+        ev = ws.receive_json()
+        assert ev["type"] == "raid:updated"
+        assert ev["name"] == "改后"
+        assert ev["starts_at"] == "2026-09-21T20:00:00"
