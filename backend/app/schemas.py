@@ -209,3 +209,13 @@ class BotCharacterList(BaseModel):
 
 class BotRegisterIn(BaseModel):
     identifier: str = Field(min_length=1)
+
+class BotSignupIn(BaseModel):
+    account: str | None = Field(default=None, min_length=1, max_length=64)
+    nickname: str | None = Field(default=None, min_length=1, max_length=64)
+
+    @model_validator(mode="after")
+    def _exactly_one_identity(self):
+        if (self.account is None) == (self.nickname is None):
+            raise ValueError("account 与 nickname 必须恰好提供一个")
+        return self

@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 from .. import jobs as job_data
 from ..auth import hash_password, require_api_token
 from ..db import get_db
-from ..models import Character, User
+from ..models import Character, RaidSignup, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
-                       BotCharactersOut, BotRegisterIn)
+                       BotCharactersOut, BotRegisterIn, BotSignupIn, UserOut)
+from ..routers.raids import _raid_or_404
+from ..ws import manager
 from .members import _character_out
 
 router = APIRouter(prefix="/api/public", tags=["bot"],
@@ -112,3 +114,30 @@ def register(body: BotRegisterIn, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(400, "用户名已存在")
     return {"account": identifier, "nickname": identifier}
+
+@router.post("/raids/{rid}/signup")
+async def bot_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    user = _get_user(db, body.account, body.nickname)
+    if user.id == raid.created_by:
+        raise HTTPException(400, "团长无需报名")
+    if raid.locked:
+        raise HTTPException(400, "攻坚已锁定，无法报名")
+    if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                   RaidSignup.user_id == user.id).first():
+        raise HTTPException(400, "该用户已报名")
+    rs = RaidSignup(raid_id=rid, user_id=user.id)
+    db.add(rs)
+    try:
+        db.commit()
+    except IntegrityError:  # 并发重复报名兜底
+        db.rollback()
+        raise HTTPException(400, "该用户已报名")
+    db.refresh(rs)
+    await manager.broadcast(rid, {"type": "raid:signup",
+                                  "user": UserOut.model_validate(user).model_dump(),
+                                  "created_at": rs.created_at.isoformat()})
+    return {"ok": True,
+            "user": UserOut.model_validate(user).model_dump(),
+            "raid": {"id": raid.id, "name": raid.name,
+                     "starts_at": raid.starts_at.isoformat()}}
