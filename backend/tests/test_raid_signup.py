@@ -304,3 +304,39 @@ def test_admin_signup_ws_broadcast_target_user(client):
         assert ev["type"] == "raid:signup"
         assert ev["user"]["id"] == u["id"]  # 广播的是目标用户，而非管理员
         assert ev["created_at"]
+
+
+def test_member_characters_participant(client):
+    ah = _admin(client)
+    h, u = register_user(client, "mch1", "甲")
+    cid = _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    r = client.get(f"/api/raids/{rid}/signups/{u['id']}/characters", headers=h)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["user"]["id"] == u["id"]
+    assert [c["id"] for c in body["characters"]] == [cid]
+
+
+def test_member_characters_creator_visible(client):
+    ah = _admin(client)
+    login = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    admin_id = login.json()["user"]["id"]
+    cid = _mkchar(client, ah, "团长C")
+    rid = make_raid(client, ah)["id"]
+    r = client.get(f"/api/raids/{rid}/signups/{admin_id}/characters", headers=ah)
+    assert r.status_code == 200
+    assert [c["id"] for c in r.json()["characters"]] == [cid]
+
+
+def test_member_characters_non_participant_404(client):
+    ah = _admin(client)
+    h, u = register_user(client, "mch2", "乙")
+    _mkchar(client, h)
+    h3, _ = register_user(client, "mch3", "丙")
+    rid = make_raid(client, ah)["id"]
+    # 乙未报名 → 查询 404
+    r = client.get(f"/api/raids/{rid}/signups/{u['id']}/characters", headers=h3)
+    assert r.status_code == 404
+    assert r.json()["detail"] == "该用户未参与本场攻坚"

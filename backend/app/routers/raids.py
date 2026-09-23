@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -9,10 +9,11 @@ from .. import jobs as job_data
 from ..auth import get_current_user, require_admin
 from ..db import get_db
 from ..models import Character, Dungeon, Raid, RaidSignup, Slot, User, Wave
-from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, RaidCreate,
-                       RaidDetail, RaidListItem, RaidSignupOut, RaidUpdate,
-                       SignupUserIn, SlotMutationResult, SlotOut, UserOut,
-                       WaveOut)
+from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, PlayerCharacters,
+                       RaidCreate, RaidDetail, RaidListItem, RaidSignupOut,
+                       RaidUpdate, SignupUserIn, SlotMutationResult, SlotOut,
+                       UserOut, WaveOut)
+from ..routers.members import _character_out
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
                                        duty_valid_for_class)
@@ -494,3 +495,18 @@ async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(requi
                                   "user": UserOut.model_validate(target).model_dump(),
                                   "created_at": rs.created_at.isoformat()})
     return {"ok": True}
+
+
+@router.get("/{rid}/signups/{user_id}/characters", response_model=PlayerCharacters)
+def get_member_characters(rid: int, user_id: int, user: User = Depends(get_current_user),
+                          db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if not _participates(db, raid, user_id):
+        raise HTTPException(404, "该用户未参与本场攻坚")
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "用户不存在")
+    chars = db.scalars(select(Character).where(Character.user_id == user_id)
+                       .order_by(Character.id)).all()
+    return PlayerCharacters(user=UserOut.model_validate(target),
+                            characters=[_character_out(c) for c in chars])
