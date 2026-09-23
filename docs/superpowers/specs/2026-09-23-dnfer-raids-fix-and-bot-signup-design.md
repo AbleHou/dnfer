@@ -34,7 +34,7 @@
   - `cmd_pick`：`out["selected"]["starts_at_local"] = _fmt_local(_parse_iso(...))`
   - `cmd_detail`：`"starts_at": _fmt_local(_parse_iso(raid["starts_at"]))`
 - `_now_local()` **保持不变**（返回中国本地当前 naive 时间，供比较）。
-- 更新文件头 docstring 与相关注释：`starts_at` 为「本地时间（前端直传 naive 本地串）」，脚本按本地时间直接读取、比较、展示；不再声称「后端 naive UTC」。
+- 更新文件头 docstring 与相关注释：`starts_at` 为「本地时间（前端直传 naive 本地串）」，脚本按本地时间直接读取、比较、展示；不再声称「后端 naive UTC」。**注释清理范围明确包括**：文件头 docstring、`_now_local()` 内部注释（「服务器存 naive UTC，取当前 UTC 再转 +8」）、`cmd_pick` 选中团处的「不用裸 UTC 字段」注释、`_to_local` 定义处注释。
 
 ## 3. Bug 2 修复：pick 优先未锁定（`scripts/dnfer_raid.py`）
 
@@ -119,7 +119,8 @@ def _pick_signup_target(raids, now):
 2. `_pick_signup_target(raids, _now_local())` → `(raid, reason)`；`raid is None` → stdout `{"ok": true, "selected": null, "reason": "no_target"}`（stderr 摘要「当前没有可报名的团」）→ 退出 0。
 3. 身份解析：昵称优先、404 回退账号（仿 `dnfer_api._resolve`）：
    ```python
-   def _signup_call(url, identifier, action):
+   def _signup_call(raid_id, identifier, action):
+       url = f"{_base()}/api/public/raids/{raid_id}/signup"  # action=="unsign" 时结尾为 /signup/cancel
        def call(field, value):
            return _request("POST", url, {field: value})
        result = call("nickname", identifier)
@@ -209,6 +210,8 @@ stdout 契约汇总：
 - `account`/`nickname` 都缺或都给 → 422。
 
 ### 脚本 `backend/tests/test_dnfer_raid_script.py`（新，`importlib` 加载纯 stdlib 脚本）
+
+- **导入策略**：`importlib.util.spec_from_file_location` + `module_from_spec` + `exec_module` 按绝对路径加载 `skills/dnfer-raids/scripts/dnfer_raid.py`（不依赖 sys.path / 不装包），放 `backend/tests/` 复用既有 pytest 运行方式（`cd backend && .venv/bin/python -m pytest tests/test_dnfer_raid_script.py -v`）。
 
 - `_parse_iso` 解析；`_fmt_local` 输出 `YYYY-MM-DD HH:MM 周X`。
 - `_pick_core`：未锁定优先——近处锁定团 + 远处未锁定团 → 选未锁定且 `preferred_unlocked:true`；全部锁定 → 选最近；时间过滤后同样未锁定优先；无命中回退也未锁定优先。
