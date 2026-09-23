@@ -115,6 +115,19 @@ def _weekday_window(weekday: int, period: str | None, now: datetime) -> tuple[da
     return start, start + timedelta(hours=end_hour - start_hour)
 
 
+def _closest_prefer_unlocked(items: list, now: datetime) -> tuple[dict, bool]:
+    """离 now 最近的 item；未锁定优先。返回 (item, skipped_locked)。
+    skipped_locked=True：为选未锁定而跳过了绝对距离更近的锁定团。"""
+    unlocked = [it for it in items if not it["raid"]["locked"]]
+    if unlocked:
+        sel = min(unlocked, key=lambda it: (abs(it["dt"] - now), it["dt"]))
+    else:
+        sel = min(items, key=lambda it: (abs(it["dt"] - now), it["dt"]))
+    closest = min(items, key=lambda it: (abs(it["dt"] - now), it["dt"]))
+    skipped = closest["raid"]["locked"] and sel["raid"]["id"] != closest["raid"]["id"]
+    return sel, skipped
+
+
 def _pick_core(raids: list, weekday: int | None, period: str | None,
                from_dt: datetime | None, to_dt: datetime | None,
                now: datetime) -> tuple[dict | None, dict]:
@@ -145,14 +158,18 @@ def _pick_core(raids: list, weekday: int | None, period: str | None,
         candidates = [it for it in items if lo <= it["dt"] < hi]
 
     if candidates:
-        sel = min(candidates, key=lambda it: (abs(it["dt"] - now), it["dt"]))
+        sel, skipped = _closest_prefer_unlocked(candidates, now)
         meta["selected"] = sel["raid"]
         meta["matches"] = [it["raid"]["id"] for it in candidates]
+        if skipped:
+            meta["preferred_unlocked"] = True
         return sel["raid"], meta
-    # 时间过滤无命中 → 回退离当前时间最近的一场
-    sel = min(items, key=lambda it: (abs(it["dt"] - now), it["dt"]))
+    # 时间过滤无命中 → 回退离当前时间最近的一场（同样未锁定优先）
+    sel, skipped = _closest_prefer_unlocked(items, now)
     meta["selected"] = sel["raid"]
     meta["fallback"] = True
+    if skipped:
+        meta["preferred_unlocked"] = True
     return sel["raid"], meta
 
 

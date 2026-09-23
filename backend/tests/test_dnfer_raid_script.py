@@ -35,3 +35,49 @@ def test_pick_core_range_hits_local_raid_without_offset():
     _, meta = dnfer_raid._pick_core(raids, None, None, from_dt, to_dt, now)
     assert meta["fallback"] is False
     assert meta["matches"] == [1]
+
+
+def test_pick_prefers_unlocked_over_closer_locked():
+    now = datetime(2026, 9, 21, 10, 0)  # 周一
+    raids = [
+        _raid(1, "2026-09-20T14:00:00", locked=True),  # 昨天（周日）已锁定，离当前最近
+        _raid(2, "2026-09-26T14:00:00"),               # 下周六未锁定
+    ]
+    sel, meta = dnfer_raid._pick_core(raids, None, None, None, None, now)
+    assert sel["id"] == 2
+    assert meta.get("preferred_unlocked") is True
+
+
+def test_pick_all_locked_takes_closest():
+    now = datetime(2026, 9, 21, 10, 0)
+    raids = [
+        _raid(1, "2026-09-20T14:00:00", locked=True),
+        _raid(2, "2026-09-26T14:00:00", locked=True),
+    ]
+    sel, meta = dnfer_raid._pick_core(raids, None, None, None, None, now)
+    assert sel["id"] == 1
+    assert "preferred_unlocked" not in meta
+
+
+def test_pick_time_filter_prefers_unlocked():
+    now = datetime(2026, 9, 21, 10, 0)
+    raids = [
+        _raid(1, "2026-09-26T14:00:00", locked=True),
+        _raid(2, "2026-09-26T15:00:00"),
+    ]
+    sel, meta = dnfer_raid._pick_core(raids, 5, None, None, None, now)  # 周六
+    assert sel["id"] == 2
+
+
+def test_pick_range_no_match_fallback_prefers_unlocked():
+    now = datetime(2026, 9, 21, 10, 0)
+    raids = [
+        _raid(1, "2026-09-20T14:00:00", locked=True),
+        _raid(2, "2026-09-26T14:00:00"),
+    ]
+    sel, meta = dnfer_raid._pick_core(raids, None, None,
+                                      datetime(2026, 9, 22, 10, 0),
+                                      datetime(2026, 9, 22, 12, 0), now)
+    assert meta["fallback"] is True
+    assert sel["id"] == 2
+    assert meta.get("preferred_unlocked") is True
