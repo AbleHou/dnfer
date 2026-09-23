@@ -43,30 +43,31 @@ const sorted = computed(() =>
 
 ### 2.2 模板
 
-- `v-for="c in list"` → `v-for="c in sorted"`（角色卡片与内联编辑表单的循环都改）。
-- 头部在「添加角色」按钮旁加排序切换：
+- 角色卡片与内联编辑表单共用一个 `<template v-for="c in list">`，改为 `v-for="c in sorted"` 即可同时覆盖两者。
+- 头部「添加角色」按钮**保持在最前**（既有测试 `wrapper.find('button')` 依赖第一个按钮是添加按钮，不得改变顺序），在其后加排序切换：
 
 ```html
 <div class="page-head">
   <h2>我的角色</h2>
   <div style="display:flex;align-items:center;gap:8px">
-    <button class="dnf-btn dnf-btn-sm" :class="sortMode === 'type' && 'dnf-btn-primary'"
-            @click="sortMode = 'type'">按类型</button>
-    <button class="dnf-btn dnf-btn-sm" :class="sortMode === 'fame' && 'dnf-btn-primary'"
-            @click="sortMode = 'fame'">按名望</button>
     <button class="dnf-btn dnf-btn-primary" @click="startCreate">＋ 添加角色</button>
+    <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'type' }"
+            @click="sortMode = 'type'">按类型</button>
+    <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'fame' }"
+            @click="sortMode = 'fame'">按名望</button>
   </div>
 </div>
 ```
 
-- 激活态：用 `dnf-btn-primary` 高亮当前排序模式（其余为普通 `dnf-btn-sm`）。
+- 激活态：用 `dnf-btn-primary` 高亮当前排序模式（对象语法 `:class="{...}"`，与代码库既有模式一致）；其余为普通 `dnf-btn-sm`。
 
 ## 3. 测试（`frontend/src/views/MyCharactersView.spec.ts` 追加）
 
 - 默认（`type`）：返回顺序混合（如 `[奶(辅助,200), 剑魂(输出,100), 鬼泣(输出,300)]`）时，渲染卡片顺序应为「输出组在前、组内名望降序、辅助在后」→ `鬼泣(300) → 剑魂(100) → 奶(200)`。
-- 切换 `按名望`：点按钮后顺序按名望降序 → `奶(200) → 鬼泣(300)`?（示例需名望关系正确：如 `剑魂(100) 奶(200) 鬼泣(300)` → 名望降序 `鬼泣 → 奶 → 剑魂`）。
-- 按钮激活态：默认「按类型」高亮；点「按名望」后高亮切换。
-- 断言方式：读 `wrapper.findAll('.dnf-panel')` 或卡片内角色名文本顺序。
+- 切换 `按名望`：点「按名望」按钮后，顺序按名望降序（如 `[剑魂(100), 奶(200), 鬼泣(300)]` → `鬼泣(300) → 奶(200) → 剑魂(100)`）。
+- 按钮激活态：默认「按类型」高亮；点「按名望」后高亮切到「按名望」。
+- 断言方式：读 `wrapper.findAll('.dnf-panel')` 中角色卡片的角色名文本顺序。
+- **注意**：既有 4 个测试（添加角色/保存守卫等）用 `wrapper.find('button')` 点「添加角色」——保持添加按钮在第一个即可不改这些断言。
 
 ## 4. 文档
 
