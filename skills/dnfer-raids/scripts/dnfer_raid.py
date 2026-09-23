@@ -7,6 +7,8 @@
       [--weekday 0-6] [--period morning|afternoon|evening] \
       [--from 'YYYY-MM-DD HH:MM'] [--to 'YYYY-MM-DD HH:MM']
   DNFER_API_TOKEN=xxx python dnfer_raid.py detail <raid_id> [--wave n | --waves n | --all]
+  DNFER_API_TOKEN=xxx python dnfer_raid.py signup <identifier>
+  DNFER_API_TOKEN=xxx python dnfer_raid.py unsign <identifier>
 
 时区：后端 starts_at 存的是本地时间（前端直传 naive 本地串，如 2026-09-26T14:00:00），
 脚本按本地时间直接读取、比较与展示；`_now_local` 取当前中国本地时间（UTC+8）用于匹配。
@@ -173,6 +175,25 @@ def _pick_core(raids: list, weekday: int | None, period: str | None,
     return sel["raid"], meta
 
 
+def _pick_signup_target(raids: list, now: datetime) -> tuple[dict | None, str | None]:
+    """报名/取消报名的目标团：只看未锁定团。
+    优先「当前时间下一次的团」（starts_at >= now 取最早）；
+    无未来未锁定团时回退「当天未锁定的团」（同日期取最早）；
+    再无 → (None, None)。"""
+    items = [{"raid": r, "dt": _parse_iso(r["starts_at"])} for r in raids if not r["locked"]]
+    if not items:
+        return None, None
+    future = [it for it in items if it["dt"] >= now]
+    if future:
+        sel = min(future, key=lambda it: it["dt"])
+        return sel["raid"], "next"
+    today = [it for it in items if it["dt"].date() == now.date()]
+    if today:
+        sel = min(today, key=lambda it: it["dt"])
+        return sel["raid"], "today_unlocked"
+    return None, None
+
+
 # ---------- 命令 ----------
 
 def _shape_wave(wave: dict) -> dict:
@@ -243,6 +264,44 @@ def cmd_pick(args) -> int:
     return 0
 
 
+def _signup_call(raid_id: int, identifier: str, action: str) -> dict:
+    """昵称优先、404 回退账号（仿 dnfer_api._resolve）。"""
+    suffix = "signup/cancel" if action == "unsign" else "signup"
+    url = f"{_base()}/api/public/raids/{raid_id}/{suffix}"
+    def call(field: str, value: str) -> dict:
+        return _request("POST", url, {field: value})
+    result = call("nickname", identifier)
+    if result.get("ok") is False and result.get("status") == 404:
+        result = call("account", identifier)
+    return result
+
+
+def cmd_signup(args) -> int:
+    action = "unsign" if getattr(args, "cancel", False) else "signup"
+    result = _request("GET", f"{_base()}/api/public/raids")
+    if isinstance(result, dict) and result.get("ok") is False:
+        return _fail(result)
+    if not isinstance(result, list):
+        return _fail({"ok": False, "error": "响应格式异常"})
+    raid, reason = _pick_signup_target(result, _now_local())
+    if raid is None:
+        out = {"ok": True, "selected": None, "reason": "no_target"}
+        print(json.dumps(out, ensure_ascii=False))
+        print("[dnfer-raid] 当前没有可报名/取消的团", file=sys.stderr)
+        return 0
+    resp = _signup_call(raid["id"], args.identifier, action)
+    if resp.get("ok") is False:
+        return _fail(resp)
+    out = {"ok": True, "action": action, "reason": reason,
+           "raid": {"id": raid["id"], "name": raid["name"],
+                    "starts_at_local": _fmt_local(_parse_iso(raid["starts_at"]))},
+           "user": resp.get("user")}
+    print(json.dumps(out, ensure_ascii=False))
+    who = (resp.get("user") or {}).get("nickname") or args.identifier
+    print(f"[dnfer-raid] {action}：{who} → {raid['name']}（{reason}）", file=sys.stderr)
+    return 0
+
+
 def cmd_detail(args) -> int:
     result = _request("GET", f"{_base()}/api/public/raids/{args.raid_id}")
     if isinstance(result, dict) and result.get("ok") is False:
@@ -304,6 +363,14 @@ def main() -> int:
     grp.add_argument("--waves", type=int, help="只返回前 n 波（超量钳制为全部）")
     grp.add_argument("--all", action="store_true", help="返回全部波次（缺省）")
     p_detail.set_defaults(func=cmd_detail)
+
+    p_signup = sub.add_parser("signup", help="替玩家报名下一次/当天未锁定的团")
+    p_signup.add_argument("identifier", help="DNfer 账号 username 或昵称")
+    p_signup.set_defaults(func=cmd_signup, cancel=False)
+
+    p_unsign = sub.add_parser("unsign", help="替玩家取消报名下一次/当天未锁定的团")
+    p_unsign.add_argument("identifier", help="DNfer 账号 username 或昵称")
+    p_unsign.set_defaults(func=cmd_signup, cancel=True)
 
     args = parser.parse_args()
     return args.func(args)

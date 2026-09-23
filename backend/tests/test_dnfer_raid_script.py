@@ -81,3 +81,50 @@ def test_pick_range_no_match_fallback_prefers_unlocked():
     assert meta["fallback"] is True
     assert sel["id"] == 2
     assert meta.get("preferred_unlocked") is True
+
+
+def test_signup_target_prefers_next_future():
+    now = datetime(2026, 9, 23, 10, 0)  # 周三
+    raids = [
+        _raid(1, "2026-09-23T09:00:00"),   # 今天已过
+        _raid(2, "2026-09-26T14:00:00"),   # 下周六
+    ]
+    raid, reason = dnfer_raid._pick_signup_target(raids, now)
+    assert raid["id"] == 2
+    assert reason == "next"
+
+
+def test_signup_target_today_future_is_next():
+    now = datetime(2026, 9, 23, 10, 0)
+    raids = [_raid(1, "2026-09-23T20:00:00")]
+    raid, reason = dnfer_raid._pick_signup_target(raids, now)
+    assert raid["id"] == 1
+    assert reason == "next"
+
+
+def test_signup_target_today_unlocked_fallback():
+    now = datetime(2026, 9, 23, 15, 0)
+    raids = [
+        _raid(1, "2026-09-23T14:00:00"),              # 今天已过但未锁定
+        _raid(2, "2026-09-23T09:00:00", locked=True),  # 今天锁定 → 排除
+    ]
+    raid, reason = dnfer_raid._pick_signup_target(raids, now)
+    assert raid["id"] == 1
+    assert reason == "today_unlocked"
+
+
+def test_signup_target_excludes_locked_future():
+    now = datetime(2026, 9, 23, 10, 0)
+    raids = [
+        _raid(1, "2026-09-26T14:00:00", locked=True),  # 最近的下一次团已锁定 → 跳过
+        _raid(2, "2026-09-27T14:00:00"),               # 更远的未锁定团
+    ]
+    raid, reason = dnfer_raid._pick_signup_target(raids, now)
+    assert raid["id"] == 2
+    assert reason == "next"
+
+
+def test_signup_target_none():
+    now = datetime(2026, 9, 23, 10, 0)
+    raids = [_raid(1, "2026-09-20T14:00:00", locked=True)]
+    assert dnfer_raid._pick_signup_target(raids, now) == (None, None)
