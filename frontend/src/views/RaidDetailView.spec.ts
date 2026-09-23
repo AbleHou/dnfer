@@ -64,7 +64,11 @@ async function mountView(signups: Raid['signups']) {
   return { wrapper: mount(RaidDetailView, {
     global: {
       plugins: [pinia, router],
-      stubs: ['router-link', 'router-view', 'WaveSection', 'CharacterPickerModal', 'SlotActionModal', 'UserAvatar', 'MemberCharactersModal', 'SignupMemberPicker'],
+      stubs: {
+        'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
+        SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
+        teleport: true,
+      },
     },
   }), auth, store }
 }
@@ -115,11 +119,48 @@ describe('RaidDetailView enhance', () => {
     const wrapper = mount(RaidDetailView, {
       global: {
         plugins: [pinia, router],
-        stubs: ['router-link', 'router-view', 'WaveSection', 'CharacterPickerModal', 'SlotActionModal', 'UserAvatar', 'MemberCharactersModal', 'SignupMemberPicker'],
+        stubs: {
+          'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
+          SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
+          teleport: true,
+        },
       },
     })
     await flushPromises()
     expect(wrapper.find('[data-test="signup-plus"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="edit-raid"]').exists()).toBe(false)
+  })
+
+  it('点击加号打开帮成员报名弹窗', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    await wrapper.find('[data-test="signup-plus"]').trigger('click')
+    await flushPromises()
+    const picker = wrapper.findComponent({ name: 'SignupMemberPicker' })
+    expect(picker.exists()).toBe(true)
+    expect(picker.props('open')).toBe(true)
+  })
+
+  it('点击头像打开成员角色只读弹窗', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    // 第二个头像即普通报名者「队员」（首项为团长）
+    await wrapper.findAll('.avatar-btn')[1].trigger('click')
+    await flushPromises()
+    const modal = wrapper.findComponent({ name: 'MemberCharactersModal' })
+    expect(modal.exists()).toBe(true)
+    expect(modal.props('open')).toBe(true)
+    expect(modal.props('user').id).toBe(memberRow.user.id)
+  })
+
+  it('修改名字保存后 PUT 并刷新', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    await wrapper.find('[data-test="edit-raid"]').trigger('click')
+    await flushPromises()
+    await wrapper.find('[data-test="edit-name"] input').setValue('新名字')
+    await wrapper.find('[data-test="save-raid"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.put).toHaveBeenCalledWith('/api/raids/1', { name: '新名字', starts_at: '2026-09-20T14:00:00' })
   })
 })

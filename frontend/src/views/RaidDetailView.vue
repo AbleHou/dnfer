@@ -171,10 +171,12 @@ async function onSaveRaid() {
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <b>已报名</b>
         <span style="color:var(--dnf-text-faint)">{{ store.raid.signups.length }} 人（含团长）</span>
-        <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
-                style="margin-left:auto" @click="onSignup">报名</button>
-        <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
-                data-test="signup-plus" style="margin-left:auto" @click="showMemberPicker = true">＋</button>
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
+                  @click="onSignup">报名</button>
+          <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+                  data-test="signup-plus" @click="showMemberPicker = true">＋</button>
+        </span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
         <div v-for="s in store.raid.signups" :key="s.user.id"
@@ -229,7 +231,7 @@ async function onSaveRaid() {
       <template #footer>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="dnf-btn" @click="showEditRaid = false">取消</button>
-          <button class="dnf-btn dnf-btn-primary" @click="onSaveRaid">保存</button>
+          <button class="dnf-btn dnf-btn-primary" data-test="save-raid" @click="onSaveRaid">保存</button>
         </div>
       </template>
     </n-modal>
