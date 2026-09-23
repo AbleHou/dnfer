@@ -94,11 +94,10 @@ export function buildPlacementMap(raid: Raid): Record<number, CharacterPlacement
 
 ### 3.6 `frontend/src/components/MemberCharactersModal.vue`（新，只读）
 
-- props：`open: boolean`、`rid: number`、`user: User`。
-- 打开时 `GET /api/raids/{rid}/signups/{user.id}/characters` → `PlayerCharacters`。
+- props：`open: boolean`、`rid: number`、`user: User | null`、`placed: Record<number, CharacterPlacement>`（必填，由父级经 `buildPlacementMap(store.raid)` 传入——弹窗自身不读 store，保持数据流向单一）。
+- `watch(() => [open, user?.id], ..., { immediate: true })`：打开时 `GET /api/raids/{rid}/signups/{user.id}/characters` → `PlayerCharacters`；`loading` ref 区分加载中与空态（`!loading && !characters.length` 才显示「还没有角色」）；拉取失败静默。
 - 头部：`user.nickname` 的角色（NModal card title）。
-- 内容：`v-for` 渲染 `<CharacterCard :placement="placed[c.id] ?? null" />`（不可点，无选择状态）。
-- `placed` 由父级（RaidDetailView）经 `buildPlacementMap(store.raid)` 传入（弹窗自身不读 store，保持数据流向单一）。
+- 内容：`v-for` 渲染 `<CharacterCard :placement="placed[c.id] ?? null" readonly />`（只读不可点、无选择状态）。
 - 无 footer，仅标题栏关闭。
 
 ### 3.7 `frontend/src/components/SignupMemberPicker.vue`（新，加号弹窗）
