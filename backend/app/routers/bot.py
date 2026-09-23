@@ -11,7 +11,7 @@ from ..db import get_db
 from ..models import Character, RaidSignup, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
                        BotCharactersOut, BotRegisterIn, BotSignupIn, UserOut)
-from ..routers.raids import _raid_or_404
+from ..routers.raids import _raid_or_404, _remove_signup
 from ..ws import manager
 from .members import _character_out
 
@@ -137,6 +137,21 @@ async def bot_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db))
     await manager.broadcast(rid, {"type": "raid:signup",
                                   "user": UserOut.model_validate(user).model_dump(),
                                   "created_at": rs.created_at.isoformat()})
+    return {"ok": True,
+            "user": UserOut.model_validate(user).model_dump(),
+            "raid": {"id": raid.id, "name": raid.name,
+                     "starts_at": raid.starts_at.isoformat()}}
+
+@router.post("/raids/{rid}/signup/cancel")
+async def bot_cancel_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    user = _get_user(db, body.account, body.nickname)
+    if raid.locked:
+        raise HTTPException(403, "攻坚已锁定，无法取消报名")
+    if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                   RaidSignup.user_id == user.id).first() is None:
+        raise HTTPException(400, "该用户尚未报名")
+    await _remove_signup(db, raid, user.id)
     return {"ok": True,
             "user": UserOut.model_validate(user).model_dump(),
             "raid": {"id": raid.id, "name": raid.name,

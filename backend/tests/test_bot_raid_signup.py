@@ -109,3 +109,47 @@ def test_bot_signup_ws_broadcast(client):
         assert ev["type"] == "raid:signup"
         assert ev["user"]["id"] == u["id"]
         assert ev["created_at"]
+
+
+def _mkchar(client, h, name="C", job="weapon_master"):
+    return client.post("/api/me/characters", headers=h, json={
+        "name": name, "job_name": job, "fame": 1}).json()["id"]
+
+
+def test_bot_cancel_removes_placements(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig5", "戊")
+    cid = _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN, json={"account": "sig5"})
+    slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                json={"character_id": cid})
+    r = client.post(f"/api/public/raids/{rid}/signup/cancel", headers=TOKEN,
+                    json={"account": "sig5"})
+    assert r.status_code == 200
+    detail = client.get(f"/api/raids/{rid}", headers=ah).json()
+    assert len(detail["signups"]) == 1  # 仅剩团长固定行
+    assert all(s["character_id"] is None for s in detail["waves"][0]["slots"])
+
+
+def test_bot_cancel_not_signed_up(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig6", "己")
+    rid = make_raid(client, ah)["id"]
+    r = client.post(f"/api/public/raids/{rid}/signup/cancel", headers=TOKEN,
+                    json={"account": "sig6"})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "该用户尚未报名"
+
+
+def test_bot_cancel_locked_blocked(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig7", "庚")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN, json={"account": "sig7"})
+    client.post(f"/api/raids/{rid}/lock", headers=ah)
+    r = client.post(f"/api/public/raids/{rid}/signup/cancel", headers=TOKEN,
+                    json={"account": "sig7"})
+    assert r.status_code == 403
+    assert r.json()["detail"] == "攻坚已锁定，无法取消报名"
