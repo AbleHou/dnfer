@@ -12,7 +12,11 @@ import CharacterPickerModal from '../components/CharacterPickerModal.vue'
 import SlotActionModal from '../components/SlotActionModal.vue'
 import { useSlotMove } from '../composables/useSlotMove'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
-import type { Character, Duty, RaidSignup, Slot } from '../types'
+import { buildPlacementMap } from '../lib/placement'
+import MemberCharactersModal from '../components/MemberCharactersModal.vue'
+import SignupMemberPicker from '../components/SignupMemberPicker.vue'
+import { NDatePicker, NInput, NModal } from 'naive-ui'
+import type { Character, CharacterPlacement, Duty, RaidSignup, Slot, User } from '../types'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -28,6 +32,13 @@ const editable = computed(() => !store.raid?.locked || auth.isAdmin)
 const mySignedUp = computed(() =>
   store.raid?.signups.some(s => s.user.id === auth.user?.id) ?? false)
 const signupUserIds = computed(() => store.raid?.signups.map(s => s.user.id) ?? [])
+const placed = computed<Record<number, CharacterPlacement>>(() =>
+  store.raid ? buildPlacementMap(store.raid) : {})
+const showMemberPicker = ref(false)
+const memberModalUser = ref<User | null>(null)
+const showEditRaid = ref(false)
+const editName = ref('')
+const editStartsAt = ref<string | null>(null)
 
 async function load() { await store.load(rid) }
 
@@ -121,6 +132,23 @@ async function onDeleteWave(index: number) {
   try { await api.del(`/api/raids/${rid}/waves/${index}`) } catch (e: any) { notifyError(e.message) }
   await load()
 }
+function openEditRaid() {
+  if (!store.raid) return
+  editName.value = store.raid.name
+  editStartsAt.value = store.raid.starts_at
+  showEditRaid.value = true
+}
+async function onSaveRaid() {
+  if (!store.raid) return
+  try {
+    await api.put(`/api/raids/${store.raid.id}`, {
+      name: editName.value || undefined,
+      starts_at: editStartsAt.value ?? undefined,
+    })
+    showEditRaid.value = false
+    await load()
+  } catch (e: any) { notifyError(e.message) }
+}
 </script>
 
 <template>
@@ -133,22 +161,27 @@ async function onDeleteWave(index: number) {
         {{ store.raid.locked ? '已锁定' : '未锁定' }}
       </span>
       <span style="margin-left:auto;display:flex;gap:8px">
+        <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</button>
         <button v-if="auth.isAdmin" class="dnf-btn" @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
         <button v-if="editable" class="dnf-btn dnf-btn-primary" @click="onAddWave">＋ 添加一波</button>
       </span>
     </div>
 
-    <div class="dnf-panel" style="margin:10px 0">
+    <div class="dnf-panel" style="margin:10px 0;padding:12px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <b>已报名</b>
         <span style="color:var(--dnf-text-faint)">{{ store.raid.signups.length }} 人（含团长）</span>
         <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
                 style="margin-left:auto" @click="onSignup">报名</button>
+        <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+                data-test="signup-plus" style="margin-left:auto" @click="showMemberPicker = true">＋</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
         <div v-for="s in store.raid.signups" :key="s.user.id"
              style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--dnf-border);border-radius:4px">
-          <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
+          <button class="avatar-btn" @click="memberModalUser = s.user">
+            <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
+          </button>
           <span>{{ s.user.nickname }}</span>
           <span v-if="s.created_at === null" class="dnf-badge dnf-badge-ok">团长</span>
           <button v-if="auth.isAdmin && s.created_at !== null" class="dnf-btn dnf-btn-sm"
@@ -177,7 +210,41 @@ async function onDeleteWave(index: number) {
                      @pickUp="onPickUp" @remove="onRemoveFromMenu" />
 
     <CharacterPickerModal :open="pickSlot != null" :admin-mode="auth.isAdmin"
-                          :signup-user-ids="signupUserIds"
+                          :signup-user-ids="signupUserIds" :placed="placed"
                           @close="pickSlot = null" @select="onSelectCharacter" />
+
+    <n-modal :show="showEditRaid" preset="card" title="修改攻坚" style="width:min(360px,92vw)"
+             @update:show="(s: boolean) => { if (!s) showEditRaid = false }">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <div style="margin-bottom:4px">名称</div>
+          <n-input v-model:value="editName" data-test="edit-name" />
+        </div>
+        <div>
+          <div style="margin-bottom:4px">时间</div>
+          <n-date-picker v-model:formatted-value="editStartsAt" type="datetime"
+                         value-format="yyyy-MM-dd'T'HH:mm:ss" style="width:100%" />
+        </div>
+      </div>
+      <template #footer>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="dnf-btn" @click="showEditRaid = false">取消</button>
+          <button class="dnf-btn dnf-btn-primary" @click="onSaveRaid">保存</button>
+        </div>
+      </template>
+    </n-modal>
+
+    <MemberCharactersModal :open="memberModalUser != null" :rid="rid" :user="memberModalUser"
+                           :placed="placed" @close="memberModalUser = null" />
+
+    <SignupMemberPicker :open="showMemberPicker" :rid="rid" :exclude-user-ids="signupUserIds"
+                        @close="showMemberPicker = false" @signedUp="load" />
   </div>
 </template>
+
+<style scoped>
+.avatar-btn {
+  display: inline-flex; padding: 0; margin: 0;
+  background: none; border: none; cursor: pointer;
+}
+</style>

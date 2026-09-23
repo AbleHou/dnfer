@@ -64,7 +64,7 @@ async function mountView(signups: Raid['signups']) {
   return { wrapper: mount(RaidDetailView, {
     global: {
       plugins: [pinia, router],
-      stubs: ['router-link', 'router-view', 'WaveSection', 'CharacterPickerModal', 'SlotActionModal', 'UserAvatar'],
+      stubs: ['router-link', 'router-view', 'WaveSection', 'CharacterPickerModal', 'SlotActionModal', 'UserAvatar', 'MemberCharactersModal', 'SignupMemberPicker'],
     },
   }), auth, store }
 }
@@ -84,5 +84,42 @@ describe('RaidDetailView signup panel', () => {
     expect(rows.length).toBe(2)
     expect(rows[0].text()).not.toContain('取消报名')
     expect(rows[1].text()).toContain('取消报名')
+  })
+})
+
+describe('RaidDetailView enhance', () => {
+  it('管理员可见加号与修改按钮', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    expect(wrapper.find('[data-test="signup-plus"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="edit-raid"]').exists()).toBe(true)
+  })
+
+  it('普通用户不可见加号与修改按钮', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = member
+    const store = useRaidStore()
+    store.raid = makeRaid([adminRow, memberRow])
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids/1') return makeRaid([adminRow, memberRow])
+      return []
+    })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/raids/:id', component: RaidDetailView }],
+    })
+    await router.push('/raids/1')
+    await router.isReady()
+    const wrapper = mount(RaidDetailView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: ['router-link', 'router-view', 'WaveSection', 'CharacterPickerModal', 'SlotActionModal', 'UserAvatar', 'MemberCharactersModal', 'SignupMemberPicker'],
+      },
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-test="signup-plus"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="edit-raid"]').exists()).toBe(false)
   })
 })
