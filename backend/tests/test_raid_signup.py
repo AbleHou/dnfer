@@ -340,3 +340,27 @@ def test_member_characters_non_participant_404(client):
     r = client.get(f"/api/raids/{rid}/signups/{u['id']}/characters", headers=h3)
     assert r.status_code == 404
     assert r.json()["detail"] == "该用户未参与本场攻坚"
+
+
+def test_member_characters_cross_user_visible(client):
+    ah = _admin(client)
+    h, u = register_user(client, "mch4", "丁")
+    cid = _mkchar(client, h)
+    h2, _ = register_user(client, "mch5", "戊")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    client.post(f"/api/raids/{rid}/signup", headers=h2)
+    # 用户乙（已报名）查看已报名的用户甲的角色
+    r = client.get(f"/api/raids/{rid}/signups/{u['id']}/characters", headers=h2)
+    assert r.status_code == 200
+    assert [c["id"] for c in r.json()["characters"]] == [cid]
+
+
+def test_member_characters_empty_roster(client):
+    ah = _admin(client)
+    h, u = register_user(client, "mch6", "己")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    r = client.get(f"/api/raids/{rid}/signups/{u['id']}/characters", headers=h)
+    assert r.status_code == 200
+    assert r.json()["characters"] == []

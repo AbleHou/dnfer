@@ -501,11 +501,11 @@ async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(requi
 def get_member_characters(rid: int, user_id: int, user: User = Depends(get_current_user),
                           db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
-    if not _participates(db, raid, user_id):
-        raise HTTPException(404, "该用户未参与本场攻坚")
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(404, "用户不存在")
+    if not _participates(db, raid, user_id):
+        raise HTTPException(404, "该用户未参与本场攻坚")
     chars = db.scalars(select(Character).where(Character.user_id == user_id)
                        .order_by(Character.id)).all()
     return PlayerCharacters(user=UserOut.model_validate(target),
