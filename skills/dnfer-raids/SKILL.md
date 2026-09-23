@@ -55,11 +55,11 @@ stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`�
 - 解析「今天/明天/周X/星期X」时换算成具体 `--from/--to` 或 `--weekday`；「上午/下午/晚上」对应 `morning/afternoon/evening`。
 - 「周六下午」→ `--weekday 5 --period afternoon`。注意：**0=周一**，周六是 `5`，周日是 `6`。
 - 无数字的「下一波」不要瞎猜，回复「发我波次号，如『第 3 波』」。
-- 报名/取消报名的目标团：脚本自动取「当前时间下一次的团」（`starts_at` 未过且最早），仅当没有未来未锁定团时回退「当天未锁定的团」。标识 `872557240` 这类纯数字按 QQ 号（账号）、`龙应藏进云里` 这类中文按昵称；脚本自动昵称优先、404 回退账号，模型无需判断。
+- 报名/取消报名的目标团：脚本自动取「当前时间下一次的团」（`starts_at` 未过且最早），仅当没有未来未锁定团时回退「当天未锁定的团」。标识（QQ 号或昵称均可）按原样传给脚本即可；脚本自动昵称优先、404 回退账号，模型无需判断。
 
 ## 回复格式
 
-- **概览**单行式：`名称（副本）｜时间｜规模｜n 波｜已锁定/未锁定`（时间用 `pick`/`raids` 的 `starts_at_local`、`detail` 的 `starts_at`，均为 `YYYY-MM-DD HH:MM 周X`，可转述为「周六 14:30」；`starts_at` 本身就是本地时间，直接使用即可）。
+- **概览**单行式：`名称（副本）｜时间｜规模｜n 波｜已锁定/未锁定`（展示时间用 `pick`/`raids` 的 `starts_at_local`、`detail` 的 `starts_at`，均为 `YYYY-MM-DD HH:MM 周X`，可转述为「周六 14:30」；底层 `starts_at` 字段本身已是本地时间，无需再做时区转换）。
 - **波次详情**：每波一个小节 `【第 n 波】`，按 `squad_name`（红/黄/绿/蓝/紫）分组，每人一行：
   - 有角色：`昵称 · 角色名 · 职责`（如 `张三 · 剑魂 · 主C`）
   - 空位：`（空）`
@@ -72,14 +72,14 @@ stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`�
 | `{"ok":true,"selected":null,"reason":"no_raids"}` | 「当前还没有攻坚计划」 |
 | `signup` 成功 `{"ok":true,"action":"signup",...}` | 「已帮 昵称（账号）报名《名称》 周六 14:30」 |
 | `unsign` 成功 `{"ok":true,"action":"unsign",...}` | 「已帮 昵称（账号）取消报名《名称》」 |
-| `{"ok":true,"selected":null,"reason":"no_target"}` | 「当前没有可报名的团」（unsign 时：「当前没有可取消报名的团」） |
+| `{"ok":true,"selected":null,"reason":"no_target"}` | 「当前没有可报名的团」（跑的是 `unsign` 时改说「当前没有可取消报名的团」） |
 | `{"ok":false,"status":400,"error":"该用户已报名"}` | 「该成员已报名该团」 |
 | `{"ok":false,"status":400,"error":"该用户尚未报名"}` | 「该成员尚未报名」 |
 | `{"ok":false,"status":400,"error":"团长无需报名"}` | 「团长无需报名」 |
 | `{"ok":false,"status":400,"error":"攻坚已锁定，无法报名"}` | 「该团已锁定，无法报名」 |
 | `{"ok":false,"status":403,"error":"攻坚已锁定，无法取消报名"}` | 「该团已锁定，无法取消报名」 |
 | `{"ok":false,"status":404,"error":"账号或昵称不存在"}` | 「这个账号/昵称还没注册，请发送『你的QQ号注册』自助注册」 |
-| `pick` 输出 `"preferred_unlocked": true` | 概览里自然带一句「最近的一场已锁定，已改为最近未锁定的一场」，再给《selected》信息（如「离当前最近的是已锁定的《A》，最近未锁定的是《B》」） |
+| `pick` 输出 `"preferred_unlocked": true` | 概览里自然带一句「最近的一场已锁定，已改为最近未锁定的一场」，随后照常给《selected》的概览 |
 | `pick` 输出 `"fallback":true` | 「没有匹配《range 里的时间》的团，最近的一场是《selected.name》（《selected.starts_at_local》）」；随后照常 `detail <id> --all` 给出该团概览 |
 | `detail` 返回 `{"ok":false,"status":400,"error":"该团只有 N 波"}` | 「该团只有 N 波」 |
 | `{"ok":false,"status":404,"error":"攻坚不存在"}` | 「这个团不存在或已删除」 |
