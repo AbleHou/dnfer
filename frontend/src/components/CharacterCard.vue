@@ -3,7 +3,7 @@ import { jobIcon, handleIconError as onIconError } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import type { Character, CharacterPlacement } from '../types'
 
-defineProps<{ character: Character; placement: CharacterPlacement | null; active?: boolean }>()
+defineProps<{ character: Character; placement: CharacterPlacement | null; active?: boolean; readonly?: boolean }>()
 const emit = defineEmits<{ (e: 'click', c: Character): void }>()
 
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
@@ -11,9 +11,9 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 </script>
 
 <template>
-  <div class="char-pick" :class="{ active }" @click="emit('click', character)">
+  <div class="char-pick" :class="{ active, readonly }" @click="emit('click', character)">
     <img :src="jobIcon(character.job_name)" @error="onIconError"
-         style="width:28px;height:28px;margin-right:8px">
+         style="width:28px;height:28px">
     <div style="flex:1">
       <b>{{ character.name }}</b>
       <span style="color:var(--dnf-text-muted);font-size:12px">
@@ -32,6 +32,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 </template>
 
 <style scoped>
+.char-pick.readonly { cursor: default; }
+.char-pick.readonly:hover { border-color: var(--dnf-gold-deep); }
 .placed-badge {
   flex-shrink: 0; align-self: flex-start;
   background: var(--dnf-gold); color: #1a1205;
