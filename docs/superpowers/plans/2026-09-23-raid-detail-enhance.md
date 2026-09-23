@@ -551,7 +551,7 @@ describe('CharacterPickerModal placed badge', () => {
 - [ ] **Step 2: 运行确认失败**
 
 Run: `cd frontend && npx vitest run src/components/CharacterPickerModal.spec.ts`
-Expected: 新用例 FAIL（当前无角标渲染）；既有 3 个用例 PASS（不改坏）
+Expected: 「渲染已占位角色的角标」用例 FAIL（当前无角标渲染）；「未占位角色无角标」用例 PASS（当前本就没有角标）；既有 3 个用例 PASS（不改坏）。红状态由第一个用例确认即可。
 
 - [ ] **Step 3: 实现**
 
