@@ -1079,7 +1079,7 @@ async function onSaveRaid() {
                     @close="showMemberPicker = false" @signedUp="load" />
 ```
 
-6. **`<style scoped>`**（`</template>` 后新增）：
+7. **`<style scoped>`**（`</template>` 后新增）：
 
 ```vue
 <style scoped>
