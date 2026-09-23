@@ -290,3 +290,17 @@ def test_admin_signup_requires_admin(client):
     rid = make_raid(client, ah)["id"]
     r = client.post(f"/api/raids/{rid}/signups", headers=h1, json={"user_id": u2["id"]})
     assert r.status_code == 403
+
+
+def test_admin_signup_ws_broadcast_target_user(client):
+    ah = _admin(client)
+    token = ah["Authorization"].split()[1]
+    h, u = register_user(client, "sigws3", "辰")
+    rid = make_raid(client, ah)["id"]
+    with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
+        assert client.post(f"/api/raids/{rid}/signups", headers=ah,
+                           json={"user_id": u["id"]}).status_code == 200
+        ev = ws.receive_json()
+        assert ev["type"] == "raid:signup"
+        assert ev["user"]["id"] == u["id"]  # 广播的是目标用户，而非管理员
+        assert ev["created_at"]
