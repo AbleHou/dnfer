@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
 import { jobIcon, handleIconError as onIconError } from '../lib/job'
@@ -11,6 +11,16 @@ const categories = ref<JobCategory[]>([])
 const showForm = ref(false)
 const editing = ref<Character | null>(null)
 const error = ref('')
+
+type SortMode = 'type' | 'fame'
+const sortMode = ref<SortMode>('type')
+const TYPE_RANK: Record<Character['class_type'], number> = { 输出: 0, 辅助: 1 }
+
+const sorted = computed(() =>
+  [...list.value].sort((a, b) => {
+    if (sortMode.value === 'fame') return b.fame - a.fame || a.id - b.id
+    return TYPE_RANK[a.class_type] - TYPE_RANK[b.class_type] || b.fame - a.fame || a.id - b.id
+  }))
 
 async function load() {
   try {
@@ -49,7 +59,13 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
   <div class="dnf-page" style="max-width:640px">
     <div class="page-head">
       <h2>我的角色</h2>
-      <button class="dnf-btn dnf-btn-primary" @click="startCreate">＋ 添加角色</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="dnf-btn dnf-btn-primary" @click="startCreate">＋ 添加角色</button>
+        <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'type' }"
+                @click="sortMode = 'type'">按类型</button>
+        <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'fame' }"
+                @click="sortMode = 'fame'">按名望</button>
+      </div>
     </div>
 
     <p v-if="error" class="form-error">{{ error }}</p>
@@ -57,7 +73,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
     <CharacterForm v-if="showForm && !editing" :categories="categories" :editing="null"
                    @saved="onSaved" @cancel="onCancel" />
 
-    <template v-for="c in list" :key="c.id">
+    <template v-for="c in sorted" :key="c.id">
       <div class="dnf-panel" style="padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px"
            @click="onCardClick">
         <div style="display:flex;align-items:center;gap:10px;flex:1">

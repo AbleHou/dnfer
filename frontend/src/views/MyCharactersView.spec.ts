@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import MyCharactersView from './MyCharactersView.vue'
 import type { JobCategory } from '../types'
 
@@ -37,6 +38,13 @@ beforeEach(() => {
 })
 
 describe('MyCharactersView job picker', () => {
+  function mk(id: number, name: string, class_type: '输出' | '辅助', fame: number) {
+    return {
+      id, name, job_name: 'x', job_title: 't', parent_name: 'p',
+      class_type, fame, simulated_damage: null, sustained_dps: null, buff_amount: null,
+    }
+  }
+
   it('selecting an output job shows damage inputs and submits job_name', async () => {
     const wrapper = mount(MyCharactersView)
     await flushPromises()
@@ -162,5 +170,41 @@ describe('MyCharactersView job picker', () => {
     await flushPromises()
     expect(apiMock.post).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('请选择职业')
+  })
+
+  it('defaults to type sort: 输出 group first (fame desc), then 辅助', async () => {
+    apiMock.get.mockResolvedValueOnce([
+      mk(1, '奶', '辅助', 200), mk(2, '剑魂', '输出', 100), mk(3, '鬼泣', '输出', 300),
+    ])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    const names = wrapper.findAll('.dnf-panel b').map(b => b.text())
+    expect(names).toEqual(['鬼泣', '剑魂', '奶'])   // 输出(名望降序) → 辅助
+  })
+
+  it('toggling 按名望 reorders by fame desc', async () => {
+    apiMock.get.mockResolvedValueOnce([
+      mk(1, '剑魂', '输出', 100), mk(2, '奶', '辅助', 200), mk(3, '鬼泣', '输出', 300),
+    ])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    expect(wrapper.findAll('.dnf-panel b').map(b => b.text())).toEqual(['鬼泣', '剑魂', '奶'])
+    const fameBtn = wrapper.findAll('button').find(b => b.text() === '按名望')!
+    await fameBtn.trigger('click')
+    await nextTick()
+    expect(wrapper.findAll('.dnf-panel b').map(b => b.text())).toEqual(['鬼泣', '奶', '剑魂'])
+  })
+
+  it('highlights the active sort mode button', async () => {
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    const typeBtn = wrapper.findAll('button').find(b => b.text() === '按类型')!
+    const fameBtn = wrapper.findAll('button').find(b => b.text() === '按名望')!
+    expect(typeBtn.classes()).toContain('dnf-btn-primary')
+    expect(fameBtn.classes()).not.toContain('dnf-btn-primary')
+    await fameBtn.trigger('click')
+    await nextTick()
+    expect(fameBtn.classes()).toContain('dnf-btn-primary')
+    expect(typeBtn.classes()).not.toContain('dnf-btn-primary')
   })
 })
