@@ -1,6 +1,6 @@
 # 我的角色页排序 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 「我的角色」页默认按类型（输出/辅助）排序，用户可切换按名望降序排序。
 
@@ -35,7 +35,7 @@
 - Modify: `frontend/src/views/MyCharactersView.vue`
 - Test: `frontend/src/views/MyCharactersView.spec.ts`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 在 `frontend/src/views/MyCharactersView.spec.ts` 顶部 import 追加 `nextTick`：
 
@@ -91,12 +91,12 @@ it('highlights the active sort mode button', async () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
 Run: `cd frontend && npx vitest run src/views/MyCharactersView.spec.ts`
 Expected: 3 个新用例 FAIL（`按类型/按名望` 按钮不存在、`find` 抛错；或顺序断言失败）
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 `frontend/src/views/MyCharactersView.vue`：
 
@@ -139,17 +139,17 @@ const sorted = computed(() =>
 
 注意：保持「＋ 添加角色」为第一个按钮（既有 4 个用例用 `wrapper.find('button')` 点它，顺序不可变）。
 
-- [ ] **Step 4: 运行确认通过**
+- [x] **Step 4: 运行确认通过**
 
 Run: `cd frontend && npx vitest run src/views/MyCharactersView.spec.ts`
 Expected: 全部 PASS（既有 7 个 + 新 3 个）
 
-- [ ] **Step 5: 类型/构建检查**
+- [x] **Step 5: 类型/构建检查**
 
 Run: `cd frontend && npm run build`
 Expected: vue-tsc 无类型错误、vite build 成功
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add frontend/src/views/MyCharactersView.vue frontend/src/views/MyCharactersView.spec.ts
@@ -169,7 +169,7 @@ EOF
 - Modify: `CHANGELOG.md`
 - Modify: `README.md`
 
-- [ ] **Step 1: CHANGELOG**
+- [x] **Step 1: CHANGELOG**
 
 `CHANGELOG.md` [v1.7]「新增」块末尾（「机器人报名/取消」条目之后）追加：
 
@@ -177,7 +177,7 @@ EOF
 - **我的角色排序**：「我的角色」页角色列表默认按类型（输出→辅助，组内名望降序）排列，可切换按名望降序排列
 ```
 
-- [ ] **Step 2: README（可选但推荐）**
+- [x] **Step 2: README（可选但推荐）**
 
 `README.md` 功能清单第 19 行「**我的角色**：编辑框打开时点击角色卡片即关闭（等同取消），移动端无需下滑到取消按钮」改为：
 
@@ -185,7 +185,7 @@ EOF
 - **我的角色**：编辑框打开时点击角色卡片即关闭（等同取消），移动端无需下滑到取消按钮；角色列表默认按类型（输出/辅助）排序，可切换按名望降序
 ```
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add CHANGELOG.md README.md
@@ -201,17 +201,17 @@ EOF
 
 ### Task 3: 全量验证
 
-- [ ] **Step 1: 前端全量测试**
+- [x] **Step 1: 前端全量测试**
 
 Run: `cd frontend && npx vitest run`
 Expected: 全部 PASS（含新增排序用例）
 
-- [ ] **Step 2: 构建**
+- [x] **Step 2: 构建**
 
 Run: `cd frontend && npm run build`
 Expected: 成功，无类型错误
 
-- [ ] **Step 3: git 状态**
+- [x] **Step 3: git 状态**
 
 Run: `git status --short`
 Expected: 工作区干净
