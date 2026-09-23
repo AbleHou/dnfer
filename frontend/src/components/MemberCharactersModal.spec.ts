@@ -35,4 +35,14 @@ describe('MemberCharactersModal', () => {
     await flushPromises()
     expect(apiMock.get).not.toHaveBeenCalled()
   })
+
+  it('拉取失败时静默显示空态', async () => {
+    apiMock.get.mockRejectedValue(new Error('网络错误'))
+    const wrapper = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {} },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('还没有角色')
+  })
 })

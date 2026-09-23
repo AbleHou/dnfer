@@ -11,7 +11,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 </script>
 
 <template>
-  <div class="char-pick" :class="{ active, readonly }" @click="emit('click', character)">
+  <div class="char-pick" :class="{ active, readonly }" @click="!readonly && emit('click', character)">
     <img :src="jobIcon(character.job_name)" @error="onIconError"
          style="width:28px;height:28px">
     <div style="flex:1">

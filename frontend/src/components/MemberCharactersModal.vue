@@ -11,15 +11,18 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const characters = ref<Character[]>([])
+const loading = ref(false)
 
-watch(() => props.open, async (open) => {
+watch(() => [props.open, props.user?.id] as const, async ([open]) => {
   if (!open || !props.user) return
+  loading.value = true
   characters.value = []
   try {
     const res = await api.get<PlayerCharacters>(
       `/api/raids/${props.rid}/signups/${props.user.id}/characters`)
     characters.value = res.characters
   } catch { /* 只读查看失败静默，可关闭重试 */ }
+  finally { loading.value = false }
 }, { immediate: true }) // immediate：测试挂载 open:true 即触发 fetch（与 CharacterPickerModal 一致）
 </script>
 
@@ -29,7 +32,7 @@ watch(() => props.open, async (open) => {
            style="width:min(420px,92vw)"
            @update:show="(s: boolean) => { if (!s) emit('close') }">
     <div style="max-height:60vh;overflow:auto">
-      <p v-if="!characters.length" style="color:var(--dnf-text-faint)">还没有角色</p>
+      <p v-if="!loading && !characters.length" style="color:var(--dnf-text-faint)">还没有角色</p>
       <CharacterCard v-for="c in characters" :key="c.id" :character="c"
                      :placement="placed[c.id] ?? null" readonly />
     </div>
