@@ -11,7 +11,8 @@ from ..db import get_db
 from ..models import Character, Dungeon, Raid, RaidSignup, Slot, User, Wave
 from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, RaidCreate,
                        RaidDetail, RaidListItem, RaidSignupOut, RaidUpdate,
-                       SlotMutationResult, SlotOut, UserOut, WaveOut)
+                       SignupUserIn, SlotMutationResult, SlotOut, UserOut,
+                       WaveOut)
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
                                        duty_valid_for_class)
@@ -464,3 +465,32 @@ async def cancel_other(rid: int, user_id: int, admin: User = Depends(require_adm
                                    RaidSignup.user_id == user_id).first() is None:
         raise HTTPException(400, "该用户尚未报名")
     return await _remove_signup(db, raid, user_id)
+
+
+@router.post("/{rid}/signups")
+async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(require_admin),
+                       db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if raid.locked:
+        raise HTTPException(400, "攻坚已锁定，无法报名")
+    target = db.get(User, body.user_id)
+    if target is None:
+        raise HTTPException(404, "用户不存在")
+    if target.id == raid.created_by:
+        raise HTTPException(400, "团长无需报名")
+    if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                   RaidSignup.user_id == target.id).first():
+        raise HTTPException(400, "该用户已报名")
+    rs = RaidSignup(raid_id=rid, user_id=target.id)
+    db.add(rs)
+    try:
+        db.commit()
+    except IntegrityError:  # 并发重复报名兜底
+        db.rollback()
+        raise HTTPException(400, "该用户已报名")
+    db.refresh(rs)
+    # 广播的是「目标用户」而非管理员
+    await manager.broadcast(rid, {"type": "raid:signup",
+                                  "user": UserOut.model_validate(target).model_dump(),
+                                  "created_at": rs.created_at.isoformat()})
+    return {"ok": True}

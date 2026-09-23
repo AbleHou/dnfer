@@ -232,3 +232,61 @@ def test_fill_creator_always_participates(client):
     # 团长（管理员、未报名）可放自己角色
     assert client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=ah,
                        json={"character_id": cid}).status_code == 200
+
+
+def test_admin_signup_for_other(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig9", "壬")
+    rid = make_raid(client, ah)["id"]
+    r = client.post(f"/api/raids/{rid}/signups", headers=ah, json={"user_id": u["id"]})
+    assert r.status_code == 200
+    assert r.json() == {"ok": True}
+    detail = client.get(f"/api/raids/{rid}", headers=ah).json()
+    assert any(s["user"]["id"] == u["id"] for s in detail["signups"])
+
+
+def test_admin_signup_other_locked_blocked(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig10", "癸")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/lock", headers=ah)
+    r = client.post(f"/api/raids/{rid}/signups", headers=ah, json={"user_id": u["id"]})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "攻坚已锁定，无法报名"
+
+
+def test_admin_signup_other_duplicate_blocked(client):
+    ah = _admin(client)
+    h, u = register_user(client, "sig11", "子")
+    rid = make_raid(client, ah)["id"]
+    client.post(f"/api/raids/{rid}/signup", headers=h)
+    r = client.post(f"/api/raids/{rid}/signups", headers=ah, json={"user_id": u["id"]})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "该用户已报名"
+
+
+def test_admin_signup_creator_blocked(client):
+    ah = _admin(client)
+    login = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    admin_id = login.json()["user"]["id"]
+    rid = make_raid(client, ah)["id"]
+    r = client.post(f"/api/raids/{rid}/signups", headers=ah, json={"user_id": admin_id})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "团长无需报名"
+
+
+def test_admin_signup_user_not_found(client):
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    r = client.post(f"/api/raids/{rid}/signups", headers=ah, json={"user_id": 99999})
+    assert r.status_code == 404
+    assert r.json()["detail"] == "用户不存在"
+
+
+def test_admin_signup_requires_admin(client):
+    h1, u1 = register_user(client, "sig12a", "丑")
+    h2, u2 = register_user(client, "sig12b", "寅")
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    r = client.post(f"/api/raids/{rid}/signups", headers=h1, json={"user_id": u2["id"]})
+    assert r.status_code == 403

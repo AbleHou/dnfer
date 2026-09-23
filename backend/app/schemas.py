@@ -89,6 +89,9 @@ class RaidSignupOut(BaseModel):
     user: UserOut
     created_at: datetime | None  # 团长固定行（无真实报名记录）为 None
 
+class SignupUserIn(BaseModel):
+    user_id: int
+
 class RaidListItem(BaseModel):
     id: int
     name: str
