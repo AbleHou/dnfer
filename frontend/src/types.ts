@@ -13,6 +13,7 @@ export interface Slot { id: number; squad_index: number; row_index: number;
   fame: number | null; simulated_damage: number | null; sustained_dps: number | null;
   buff_amount: number | null; owner_id: number | null; owner_nickname: string | null;
   owner_avatar: string | null; duty: Duty | null; version: number }
+export interface CharacterPlacement { wave_index: number; squad_index: number; duty: Duty }
 export interface JobChild { id: number; name: string; title: string; class_type: ClassType }
 export interface JobCategory { id: number; name: string; title: string; children: JobChild[] }
 export interface Wave { id: number; index: number; slots: Slot[] }

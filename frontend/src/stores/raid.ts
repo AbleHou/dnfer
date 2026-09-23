@@ -12,6 +12,7 @@ export type WsEvent =
   | { type: 'raid:unlocked' }
   | { type: 'raid:signup'; user: User; created_at: string | null }
   | { type: 'raid:signup_removed'; user_id: number }
+  | { type: 'raid:updated'; name: string; starts_at: string }
 
 export const useRaidStore = defineStore('raid', {
   state: () => ({ raid: null as Raid | null, needRefresh: false }),
@@ -60,6 +61,10 @@ export function applyEvent(store: ReturnType<typeof useRaidStore>, ev: WsEvent) 
     case 'raid:signup_removed':
       raid.signups ??= []
       raid.signups = raid.signups.filter(s => s.user.id !== ev.user_id)
+      break
+    case 'raid:updated':
+      raid.name = ev.name
+      raid.starts_at = ev.starts_at
       break
   }
 }

@@ -94,4 +94,13 @@ describe('raid store', () => {
     applyEvent(store, { type: 'raid:signup_removed', user_id: 9 })
     expect(store.raid!.signups).toHaveLength(0)
   })
+
+  it('applies raid:updated', () => {
+    setActivePinia(createPinia())
+    const store = useRaidStore()
+    store.raid = makeRaid()
+    applyEvent(store, { type: 'raid:updated', name: '新名', starts_at: '2026-09-25T09:00:00' })
+    expect(store.raid!.name).toBe('新名')
+    expect(store.raid!.starts_at).toBe('2026-09-25T09:00:00')
+  })
 })
