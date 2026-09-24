@@ -45,7 +45,7 @@ is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
 
 ## 4. 后端 API（新路由 `routers/admin.py`）
 
-`prefix="/api/admin"`、`require_admin` 保护。把下列端点从 `auth.py` 迁入（URL 不变），其余 auth 端点留在 `auth.py`（回归纯认证）：
+`prefix="/api/admin"`、`require_admin` 保护。把下列端点从 `auth.py` 迁入（URL 不变），其余 auth 端点留在 `auth.py`（回归纯认证）。新路由需在 `main.py` 的 `include_router` 列表中注册。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -89,16 +89,19 @@ Query 参数：
 - `apply_character_payload(c, body)`（赋值 name/job_name/class_type/fame/damage/buff）
 - `delete_character_if_free(db, cid)`（占用则 400）
 
-`members.py` 与 `admin.py` 共同复用；`auth.py` 不再直接依赖 `members._character_out`。
+`members.py` 与 `admin.py` 共同复用。
+
+注意：`_character_out` 目前被 `members.py` 之外的 **三个模块** 引用——`auth.py`、`raids.py`、`bot.py`（均为 `from .members import _character_out`）。若从 `members.py` 移除，须同步更新三处导入（改为从 `services/characters.py` 导入），否则导入期即报错。
 
 ### 4.3 封禁校验点
 - `raids.py: signup`（自报名）：`if user.is_banned: 403 "你已被封禁，无法报名"`。
 - `raids.py: fill_slot`：取到 `char` 后 `if char.owner.is_banned: 403 "该用户已被封禁，无法排表"`（独立于 `_participates`）。
 - `raids.py: admin_signup`：目标用户 `is_banned` → 403。
 - `raids.py: create_raid`：`if admin.is_banned: 403`（防御；规则上不允许封管理员）。
-- `bot.py: POST /api/bot/raids/{rid}/signup`：目标用户 `is_banned` → 403（cancel 不拦）。
+- `bot.py: bot_signup`（实际路径 `POST /api/public/raids/{rid}/signup`）：目标用户 `is_banned` → 403（cancel 不拦）。
 - `get_current_user` **不拦截**（软封禁可登录查看）。
 - 封禁动作**不改动**现有报名与占位，**不广播** WS 事件。
+- **封禁用户在选人面板的呈现**：`CharacterPickerModal`（分组 `/api/admin/characters`）与 `SignupMemberPicker`（`/api/admin/users`）均不筛除封禁用户，仍可见；对其执行 fill / admin_signup 时后端 403，前端显示 403 提示即可，不做灰置。（既定决策，实施时不再重议）
 
 ## 5. 前端
 
