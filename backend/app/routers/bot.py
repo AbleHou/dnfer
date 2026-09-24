@@ -119,6 +119,8 @@ def register(body: BotRegisterIn, db: Session = Depends(get_db)):
 async def bot_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
     user = _get_user(db, body.account, body.nickname)
+    if user.is_banned:
+        raise HTTPException(403, "该用户已被封禁")
     if user.id == raid.created_by:
         raise HTTPException(400, "团长无需报名")
     if raid.locked:

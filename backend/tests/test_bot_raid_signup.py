@@ -153,3 +153,13 @@ def test_bot_cancel_locked_blocked(client):
                     json={"account": "sig7"})
     assert r.status_code == 403
     assert r.json()["detail"] == "攻坚已锁定，无法取消报名"
+
+
+def test_bot_signup_banned_user_blocked(client, admin_headers, db):
+    _, u = register_user(client, "botban", "机器人封禁")
+    raid = make_raid(client, admin_headers)
+    client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
+    r = client.post(f"/api/public/raids/{raid['id']}/signup",
+                    headers={"Authorization": "Bearer change-me-bot-token"},
+                    json={"nickname": "机器人封禁"})
+    assert r.status_code == 403
