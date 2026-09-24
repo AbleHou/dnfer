@@ -78,3 +78,37 @@ def test_query_characters_filters_sorts_paginates(client, admin_headers, db):
     # 空字符串参数按不过滤处理（不应 400）
     assert client.get("/api/admin/characters/query", params={"sort": "", "order": ""},
                       headers=admin_headers).status_code == 200
+
+def test_admin_user_character_crud(client, admin_headers, db):
+    _, u = register_user(client, "p9", "玩家九")
+    uid = u["id"]
+    # list（空）
+    assert client.get(f"/api/admin/users/{uid}/characters",
+                      headers=admin_headers).json() == []
+    # create
+    r = client.post(f"/api/admin/users/{uid}/characters", headers=admin_headers,
+                    json={"name": "狂战", "job_name": "berserker", "fame": 150,
+                          "simulated_damage": 2000, "sustained_dps": 800, "buff_amount": None})
+    assert r.status_code == 200
+    cid = r.json()["id"]
+    assert r.json()["class_type"] == "输出"
+    # update
+    r = client.put(f"/api/admin/users/{uid}/characters/{cid}", headers=admin_headers,
+                   json={"name": "狂战改", "job_name": "weapon_master", "fame": 160,
+                         "simulated_damage": 2100, "sustained_dps": 850, "buff_amount": None})
+    assert r.status_code == 200 and r.json()["name"] == "狂战改"
+    # 他人 id 下改该角色 -> 404（归属校验）
+    _, other = register_user(client, "p10", "玩家十")
+    other_uid = other["id"]
+    r = client.put(f"/api/admin/users/{other_uid}/characters/{cid}", headers=admin_headers,
+                   json={"name": "越权改", "job_name": "berserker", "fame": 999,
+                         "simulated_damage": 1, "sustained_dps": 1, "buff_amount": None})
+    assert r.status_code == 404
+    assert client.get(f"/api/admin/users/{uid}/characters",
+                      headers=admin_headers).json()[0]["name"] == "狂战改"  # 未被改动
+    # delete
+    r = client.delete(f"/api/admin/users/{uid}/characters/{cid}", headers=admin_headers)
+    assert r.status_code == 200
+    assert client.get(f"/api/admin/users/{uid}/characters", headers=admin_headers).json() == []
+    # 用户不存在 404
+    assert client.get("/api/admin/users/99999/characters", headers=admin_headers).status_code == 404

@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session, contains_eager
 from ..auth import make_code, require_admin
 from ..db import get_db
 from ..models import Character, RegistrationCode, User
-from ..schemas import (AdminCharacterRow, AdminUserOut, CharacterQueryResult,
-                       CodeCreate, CodeOut, PlayerCharacters, UserOut)
-from ..services.characters import character_out
+from ..schemas import (AdminCharacterRow, AdminUserOut, CharacterIn, CharacterOut,
+                       CharacterQueryResult, CodeCreate, CodeOut, PlayerCharacters,
+                       UserOut)
+from ..services.characters import (apply_character_payload, character_out,
+                                   delete_character_if_free, validate_job)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -97,3 +99,53 @@ def query_characters(
         for c in rows
     ]
     return CharacterQueryResult(items=items, total=total)
+
+def _user_or_404(db: Session, uid: int) -> User:
+    u = db.get(User, uid)
+    if u is None:
+        raise HTTPException(404, "用户不存在")
+    return u
+
+def _user_character_or_404(db: Session, uid: int, cid: int) -> Character:
+    c = db.get(Character, cid)
+    if c is None or c.user_id != uid:
+        raise HTTPException(404, "角色不存在")
+    return c
+
+@router.get("/users/{uid}/characters", response_model=list[CharacterOut])
+def list_user_characters(uid: int, admin: User = Depends(require_admin),
+                         db: Session = Depends(get_db)):
+    _user_or_404(db, uid)
+    chars = db.query(Character).filter(Character.user_id == uid).order_by(Character.id).all()
+    return [character_out(c) for c in chars]
+
+@router.post("/users/{uid}/characters", response_model=CharacterOut)
+def create_user_character(uid: int, body: CharacterIn, admin: User = Depends(require_admin),
+                          db: Session = Depends(get_db)):
+    _user_or_404(db, uid)
+    validate_job(body.job_name)
+    c = Character(user_id=uid)
+    apply_character_payload(c, body)
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    return character_out(c)
+
+@router.put("/users/{uid}/characters/{cid}", response_model=CharacterOut)
+def update_user_character(uid: int, cid: int, body: CharacterIn,
+                          admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    c = _user_character_or_404(db, uid, cid)
+    validate_job(body.job_name)
+    apply_character_payload(c, body)
+    db.commit()
+    db.refresh(c)
+    return character_out(c)
+
+@router.delete("/users/{uid}/characters/{cid}")
+def delete_user_character(uid: int, cid: int, admin: User = Depends(require_admin),
+                          db: Session = Depends(get_db)):
+    c = _user_character_or_404(db, uid, cid)
+    delete_character_if_free(db, cid)
+    db.delete(c)
+    db.commit()
+    return {"ok": True}
