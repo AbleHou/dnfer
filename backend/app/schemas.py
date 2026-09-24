@@ -45,6 +45,7 @@ class UserOut(BaseModel):
     nickname: str
     avatar: str | None = None
     is_admin: bool
+    is_banned: bool = False
 
 class PlayerCharacters(BaseModel):
     user: UserOut
@@ -219,3 +220,16 @@ class BotSignupIn(BaseModel):
         if (self.account is None) == (self.nickname is None):
             raise ValueError("account 与 nickname 必须恰好提供一个")
         return self
+
+class AdminUserOut(UserOut):
+    character_count: int
+
+class AdminCharacterRow(CharacterOut):
+    owner_id: int
+    owner_nickname: str
+    owner_username: str
+    owner_is_banned: bool
+
+class CharacterQueryResult(BaseModel):
+    items: list[AdminCharacterRow]
+    total: int
