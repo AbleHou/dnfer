@@ -1,18 +1,15 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import s3
 from ..auth import (consume_code, create_access_token, get_current_user,
-                    hash_password, make_code, require_admin, verify_password)
+                    hash_password, verify_password)
 from ..config import settings
 from ..db import get_db
-from ..models import Character, RegistrationCode, User
-from ..schemas import (CodeCreate, CodeOut, LoginIn, PlayerCharacters,
-                       ProfileUpdate, RegisterIn, UserOut)
-from ..services.characters import character_out
+from ..models import User
+from ..schemas import LoginIn, ProfileUpdate, RegisterIn, UserOut
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -85,30 +82,3 @@ def upload_avatar(file: UploadFile = File(...),
     db.commit()
     db.refresh(user)
     return UserOut.model_validate(user)
-
-@router.post("/admin/codes", response_model=CodeOut)
-def create_code(body: CodeCreate, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    rc = make_code(db, admin, body.single_use, body.expire_days)
-    db.commit()
-    db.refresh(rc)
-    return rc
-
-@router.get("/admin/codes", response_model=list[CodeOut])
-def list_codes(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    return db.query(RegistrationCode).order_by(RegistrationCode.id.desc()).limit(100).all()
-
-@router.get("/admin/users", response_model=list[UserOut])
-def list_users(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    return db.query(User).all()
-
-@router.get("/admin/characters", response_model=list[PlayerCharacters])
-def list_all_characters(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    result = []
-    for u in db.scalars(select(User).order_by(User.nickname)).all():
-        chars = db.scalars(select(Character).where(Character.user_id == u.id)
-                           .order_by(Character.id)).all()
-        if not chars:
-            continue  # 过滤无角色玩家
-        result.append(PlayerCharacters(user=UserOut.model_validate(u),
-                                       characters=[character_out(c) for c in chars]))
-    return result

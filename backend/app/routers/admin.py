@@ -1,0 +1,38 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ..auth import make_code, require_admin
+from ..db import get_db
+from ..models import Character, RegistrationCode, User
+from ..schemas import CodeCreate, CodeOut, PlayerCharacters, UserOut
+from ..services.characters import character_out
+
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+@router.post("/codes", response_model=CodeOut)
+def create_code(body: CodeCreate, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    rc = make_code(db, admin, body.single_use, body.expire_days)
+    db.commit()
+    db.refresh(rc)
+    return rc
+
+@router.get("/codes", response_model=list[CodeOut])
+def list_codes(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    return db.query(RegistrationCode).order_by(RegistrationCode.id.desc()).limit(100).all()
+
+@router.get("/users", response_model=list[UserOut])
+def list_users(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    return db.query(User).all()
+
+@router.get("/characters", response_model=list[PlayerCharacters])
+def list_all_characters(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    result = []
+    for u in db.scalars(select(User).order_by(User.nickname)).all():
+        chars = db.scalars(select(Character).where(Character.user_id == u.id)
+                           .order_by(Character.id)).all()
+        if not chars:
+            continue
+        result.append(PlayerCharacters(user=UserOut.model_validate(u),
+                                       characters=[character_out(c) for c in chars]))
+    return result
