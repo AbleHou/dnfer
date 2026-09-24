@@ -23,7 +23,7 @@ describe('AdminUserCharactersModal', () => {
     apiMock.del.mockResolvedValue({ ok: true })
     const wrapper = mount(AdminUserCharactersModal, {
       props: { open: true, user },
-      global: { stubs: { teleport: true, AdminNav: true, CharacterForm: true } },
+      global: { stubs: { teleport: true, CharacterForm: true } },
     })
     await flushPromises()
     expect(apiMock.get).toHaveBeenCalledWith('/api/admin/users/7/characters')

@@ -21,6 +21,7 @@ const base = () => props.user ? `/api/admin/users/${props.user.id}/characters` :
 
 async function load() {
   if (!props.user) return
+  error.value = ''
   loading.value = true
   try {
     const [chars, cats] = await Promise.all([
@@ -45,9 +46,11 @@ function startEdit(c: Character) { editing.value = c; showForm.value = true }
 async function onSaved() { showForm.value = false; editing.value = null; await load() }
 
 async function remove(c: Character) {
+  const uid = props.user?.id
+  if (!uid) return
   const ok = await confirmDialog({ content: `删除角色 ${c.name}？` })
   if (!ok) return
-  try { await api.del(`/api/admin/users/${props.user!.id}/characters/${c.id}`); await load() }
+  try { await api.del(`/api/admin/users/${uid}/characters/${c.id}`); await load() }
   catch (e: any) { notifyError(e.message) }
 }
 </script>
@@ -58,7 +61,7 @@ async function remove(c: Character) {
            @update:show="(s: boolean) => { if (!s) emit('close') }">
     <div style="max-height:70vh;overflow:auto">
       <p v-if="error" class="form-error">{{ error }}</p>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <div v-if="user" style="display:flex;justify-content:flex-end;margin-bottom:8px">
         <button class="dnf-btn dnf-btn-primary" data-act="add" @click="startAdd">＋ 添加角色</button>
       </div>
 
