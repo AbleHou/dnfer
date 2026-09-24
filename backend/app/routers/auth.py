@@ -12,7 +12,7 @@ from ..db import get_db
 from ..models import Character, RegistrationCode, User
 from ..schemas import (CodeCreate, CodeOut, LoginIn, PlayerCharacters,
                        ProfileUpdate, RegisterIn, UserOut)
-from .members import _character_out
+from ..services.characters import character_out
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -110,5 +110,5 @@ def list_all_characters(admin: User = Depends(require_admin), db: Session = Depe
         if not chars:
             continue  # 过滤无角色玩家
         result.append(PlayerCharacters(user=UserOut.model_validate(u),
-                                       characters=[_character_out(c) for c in chars]))
+                                       characters=[character_out(c) for c in chars]))
     return result

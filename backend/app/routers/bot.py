@@ -12,8 +12,8 @@ from ..models import Character, RaidSignup, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
                        BotCharactersOut, BotRegisterIn, BotSignupIn, UserOut)
 from ..routers.raids import _raid_or_404, _remove_signup
+from ..services.characters import character_out
 from ..ws import manager
-from .members import _character_out
 
 router = APIRouter(prefix="/api/public", tags=["bot"],
                    dependencies=[Depends(require_api_token)])
@@ -74,12 +74,12 @@ def upsert_characters(body: BotCharactersIn, db: Session = Depends(get_db)):
             db.flush()
             seen[item.name] = c
             results.append(BotCharacterResult(name=item.name, ok=True, action="created",
-                                              character=_character_out(c)))
+                                              character=character_out(c)))
         else:
             seen[item.name] = c
             _apply_partial(c, item)
             results.append(BotCharacterResult(name=item.name, ok=True, action="updated",
-                                              character=_character_out(c)))
+                                              character=character_out(c)))
     db.commit()
     return BotCharactersOut(account=user.username, nickname=user.nickname,
                             results=results)
@@ -93,7 +93,7 @@ def list_characters(account: str | None = None, nickname: str | None = None,
     chars = db.scalars(select(Character).where(Character.user_id == user.id)
                        .order_by(Character.id)).all()
     return BotCharacterList(account=user.username, nickname=user.nickname,
-                            characters=[_character_out(c) for c in chars])
+                            characters=[character_out(c) for c in chars])
 
 @router.post("/register")
 def register(body: BotRegisterIn, db: Session = Depends(get_db)):

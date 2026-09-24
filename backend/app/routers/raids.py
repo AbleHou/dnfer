@@ -13,7 +13,7 @@ from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, PlayerCharacters,
                        RaidCreate, RaidDetail, RaidListItem, RaidSignupOut,
                        RaidUpdate, SignupUserIn, SlotMutationResult, SlotOut,
                        UserOut, WaveOut)
-from ..routers.members import _character_out
+from ..services.characters import character_out
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
                                        duty_valid_for_class)
@@ -512,4 +512,4 @@ def get_member_characters(rid: int, user_id: int, user: User = Depends(get_curre
     chars = db.scalars(select(Character).where(Character.user_id == user_id)
                        .order_by(Character.id)).all()
     return PlayerCharacters(user=UserOut.model_validate(target),
-                            characters=[_character_out(c) for c in chars])
+                            characters=[character_out(c) for c in chars])
