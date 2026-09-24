@@ -45,7 +45,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false }
 
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
@@ -63,7 +63,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false }
 
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
@@ -84,7 +84,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null, is_banned: false }
 
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
     await flushPromises()
@@ -95,7 +95,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       if (url === '/api/dungeons') return dungeons
@@ -117,7 +117,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null }
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       if (url === '/api/dungeons') return dungeons
@@ -135,7 +135,7 @@ describe('RaidListView create form', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null, is_banned: false }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       return []
@@ -149,7 +149,7 @@ describe('RaidListView create form', () => {
   it('non-admin sees 报名 button and signs up', async () => {
     const pinia = createPinia(); setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null, is_banned: false }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       return []
@@ -165,7 +165,7 @@ describe('RaidListView create form', () => {
   it('shows 已报名 badge instead of button when signed up', async () => {
     const pinia = createPinia(); setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null }
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null, is_banned: false }
     const signed: RaidListItem = { ...raid, my_signed_up: true, signup_count: 3 }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [signed] as RaidListItem[]

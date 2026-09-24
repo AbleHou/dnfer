@@ -31,8 +31,8 @@ vi.mock('../lib/notify', () => ({
   notifySuccess: notifyMock.success,
 }))
 
-const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null }
-const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null }
+const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false }
+const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
 const adminRow = { user: admin, created_at: null }
 const memberRow = { user: member, created_at: '2026-09-22T10:00:00' }
 

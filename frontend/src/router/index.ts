@@ -10,7 +10,10 @@ const router = createRouter({
     { path: '/', component: () => import('../views/RaidListView.vue') },
     { path: '/raids/:id', component: () => import('../views/RaidDetailView.vue') },
     { path: '/characters', component: () => import('../views/MyCharactersView.vue') },
-    { path: '/admin', component: () => import('../views/AdminView.vue') },
+    { path: '/admin', redirect: '/admin/codes' },
+    { path: '/admin/codes', component: () => import('../views/AdminCodesView.vue') },
+    { path: '/admin/users', component: () => import('../views/AdminUsersView.vue') },
+    { path: '/admin/dungeons', component: () => import('../views/AdminDungeonsView.vue') },
   ],
 })
 

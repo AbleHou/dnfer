@@ -8,7 +8,7 @@ vi.mock('../api/client', () => ({ api: apiMock, getToken: vi.fn(() => 'tok') }))
 
 beforeEach(() => vi.clearAllMocks())
 
-const user = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null }
+const user = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
 const characters = [{ id: 11, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: 'swordman_male', class_type: '输出', fame: 52000,
   simulated_damage: 5, sustained_dps: 2, buff_amount: null }]

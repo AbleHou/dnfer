@@ -84,7 +84,7 @@ describe('raid store', () => {
     setActivePinia(createPinia())
     const store = useRaidStore()
     store.raid = makeRaid()
-    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null }
+    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
     applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00' })
     expect(store.raid!.signups).toHaveLength(1)
     expect(store.raid!.signups[0].user.id).toBe(9)
