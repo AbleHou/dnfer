@@ -112,3 +112,17 @@ def test_admin_user_character_crud(client, admin_headers, db):
     assert client.get(f"/api/admin/users/{uid}/characters", headers=admin_headers).json() == []
     # 用户不存在 404
     assert client.get("/api/admin/users/99999/characters", headers=admin_headers).status_code == 404
+
+def test_ban_unban_user(client, admin_headers, db):
+    _, u = register_user(client, "ban1", "被禁玩家")
+    uid = u["id"]
+    r = client.post(f"/api/admin/users/{uid}/ban", headers=admin_headers)
+    assert r.status_code == 200 and r.json()["is_banned"] is True
+    # 解封
+    r = client.post(f"/api/admin/users/{uid}/unban", headers=admin_headers)
+    assert r.status_code == 200 and r.json()["is_banned"] is False
+    # 不能封禁管理员
+    r = client.post("/api/admin/users/1/ban", headers=admin_headers)
+    assert r.status_code == 403
+    # 用户不存在
+    assert client.post("/api/admin/users/99999/ban", headers=admin_headers).status_code == 404

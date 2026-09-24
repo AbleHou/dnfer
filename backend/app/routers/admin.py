@@ -149,3 +149,28 @@ def delete_user_character(uid: int, cid: int, admin: User = Depends(require_admi
     db.delete(c)
     db.commit()
     return {"ok": True}
+
+def _admin_user_out(db: Session, target: User) -> AdminUserOut:
+    return AdminUserOut(character_count=db.query(Character)
+                        .filter(Character.user_id == target.id).count(),
+                        **UserOut.model_validate(target).model_dump())
+
+@router.post("/users/{uid}/ban", response_model=AdminUserOut)
+def ban_user(uid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    target = _user_or_404(db, uid)
+    if target.is_admin:
+        raise HTTPException(403, "不能封禁管理员")
+    if target.id == admin.id:
+        raise HTTPException(403, "不能封禁自己")
+    target.is_banned = True
+    db.commit()
+    db.refresh(target)
+    return _admin_user_out(db, target)
+
+@router.post("/users/{uid}/unban", response_model=AdminUserOut)
+def unban_user(uid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    target = _user_or_404(db, uid)
+    target.is_banned = False
+    db.commit()
+    db.refresh(target)
+    return _admin_user_out(db, target)
