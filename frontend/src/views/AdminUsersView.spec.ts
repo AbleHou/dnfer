@@ -58,4 +58,18 @@ describe('AdminUsersView', () => {
     await wrapper.find('[data-act="manage-2"]').trigger('click')
     expect(wrapper.findComponent({ name: 'AdminUserCharactersModal' }).exists()).toBe(true)
   })
+  it('解封调用 unban 端点', async () => {
+    apiMock.get.mockImplementation((url: string) => {
+      if (url === '/api/admin/users') return Promise.resolve([{ ...users[0], is_banned: true }])
+      if (url.startsWith('/api/admin/characters/query')) return Promise.resolve(query)
+      return Promise.resolve([])
+    })
+    apiMock.post.mockResolvedValue({})
+    const wrapper = mount(AdminUsersView, { global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } } })
+    await flushPromises()
+    await wrapper.find('[data-act="unban-2"]').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/admin/users/2/unban')
+  })
 })

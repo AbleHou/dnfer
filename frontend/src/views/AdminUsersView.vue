@@ -23,7 +23,11 @@ const flatJobs = computed(() => categories.value.flatMap((c) => c.children))
 const queryKey = computed(() =>
   [classType.value, jobName.value, keyword.value, owner.value, sort.value, order.value].join('\x00'))
 
+// 请求序号：防止 watch 触发的并发查询乱序覆盖新结果（老响应到达时已被更新的查询超越）
+let querySeq = 0
+
 async function loadQuery() {
+  const seq = ++querySeq
   queryLoading.value = true
   queryError.value = ''
   try {
@@ -35,6 +39,7 @@ async function loadQuery() {
     if (sort.value) params.set('sort', sort.value)
     params.set('order', order.value)
     const res = await api.get<CharacterQueryResult>(`/api/admin/characters/query?${params.toString()}`)
+    if (seq !== querySeq) return   // 有更新的筛选已胜出，丢弃本次结果
     queryItems.value = res.items
     total.value = res.total
   } catch (e: any) { queryError.value = e.message }
@@ -63,6 +68,15 @@ const modalOpen = ref(false)
 const modalUser = ref<User | null>(null)
 
 function openManage(u: AdminUser) { modalUser.value = u; modalOpen.value = true }
+
+// 弹窗关闭后刷新两侧数据，保证角色数/查询行与弹窗内增删改保持一致
+function onModalClose() {
+  modalOpen.value = false
+  loadUsers()
+  loadQuery()
+}
+// 注意：openOwner 用占位字段构造 User（is_admin: false / avatar: null）。
+// 弹窗只消费 id、nickname（及 owner_is_banned → is_banned），占位字段是安全的，勿在别处依赖。
 function openOwner(c: AdminCharacterRow) {
   modalUser.value = {
     id: c.owner_id, username: c.owner_username, nickname: c.owner_nickname,
@@ -85,7 +99,8 @@ async function toggleBan(u: AdminUser) {
 onMounted(() => {
   void loadQuery()
   void loadUsers()
-  void api.getJobs().then((jobs) => { categories.value = jobs })
+  // 职业列表拉取失败不致命：职业筛选项留空即可（用 catch 吞掉未处理拒绝）
+  void api.getJobs().then((jobs) => { categories.value = jobs }).catch(() => {})
 })
 </script>
 
@@ -168,9 +183,11 @@ onMounted(() => {
             <td>{{ u.is_banned ? '已封禁' : '正常' }}</td>
             <td style="white-space:nowrap">
               <button class="dnf-btn dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</button>
-              <button v-if="!u.is_banned" class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'ban-' + u.id"
-                      @click="toggleBan(u)">封禁</button>
-              <button v-else class="dnf-btn dnf-btn-sm" :data-act="'unban-' + u.id" @click="toggleBan(u)">解封</button>
+              <template v-if="!u.is_admin">
+                <button v-if="!u.is_banned" class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'ban-' + u.id"
+                        @click="toggleBan(u)">封禁</button>
+                <button v-else class="dnf-btn dnf-btn-sm" :data-act="'unban-' + u.id" @click="toggleBan(u)">解封</button>
+              </template>
             </td>
           </tr>
         </tbody>
@@ -178,6 +195,6 @@ onMounted(() => {
     </section>
 
     <AdminUserCharactersModal v-if="modalOpen" :open="modalOpen" :user="modalUser"
-                              @close="modalOpen = false" />
+                              @close="onModalClose" />
   </div>
 </template>
