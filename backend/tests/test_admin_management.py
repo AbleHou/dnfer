@@ -48,14 +48,33 @@ def test_query_characters_filters_sorts_paginates(client, admin_headers, db):
                    params={"owner": "玩家二"}, headers=admin_headers)
     assert [i["name"] for i in r.json()["items"]] == ["剑魂丙"]
     assert r.json()["items"][0]["owner_nickname"] == "玩家二"
-    # 排序：增益量 asc（三个角色 buff_amount 均为 NULL → NULLS LAST 均排后，
-    # 靠 Character.id 稳定 tie-break，最后一个是 id 最大的剑魂丙）
+    # 新增一个 buff_amount 有值的角色（放在排序断言之前，不影响前面筛选断言的 3 个角色）
+    db.add(Character(user_id=u1["id"], name="奶妈丁", job_name="crusader_female",
+                     class_type="辅助", fame=50, simulated_damage=None,
+                     sustained_dps=None, buff_amount=500))
+    db.commit()
+    # 排序：增益量 asc（奶妈丁有值排最前；其余 buff_amount NULL 经 NULLS LAST 排后，
+    # 靠 Character.id 稳定 tie-break → 最后是 id 最大的剑魂丙）
     r = client.get("/api/admin/characters/query",
                    params={"sort": "buff_amount", "order": "asc"}, headers=admin_headers)
     names = [i["name"] for i in r.json()["items"]]
+    assert names[0] == "奶妈丁"
     assert names[-1] == "剑魂丙"  # buff_amount NULL 排最后
+    r = client.get("/api/admin/characters/query",
+                   params={"sort": "buff_amount", "order": "desc"}, headers=admin_headers)
+    assert r.json()["items"][0]["name"] == "奶妈丁"  # desc 时奶妈丁仍排最前
     # 分页
     r = client.get("/api/admin/characters/query",
                    params={"limit": 2, "offset": 1}, headers=admin_headers)
     assert len(r.json()["items"]) == 2
-    assert r.json()["total"] == 3
+    assert r.json()["total"] == 4
+    # 非法参数 → 400
+    assert client.get("/api/admin/characters/query", params={"sort": "bogus"},
+                      headers=admin_headers).status_code == 400
+    assert client.get("/api/admin/characters/query", params={"order": "sideways"},
+                      headers=admin_headers).status_code == 400
+    assert client.get("/api/admin/characters/query", params={"class_type": "坦克"},
+                      headers=admin_headers).status_code == 400
+    # 空字符串参数按不过滤处理（不应 400）
+    assert client.get("/api/admin/characters/query", params={"sort": "", "order": ""},
+                      headers=admin_headers).status_code == 200

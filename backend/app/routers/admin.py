@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, contains_eager
 
 from ..auth import make_code, require_admin
 from ..db import get_db
@@ -69,11 +69,13 @@ def query_characters(
     offset: int = Query(0, ge=0),
     admin: User = Depends(require_admin), db: Session = Depends(get_db),
 ):
+    sort = sort or "fame"
+    order = order or "desc"
     if sort not in _SORT_COLS or order not in ("asc", "desc"):
         raise HTTPException(400, "排序参数无效")
-    if class_type not in (None, "输出", "辅助"):
+    if class_type and class_type not in ("输出", "辅助"):
         raise HTTPException(400, "职业类别无效")
-    q = db.query(Character).join(User, Character.user_id == User.id)
+    q = db.query(Character).join(Character.owner).options(contains_eager(Character.owner))
     if job_name:
         q = q.filter(Character.job_name == job_name)
     if class_type:
