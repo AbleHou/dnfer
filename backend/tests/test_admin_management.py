@@ -19,3 +19,43 @@ def test_admin_users_search_and_counts(client, admin_headers, db):
     assert [x["username"] for x in r2.json()] == ["alice"]
     r3 = client.get("/api/admin/users", params={"q": "不存在的人"}, headers=admin_headers)
     assert r3.json() == []
+
+def test_query_characters_filters_sorts_paginates(client, admin_headers, db):
+    _, u1 = register_user(client, "p1", "玩家一")
+    _, u2 = register_user(client, "p2", "玩家二")
+    _add_char(db, u1["id"], name="剑魂甲", job="weapon_master", fame=100, class_type="输出")
+    _add_char(db, u1["id"], name="奶妈乙", job="crusader_female", fame=200, class_type="辅助")
+    db.add(Character(user_id=u2["id"], name="剑魂丙", job_name="weapon_master",
+                     class_type="输出", fame=300, simulated_damage=999,
+                     sustained_dps=None, buff_amount=None))
+    db.commit()
+
+    # 筛选：职业
+    r = client.get("/api/admin/characters/query",
+                   params={"job_name": "weapon_master"}, headers=admin_headers)
+    assert r.status_code == 200
+    assert [i["name"] for i in r.json()["items"]] == ["剑魂丙", "剑魂甲"]  # fame desc
+    # 筛选：输出/辅助
+    r = client.get("/api/admin/characters/query",
+                   params={"class_type": "辅助"}, headers=admin_headers)
+    assert [i["name"] for i in r.json()["items"]] == ["奶妈乙"]
+    # 筛选：角色名关键词
+    r = client.get("/api/admin/characters/query",
+                   params={"keyword": "剑魂"}, headers=admin_headers)
+    assert r.json()["total"] == 2
+    # 筛选：归属玩家
+    r = client.get("/api/admin/characters/query",
+                   params={"owner": "玩家二"}, headers=admin_headers)
+    assert [i["name"] for i in r.json()["items"]] == ["剑魂丙"]
+    assert r.json()["items"][0]["owner_nickname"] == "玩家二"
+    # 排序：增益量 asc（三个角色 buff_amount 均为 NULL → NULLS LAST 均排后，
+    # 靠 Character.id 稳定 tie-break，最后一个是 id 最大的剑魂丙）
+    r = client.get("/api/admin/characters/query",
+                   params={"sort": "buff_amount", "order": "asc"}, headers=admin_headers)
+    names = [i["name"] for i in r.json()["items"]]
+    assert names[-1] == "剑魂丙"  # buff_amount NULL 排最后
+    # 分页
+    r = client.get("/api/admin/characters/query",
+                   params={"limit": 2, "offset": 1}, headers=admin_headers)
+    assert len(r.json()["items"]) == 2
+    assert r.json()["total"] == 3
