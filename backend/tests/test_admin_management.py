@@ -1,4 +1,4 @@
-from app.models import Character, User
+from app.models import Character, RaidSignup, User
 from app.auth import hash_password
 from .helpers import make_raid, register_user
 
@@ -145,6 +145,9 @@ def test_banned_cannot_signup_or_be_placed(client, admin_headers, db):
     r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
                     json={"character_id": char_id})
     assert r.status_code == 403
+    # 封禁保留报名（不撤）
+    assert db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                       RaidSignup.user_id == u["id"]).first() is not None
     # 解封后可正常排
     client.post(f"/api/admin/users/{u['id']}/unban", headers=admin_headers)
     r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
@@ -152,9 +155,23 @@ def test_banned_cannot_signup_or_be_placed(client, admin_headers, db):
     assert r.status_code == 200
 
 def test_banned_admin_signup_blocked(client, admin_headers, db):
-    h, u = register_user(client, "bannedB", "被封乙")
+    _, u = register_user(client, "bannedB", "被封乙")
     raid = make_raid(client, admin_headers)
     client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
     r = client.post(f"/api/raids/{raid['id']}/signups", headers=admin_headers,
                     json={"user_id": u["id"]})
+    assert r.status_code == 403
+
+def test_banned_user_cannot_place_own_character(client, admin_headers, db):
+    h, u = register_user(client, "bannedC", "被封丙")
+    _add_char(db, u["id"], name="剑魂", fame=100)
+    raid = make_raid(client, admin_headers)
+    rid = raid["id"]
+    # 先报名（正常）
+    assert client.post(f"/api/raids/{rid}/signup", headers=h).status_code == 200
+    client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
+    slot_id = raid["waves"][0]["slots"][0]["id"]
+    char_id = db.query(Character).filter(Character.user_id == u["id"]).one().id
+    r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=h,
+                    json={"character_id": char_id})
     assert r.status_code == 403

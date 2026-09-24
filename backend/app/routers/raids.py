@@ -228,10 +228,10 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
     char = db.get(Character, body.character_id)
     if char is None:
         raise HTTPException(404, "角色不存在")
-    if char.owner.is_banned:
-        raise HTTPException(403, "该用户已被封禁，无法排表")
     if not user.is_admin and char.user_id != user.id:
         raise HTTPException(400, "只能使用自己的角色")
+    if char.owner.is_banned:
+        raise HTTPException(403, "该用户已被封禁，无法排表")
     if not _participates(db, raid, char.user_id):
         if user.is_admin:
             raise HTTPException(403, "该用户未报名，无法排表")
