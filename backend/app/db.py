@@ -32,7 +32,9 @@ def get_db():
 def init_db() -> None:
     from . import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
-    from .migrations import migrate_avatars, migrate_dungeons, migrate_jobs
+    from .migrations import (migrate_avatars, migrate_dungeons, migrate_jobs,
+                             migrate_users_ban)
     migrate_dungeons(engine)
     migrate_jobs(engine)
     migrate_avatars(engine)
+    migrate_users_ban(engine)
