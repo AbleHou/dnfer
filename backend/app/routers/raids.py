@@ -129,6 +129,8 @@ def list_raids(user: User = Depends(get_current_user), db: Session = Depends(get
 @router.post("")
 def create_raid(body: RaidCreate, admin: User = Depends(require_admin),
                 db: Session = Depends(get_db)):
+    if admin.is_banned:
+        raise HTTPException(403, "你已被封禁，无法创建攻坚")
     dungeon = db.get(Dungeon, body.dungeon_id)
     if dungeon is None:
         raise HTTPException(404, "副本不存在")
@@ -226,6 +228,8 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
     char = db.get(Character, body.character_id)
     if char is None:
         raise HTTPException(404, "角色不存在")
+    if char.owner.is_banned:
+        raise HTTPException(403, "该用户已被封禁，无法排表")
     if not user.is_admin and char.user_id != user.id:
         raise HTTPException(400, "只能使用自己的角色")
     if not _participates(db, raid, char.user_id):
@@ -413,6 +417,8 @@ async def move_slot(rid: int, slot_id: int, body: MoveIn,
 @router.post("/{rid}/signup")
 async def signup(rid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    if user.is_banned:
+        raise HTTPException(403, "你已被封禁，无法报名")
     if user.id == raid.created_by:
         raise HTTPException(400, "团长无需报名")
     if raid.locked:
@@ -480,6 +486,8 @@ async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(requi
     target = db.get(User, body.user_id)
     if target is None:
         raise HTTPException(404, "用户不存在")
+    if target.is_banned:
+        raise HTTPException(403, "该用户已被封禁")
     if target.id == raid.created_by:
         raise HTTPException(400, "团长无需报名")
     if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,

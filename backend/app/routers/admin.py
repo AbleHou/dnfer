@@ -158,10 +158,10 @@ def _admin_user_out(db: Session, target: User) -> AdminUserOut:
 @router.post("/users/{uid}/ban", response_model=AdminUserOut)
 def ban_user(uid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     target = _user_or_404(db, uid)
-    if target.is_admin:
-        raise HTTPException(403, "不能封禁管理员")
     if target.id == admin.id:
         raise HTTPException(403, "不能封禁自己")
+    if target.is_admin:
+        raise HTTPException(403, "不能封禁管理员")
     target.is_banned = True
     db.commit()
     db.refresh(target)

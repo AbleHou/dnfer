@@ -1,6 +1,6 @@
 from app.models import Character, User
 from app.auth import hash_password
-from .helpers import register_user
+from .helpers import make_raid, register_user
 
 def _add_char(db, uid, name="剑魂", job="weapon_master", fame=100, class_type="输出"):
     db.add(Character(user_id=uid, name=name, job_name=job, class_type=class_type,
@@ -121,8 +121,40 @@ def test_ban_unban_user(client, admin_headers, db):
     # 解封
     r = client.post(f"/api/admin/users/{uid}/unban", headers=admin_headers)
     assert r.status_code == 200 and r.json()["is_banned"] is False
-    # 不能封禁管理员
+    # 不能封禁自己（管理员 id=1；self-check 优先于 is_admin 分支）
     r = client.post("/api/admin/users/1/ban", headers=admin_headers)
-    assert r.status_code == 403
+    assert r.status_code == 403 and r.json()["detail"] == "不能封禁自己"
     # 用户不存在
     assert client.post("/api/admin/users/99999/ban", headers=admin_headers).status_code == 404
+
+def test_banned_cannot_signup_or_be_placed(client, admin_headers, db):
+    h, u = register_user(client, "bannedA", "被封甲")
+    _add_char(db, u["id"], name="剑魂", fame=100)
+    raid = make_raid(client, admin_headers)
+    rid = raid["id"]
+    char_id = db.query(Character).filter(Character.user_id == u["id"]).one().id
+    # 先封禁 → 自报名被拒
+    client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
+    r = client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert r.status_code == 403
+    # 解封后报名成功，再封禁（封禁保留报名）→ 排表被拒
+    client.post(f"/api/admin/users/{u['id']}/unban", headers=admin_headers)
+    assert client.post(f"/api/raids/{rid}/signup", headers=h).status_code == 200
+    client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
+    slot_id = raid["waves"][0]["slots"][0]["id"]
+    r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
+                    json={"character_id": char_id})
+    assert r.status_code == 403
+    # 解封后可正常排
+    client.post(f"/api/admin/users/{u['id']}/unban", headers=admin_headers)
+    r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
+                    json={"character_id": char_id})
+    assert r.status_code == 200
+
+def test_banned_admin_signup_blocked(client, admin_headers, db):
+    h, u = register_user(client, "bannedB", "被封乙")
+    raid = make_raid(client, admin_headers)
+    client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
+    r = client.post(f"/api/raids/{raid['id']}/signups", headers=admin_headers,
+                    json={"user_id": u["id"]})
+    assert r.status_code == 403
