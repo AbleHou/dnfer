@@ -59,7 +59,7 @@
 **Files:**
 - Modify: `backend/app/models.py`
 - Modify: `backend/app/migrations.py`
-- Modify: `backend/app/db.py:32-39`
+- Modify: `backend/app/db.py:32-38`
 - Test: `backend/tests/test_migrations.py`
 
 - [ ] **Step 1: 写失败测试**
@@ -120,7 +120,7 @@ def migrate_users_ban(engine: Engine) -> None:
 - [ ] **Step 4: 运行确认通过**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_migrations.py -v`
-Expected: 3 个测试全部 PASS（含幂等）
+Expected: 4 个测试全部 PASS（含幂等）
 
 - [ ] **Step 5: 提交**
 
@@ -241,6 +241,18 @@ from ..services.characters import (apply_character_payload, character_out,
 - `update_character`：`_validate_job(body)` → `validate_job(body.job_name)`；删内联赋值改 `apply_character_payload(c, body)`。
 - `delete_character`：删内联占用检查改 `delete_character_if_free(db, cid)`。
 - 保留 `_own_character`（含 `HTTPException` 导入仍需保留）。
+- 重构后 `job_data` 与 `Slot` 不再被 members.py 使用，删除 `from .. import jobs as job_data` 与 `Slot` 导入；最终导入为：
+```python
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from ..auth import get_current_user
+from ..db import get_db
+from ..models import Character, User
+from ..schemas import CharacterIn, CharacterOut
+from ..services.characters import (apply_character_payload, character_out,
+                                   delete_character_if_free, validate_job)
+```
 
 - [ ] **Step 3: 更新 raids.py / bot.py / auth.py 导入**
 
@@ -468,7 +480,8 @@ def test_query_characters_filters_sorts_paginates(client, admin_headers, db):
                    params={"owner": "玩家二"}, headers=admin_headers)
     assert [i["name"] for i in r.json()["items"]] == ["剑魂丙"]
     assert r.json()["items"][0]["owner_nickname"] == "玩家二"
-    # 排序：增益量 asc（辅助唯一有值，NULLS LAST 排最后）
+    # 排序：增益量 asc（三个角色 buff_amount 均为 NULL → NULLS LAST 均排后，
+    # 靠 Character.id 稳定 tie-break，最后一个是 id 最大的剑魂丙）
     r = client.get("/api/admin/characters/query",
                    params={"sort": "buff_amount", "order": "asc"}, headers=admin_headers)
     names = [i["name"] for i in r.json()["items"]]
@@ -580,12 +593,15 @@ def test_admin_user_character_crud(client, admin_headers, db):
                    json={"name": "狂战改", "job_name": "weapon_master", "fame": 160,
                          "simulated_damage": 2100, "sustained_dps": 850, "buff_amount": None})
     assert r.status_code == 200 and r.json()["name"] == "狂战改"
-    # 他人 id 下改 -> 404
-    other = client.post(f"/api/admin/users/{uid}/characters/999999",
-                        headers=admin_headers, json={"name": "x", "job_name": "berserker",
-                                                     "fame": 1, "simulated_damage": None,
-                                                     "sustained_dps": None, "buff_amount": None})
-    assert other.status_code == 404
+    # 他人 id 下改该角色 -> 404（归属校验）
+    _, other = register_user(client, "p10", "玩家十")
+    other_uid = other["id"]
+    r = client.put(f"/api/admin/users/{other_uid}/characters/{cid}", headers=admin_headers,
+                   json={"name": "越权改", "job_name": "berserker", "fame": 999,
+                         "simulated_damage": 1, "sustained_dps": 1, "buff_amount": None})
+    assert r.status_code == 404
+    assert client.get(f"/api/admin/users/{uid}/characters",
+                      headers=admin_headers).json()[0]["name"] == "狂战改"  # 未被改动
     # delete
     r = client.delete(f"/api/admin/users/{uid}/characters/{cid}", headers=admin_headers)
     assert r.status_code == 200
@@ -760,20 +776,23 @@ def test_banned_cannot_signup_or_be_placed(client, admin_headers, db):
     _add_char(db, u["id"], name="剑魂", fame=100)
     raid = make_raid(client, admin_headers)
     rid = raid["id"]
-    # 报名被拒
+    char_id = db.query(Character).filter(Character.user_id == u["id"]).one().id
+    # 先封禁 → 自报名被拒
+    client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
     r = client.post(f"/api/raids/{rid}/signup", headers=h)
     assert r.status_code == 403
-    # 管理员先替其报名再封禁（封禁保留报名），排表也被拒
-    client.post(f"/api/raids/{rid}/signups", headers=admin_headers, json={"user_id": u["id"]})
+    # 解封后报名成功，再封禁（封禁保留报名）→ 排表被拒
+    client.post(f"/api/admin/users/{u['id']}/unban", headers=admin_headers)
+    assert client.post(f"/api/raids/{rid}/signup", headers=h).status_code == 200
     client.post(f"/api/admin/users/{u['id']}/ban", headers=admin_headers)
     slot_id = raid["waves"][0]["slots"][0]["id"]
     r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
-                    json={"character_id": db.query(Character).filter(Character.user_id == u["id"]).one().id})
+                    json={"character_id": char_id})
     assert r.status_code == 403
     # 解封后可正常排
     client.post(f"/api/admin/users/{u['id']}/unban", headers=admin_headers)
     r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
-                    json={"character_id": db.query(Character).filter(Character.user_id == u["id"]).one().id})
+                    json={"character_id": char_id})
     assert r.status_code == 200
 
 def test_banned_admin_signup_blocked(client, admin_headers, db):
@@ -899,7 +918,7 @@ git status
 **Files:**
 - Modify: `frontend/src/types.ts`
 - Create: `frontend/src/components/AdminNav.vue`
-- Modify: `frontend/src/router/index.ts:12`
+- Modify: `frontend/src/router/index.ts:13`
 - Delete: `frontend/src/views/AdminView.vue`
 - Test: `frontend/src/components/AdminNav.spec.ts`
 
@@ -917,11 +936,11 @@ describe('AdminNav', () => {
     const wrapper = mount(AdminNav, {
       global: { stubs: { RouterLink: RouterLinkStub } },
     })
-    const links = wrapper.findAll('a')
-    expect(links.map(l => l.text())).toEqual(['邀请码管理', '用户管理', '副本管理'])
-    expect(wrapper.find('[data-nav="codes"]').attributes('to')).toBe('/admin/codes')
-    expect(wrapper.find('[data-nav="users"]').attributes('to')).toBe('/admin/users')
-    expect(wrapper.find('[data-nav="dungeons"]').attributes('to')).toBe('/admin/dungeons')
+    // RouterLinkStub 把 to 作为 prop 消费，不落成 DOM 属性；用 findAllComponents 读 props('to')
+    expect(wrapper.findAll('a').map(a => a.text()))
+      .toEqual(['邀请码管理', '用户管理', '副本管理'])
+    const links = wrapper.findAllComponents(RouterLinkStub)
+    expect(links.map(l => l.props('to'))).toEqual(['/admin/codes', '/admin/users', '/admin/dungeons'])
   })
 })
 ```
@@ -1127,8 +1146,10 @@ const categories = [{
   children: [{ id: 11, name: 'weapon_master', title: '极诣·剑魂', class_type: '输出' as const }],
 }]
 
+// 注意：职业按钮在选中类别后才渲染（v-if="selectedCat"），必须先点类别再点职业
 async function fillAndSave(wrapper: any) {
   await wrapper.find('#char-name').setValue('剑魂')
+  await wrapper.find('[data-cat="swordman_male"]').trigger('click')
   await wrapper.find('[data-job="weapon_master"]').trigger('click')
   await wrapper.find('#char-fame').setValue(100)
   await wrapper.find('[data-act="save"]').trigger('click')
@@ -1290,7 +1311,7 @@ import AdminUsersView from './AdminUsersView.vue'
 import { confirmDialog } from '../lib/notify'
 
 const { apiMock } = vi.hoisted(() => ({
-  apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn() },
+  apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn(), getJobs: vi.fn() },
 }))
 vi.mock('../api/client', () => ({ api: apiMock, getToken: vi.fn(() => 'tok') }))
 vi.mock('../lib/notify', () => ({
@@ -1312,8 +1333,9 @@ describe('AdminUsersView', () => {
     apiMock.get.mockImplementation((url: string) => {
       if (url === '/api/admin/users') return Promise.resolve(users)
       if (url.startsWith('/api/admin/characters/query')) return Promise.resolve(query)
-      return Promise.resolve(jobs)
+      return Promise.resolve([])
     })
+    apiMock.getJobs.mockResolvedValue(jobs)
   })
   it('角色查询带筛选与排序参数', async () => {
     const wrapper = mount(AdminUsersView, { global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } } })
@@ -1323,9 +1345,11 @@ describe('AdminUsersView', () => {
     await wrapper.find('[data-filter="sort"]').setValue('buff_amount')
     await flushPromises()
     const lastCall = apiMock.get.mock.calls.filter((c: any[]) => String(c[0]).includes('/query')).at(-1)
-    expect(String(lastCall[0])).toContain('class_type=辅助')
-    expect(String(lastCall[0])).toContain('keyword=剑')
-    expect(String(lastCall[0])).toContain('sort=buff_amount')
+    // URLSearchParams 会把非 ASCII 编码成 %xx，先 decodeURIComponent 再断言
+    const url = decodeURIComponent(String(lastCall[0]))
+    expect(url).toContain('class_type=辅助')
+    expect(url).toContain('keyword=剑')
+    expect(url).toContain('sort=buff_amount')
   })
   it('封禁/解封与角色管理入口', async () => {
     apiMock.post.mockResolvedValue({})
