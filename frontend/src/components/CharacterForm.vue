@@ -4,7 +4,8 @@ import { api } from '../api/client'
 import { categoryIcon, jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Character, JobCategory, JobChild } from '../types'
 
-const props = defineProps<{ categories: JobCategory[]; editing: Character | null }>()
+const props = defineProps<{ categories: JobCategory[]; editing: Character | null; baseUrl?: string }>()
+const base = () => props.baseUrl ?? '/api/me/characters'
 const emit = defineEmits<{ (e: 'saved'): void; (e: 'cancel'): void }>()
 
 const form = ref({ name: props.editing?.name ?? '', fame: props.editing?.fame ?? null as number | null,
@@ -36,8 +37,8 @@ async function save() {
       fame: Number(form.value.fame) || 0,
       simulated_damage: form.value.simulated_damage,
       sustained_dps: form.value.sustained_dps, buff_amount: form.value.buff_amount }
-    if (props.editing) await api.put(`/api/me/characters/${props.editing.id}`, payload)
-    else await api.post('/api/me/characters', payload)
+    if (props.editing) await api.put(`${base()}/${props.editing.id}`, payload)
+    else await api.post(base(), payload)
     emit('saved')
   } catch (e: any) { error.value = e.message }
   finally { saving.value = false }
