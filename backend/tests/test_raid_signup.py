@@ -60,6 +60,7 @@ def test_signup_success_and_detail(client):
     admin_id = login.json()["user"]["id"]
     rid = make_raid(client, ah)["id"]
     h, u = register_user(client, "sig1", "甲")
+    _mkchar(client, h)
     r = client.post(f"/api/raids/{rid}/signup", headers=h)
     assert r.status_code == 200
     assert r.json() == {"ok": True}
@@ -97,6 +98,7 @@ def test_signup_duplicate_blocked(client):
     ah = _admin(client)
     rid = make_raid(client, ah)["id"]
     h, _ = register_user(client, "sig3", "丙")
+    _mkchar(client, h)
     client.post(f"/api/raids/{rid}/signup", headers=h)
     r = client.post(f"/api/raids/{rid}/signup", headers=h)
     assert r.status_code == 400
@@ -122,6 +124,7 @@ def test_self_cancel_removes_placements(client):
 def test_self_cancel_locked_blocked(client):
     ah = _admin(client)
     h, _ = register_user(client, "sig5", "戊")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/signup", headers=h)
     client.post(f"/api/raids/{rid}/lock", headers=ah)
@@ -160,6 +163,7 @@ def test_admin_cancel_not_signed_up_400(client):
 def test_delete_raid_with_signups(client):
     ah = _admin(client)
     h, _ = register_user(client, "sig8", "辛")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/signup", headers=h)
     assert client.delete(f"/api/raids/{rid}", headers=ah).status_code == 200
@@ -170,6 +174,7 @@ def test_signup_ws_broadcast(client):
     token = ah["Authorization"].split()[1]
     rid = make_raid(client, ah)["id"]
     h, u = register_user(client, "sigws1", "甲")
+    _mkchar(client, h)
     with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
         assert client.post(f"/api/raids/{rid}/signup", headers=h).status_code == 200
         ev = ws.receive_json()
@@ -239,6 +244,7 @@ def test_fill_creator_always_participates(client):
 def test_admin_signup_for_other(client):
     ah = _admin(client)
     h, u = register_user(client, "sig9", "壬")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     r = client.post(f"/api/raids/{rid}/signups", headers=ah, json={"user_id": u["id"]})
     assert r.status_code == 200
@@ -260,6 +266,7 @@ def test_admin_signup_other_locked_blocked(client):
 def test_admin_signup_other_duplicate_blocked(client):
     ah = _admin(client)
     h, u = register_user(client, "sig11", "子")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/signup", headers=h)
     r = client.post(f"/api/raids/{rid}/signups", headers=ah, json={"user_id": u["id"]})
@@ -298,6 +305,7 @@ def test_admin_signup_ws_broadcast_target_user(client):
     ah = _admin(client)
     token = ah["Authorization"].split()[1]
     h, u = register_user(client, "sigws3", "辰")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
         assert client.post(f"/api/raids/{rid}/signups", headers=ah,
@@ -349,6 +357,7 @@ def test_member_characters_cross_user_visible(client):
     h, u = register_user(client, "mch4", "丁")
     cid = _mkchar(client, h)
     h2, _ = register_user(client, "mch5", "戊")
+    _mkchar(client, h2)
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/signup", headers=h)
     client.post(f"/api/raids/{rid}/signup", headers=h2)
@@ -358,19 +367,19 @@ def test_member_characters_cross_user_visible(client):
     assert [c["id"] for c in r.json()["characters"]] == [cid]
 
 
-def test_member_characters_empty_roster(client):
+def test_signup_no_characters_rejected(client):
     ah = _admin(client)
     h, u = register_user(client, "mch6", "己")
     rid = make_raid(client, ah)["id"]
-    client.post(f"/api/raids/{rid}/signup", headers=h)
-    r = client.get(f"/api/raids/{rid}/signups/{u['id']}/characters", headers=h)
-    assert r.status_code == 200
-    assert r.json()["characters"] == []
+    r = client.post(f"/api/raids/{rid}/signup", headers=h)
+    assert r.status_code == 400
+    assert r.json()["detail"] == "至少选择一个角色"
 
 
 def test_member_characters_user_not_found(client):
     ah = _admin(client)
     h, u = register_user(client, "mch7", "庚")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/raids/{rid}/signup", headers=h)
     r = client.get(f"/api/raids/{rid}/signups/99999/characters", headers=h)

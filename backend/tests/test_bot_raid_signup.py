@@ -21,6 +21,7 @@ def test_bot_signup_requires_token(client):
 def test_bot_signup_by_account(client):
     ah = _admin(client)
     h, u = register_user(client, "sig1", "甲")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     r = client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN,
                     json={"account": "sig1"})
@@ -36,6 +37,7 @@ def test_bot_signup_by_account(client):
 def test_bot_signup_by_nickname(client):
     ah = _admin(client)
     h, u = register_user(client, "sig2", "乙")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     r = client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN,
                     json={"nickname": "乙"})
@@ -46,6 +48,7 @@ def test_bot_signup_by_nickname(client):
 def test_bot_signup_duplicate(client):
     ah = _admin(client)
     h, u = register_user(client, "sig3", "丙")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN, json={"account": "sig3"})
     r = client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN, json={"account": "sig3"})
@@ -101,6 +104,7 @@ def test_bot_signup_ws_broadcast(client):
     ah = _admin(client)
     token = ah["Authorization"].split()[1]
     h, u = register_user(client, "sigws1", "甲")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     with client.websocket_connect(f"/ws/raids/{rid}?token={token}") as ws:
         assert client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN,
@@ -146,6 +150,7 @@ def test_bot_cancel_not_signed_up(client):
 def test_bot_cancel_locked_blocked(client):
     ah = _admin(client)
     h, u = register_user(client, "sig7", "庚")
+    _mkchar(client, h)
     rid = make_raid(client, ah)["id"]
     client.post(f"/api/public/raids/{rid}/signup", headers=TOKEN, json={"account": "sig7"})
     client.post(f"/api/raids/{rid}/lock", headers=ah)

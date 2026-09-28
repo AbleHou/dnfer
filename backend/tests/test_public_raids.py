@@ -18,9 +18,9 @@ def test_public_raid_detail(client):
     ah = _admin(client)
     rid = make_raid(client, ah, name="巴卡尔", size=12)["id"]
     h, _ = register_user(client, "p1", "甲")
-    signup(client, rid, h)
     cid = client.post("/api/me/characters", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 1}).json()["id"]
+    signup(client, rid, h)
     slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
     client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
                 json={"character_id": cid, "duty": "主C"})
