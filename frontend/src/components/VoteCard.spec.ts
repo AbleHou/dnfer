@@ -44,4 +44,29 @@ describe('VoteCard', () => {
     expect(wrapper.find('[data-act="vote"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('你已投票')
   })
+  it('5s 轮询刷新不清空进行中的多选', async () => {
+    const multi = { ...openVote, multi_choice: true }
+    const wrapper = mount(VoteCard, { props: { vote: multi } })
+    await wrapper.find('[data-act="opt-1"]').trigger('click')
+    await wrapper.find('[data-act="opt-2"]').trigger('click')
+    expect(wrapper.findAll('.vote-option.selected')).toHaveLength(2)
+    // 模拟轮询：props.vote 换新对象引用但 my_voted 仍 false → 选择应保留
+    await wrapper.setProps({ vote: { ...multi, total_voters: 1 } })
+    expect(wrapper.findAll('.vote-option.selected')).toHaveLength(2)
+  })
+  it('实名投票成功后回填我的选择', async () => {
+    const wrapper = mount(VoteCard, { props: { vote: openVote } })
+    await wrapper.find('[data-act="opt-1"]').trigger('click')
+    await wrapper.find('[data-act="vote"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('refresh')).toHaveLength(1)
+    // 模拟父组件刷新后返回已投票详情（my_voted 从 false → true）
+    const voted = {
+      ...openVote,
+      my_voted: true, my_option_ids: [1],
+      options: [{ ...openVote.options[0], count: 1, voters: ['某人'] }, openVote.options[1]],
+    }
+    await wrapper.setProps({ vote: voted })
+    expect(wrapper.find('.vote-option.selected').exists()).toBe(true)
+  })
 })

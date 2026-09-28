@@ -61,7 +61,7 @@ async function submitVote() {
     <ul class="vote-options">
       <li v-for="o in vote.options" :key="o.id" class="vote-option"
           :class="{ selected: isSelected(o.id) }">
-        <button v-if="isOpen && !votedAnon" class="vote-option-row" :data-act="'opt-' + o.id"
+        <button v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-option-row" :data-act="'opt-' + o.id"
                 @click="toggleOption(o.id)">
           <span class="vote-opt-text">{{ o.text }}</span>
           <span class="vote-opt-count">{{ o.count }} 票</span>
@@ -93,5 +93,4 @@ async function submitVote() {
 .vote-option-row { display:flex; justify-content:space-between; align-items:center; gap:8px }
 button.vote-option-row { width:100%; background:none; border:none; color:inherit; cursor:pointer; text-align:left; padding:0; font-size:14px }
 .vote-opt-count { color:var(--dnf-text-muted,#9aa3b2); font-size:12px }
-.vote-foot { margin-top:10px }
 </style>
