@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from .. import jobs as job_data
-from ..models import Character, Slot
+from ..models import Character, RaidSignupCharacter, Slot
 from ..schemas import CharacterIn, CharacterOut
 
 
@@ -34,3 +34,13 @@ def delete_character_if_free(db: Session, cid: int) -> None:
     in_use = db.query(Slot).filter(Slot.character_id == cid).first()
     if in_use:
         raise HTTPException(400, "该角色正在攻坚中，请先撤下")
+    # 角色在报名勾选中 → 一并移除子行；若该报名因此清空 → 整条取消报名
+    for rsc in db.query(RaidSignupCharacter).filter(
+            RaidSignupCharacter.character_id == cid).all():
+        signup = rsc.signup
+        db.delete(rsc)
+        remaining = db.query(RaidSignupCharacter).filter(
+            RaidSignupCharacter.signup_id == signup.id,
+            RaidSignupCharacter.character_id != cid).count()
+        if remaining == 0:
+            db.delete(signup)  # 角色已 free（无占位），无需撤占位；此路径不广播
