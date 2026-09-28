@@ -67,7 +67,7 @@ class SignupIn(BaseModel):
     character_ids: list[int] | None = None   # None=默认全部角色
 ```
 
-- `RaidSignupOut.characters` **带默认值 `[]`**：`_detail` 在 `raids.py` 与 `public.py` 两处构造 `RaidSignupOut`，带默认值可避免中间态 500。
+- `RaidSignupOut.characters` **带默认值 `[]`**：`_detail` 定义于 `raids.py` 并被 `public.py` 复用（公开端点直接调 `_detail`），`RaidSignupOut` 构造点只有 `raids.py` 一处；带默认值可避免中间态 500。
 - `BotSignupIn` 增加 `character_ids: list[int] | None = None`（缺省=全部角色）。
 - `SignupUserIn`（管理员代报名）不加字段：代报名恒默认全部角色。
 
@@ -110,6 +110,7 @@ def _signup_user(db, raid, user, character_ids=None) -> RaidSignup:
 - `commit`（并发重复报名 `IntegrityError → rollback → 400 "你已报名"` 兜底不变），`refresh`。
 - 广播 `raid:signup { user, created_at, characters: [SignupCharacterOut] }`。
 - 返回 `{"ok": True}`。
+- **`_detail`（`GET /api/raids/{rid}`）**：为每位成员报名行填充 `characters`（取该报名行 `RaidSignupCharacter.character` 转 `SignupCharacterOut`）；团长固定行 `characters=[]`（走 schema 默认值）。
 
 ### 4.3 追加勾选 `POST /api/raids/{rid}/signup/characters/{cid}`（新增）
 
@@ -137,7 +138,24 @@ def _signup_user(db, raid, user, character_ids=None) -> RaidSignup:
 
 ### 4.5 取消报名 `DELETE /api/raids/{rid}/signup` 与管理员取消 `DELETE /api/raids/{rid}/signups/{user_id}`
 
-- 逻辑不变（删报名行 → 子表级联清 → 撤全部占位 → 广播），仅 `_remove_signup` 因子表级联自动清 `raid_signup_characters`。**无需改动**。
+`_remove_signup`（被本人/管理员/机器人三条取消路径共用）**必须修改**：现实现用批量 `db.query(RaidSignup).filter(...).delete()`，而 **SQLAlchemy 批量删除不触发 ORM 关系级联**（`cascade="all, delete-orphan"` 仅对 `session.delete(obj)` 生效）；SQLite 已启用 `PRAGMA foreign_keys=ON`（`db.py`/`conftest.py`）且 FK 未声明 `ondelete`——直接删父行会因 `raid_signup_characters` 残留触发外键 `IntegrityError` → 500（每条报名都有 ≥1 个子行，所有取消路径必触发）。
+
+改为**加载报名对象后 `db.delete(rs)`**（ORM 级联清 `raid_signup_characters` 子行），再撤全部占位、广播，行为与现状一致：
+
+```python
+rs = db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
+                                 RaidSignup.user_id == user_id).first()
+if rs is not None:
+    db.delete(rs)   # ORM 级联清 raid_signup_characters 子行
+removed = db.query(Slot).filter(Slot.wave.has(raid_id=raid.id),
+                                Slot.character.has(user_id=user_id)).all()
+for s in removed:
+    _clear_slot(s)
+db.commit()
+# 广播 slot:removed + raid:signup_removed 不变
+```
+
+`delete_raid` 走 `db.delete(raid)` ORM 级联，不受影响。
 
 ### 4.6 占位强制（`fill_slot`）
 
@@ -184,6 +202,13 @@ for rsc in db.query(RaidSignupCharacter).filter(
 
 - `delete_character_if_free` 被 `members.py` 与 `admin.py` 共用，两处删除行为一致。
 
+### 4.9 管理员代报名 `POST /api/raids/{rid}/signups` 与机器人报名 `POST /api/public/raids/{rid}/signup`
+
+两者均改用 `_signup_user`（默认全部角色）：
+
+- `admin_signup`：前置校验不变（锁定 400 / 目标封禁 403 / 团长 400 / 已报名 400），将「建 `RaidSignup`」替换为 `_signup_user(db, raid, target, None)`；目标用户无角色 → 400「至少选择一个角色」。既有并发重复报名 `IntegrityError → rollback → 400` 兜底保留。
+- `bot_signup`：同样以 `body.character_ids`（缺省 `None`=全部）调 `_signup_user(db, raid, user, body.character_ids)`；机器人用户无角色 → 400「至少选择一个角色」。并发兜底保留。
+
 ## 5. WebSocket 事件
 
 - 既有 `raid:signup` 的 payload 增加 `characters: [SignupCharacterOut]`。
@@ -217,14 +242,16 @@ for rsc in db.query(RaidSignupCharacter).filter(
 - **报名面板**：每个成员行（含团长）昵称下渲染角色芯片 `characters`。
   - **本人行**（非团长、非锁定）：芯片带 × 可取消勾选，`confirmDialog`（若该角色有占位 → 提示「该角色已占位，取消勾选将撤销其占位」）后 `DELETE /api/raids/{rid}/signup/characters/{cid}`；另有「+ 添加角色」按钮打开 `SignupModal`（mode=manage，`selectedIds`=当前勾选），toggle 走 POST/DELETE。
   - **他人行 / 团长行**：只读芯片（团长可见成员已勾选角色）。
-- **`CharacterPickerModal` 新 prop `signupCharsByUser: Record<number, number[]>`**：由 `store.raid.signups` 计算（团长固定行 `created_at === null` 不在其中）。
+- **`CharacterPickerModal` 新 prop `signupCharsByUser: Record<number, number[]>`**：由 `store.raid.signups` 计算，**只取非团长行**（`signups.filter(s => s.created_at !== null)`，每行取其 `characters` 的 id 数组）——团长固定行 `characters: []` 若被纳入会产生 `{ [leaderId]: [] }`，导致团长角色被全部过滤的回归。
   - 管理员模式与本人排表模式都过滤：目标玩家在 `signupCharsByUser` 中 → 仅显示其已勾选角色；不在（团长）→ 显示全部。
 - **`MemberCharactersModal`** 不改：后端 §4.7 已过滤。
 
 ### 6.5 `CharacterPickerModal.vue`
 
 - 新增 prop `signupCharsByUser?: Record<number, number[]>`（默认 `{}`）。
-- 过滤 `characters`：`props.signupCharsByUser[playerId]` 存在 → `characters.filter(c => ids.includes(c.id))`；否则原样。
+- 过滤 `characters`（按场景区分，避免本人模式 `playerId` 为 null 失效）：
+  - **管理员模式**：`props.signupCharsByUser[playerId]` 存在 → `characters.filter(c => ids.includes(c.id))`；不存在（团长，无报名行）→ 原样全部。
+  - **本人模式**：按 `props.signupCharsByUser[auth.user.id]` 过滤（本人已报名必有该键）；不存在 → 原样兜底（后端 `fill_slot` 仍会 403 拦截，见 §4.6）。
 
 ### 6.6 机器人脚本 `skills/dnfer-raids/scripts/dnfer_raid.py`
 
@@ -243,6 +270,7 @@ for rsc in db.query(RaidSignupCharacter).filter(
 - 追加勾选 → 成功；已勾选 → 400；非本人 → 400；锁定 → 403；未报名 → 400。
 - 取消勾选 → 勾选移除 + 该角色占位被撤（`slot.character_id is None`）+ WS 顺序 `slot:removed` → `raid:signup_chars_changed`。
 - 取消最后一个勾选 → 400「至少保留一个角色」；未勾选该角色 → 400「该角色不在报名中」；锁定 → 403。
+- **取消报名（本人/管理员/机器人）→ `raid_signups` 与 `raid_signup_characters` 子行均清空、无 500**（验证 §4.5 `_remove_signup` 改造，批量删除改 ORM 删除后不触发外键错误）。
 - `fill_slot`：成员放置自己未勾选角色 → 403「请先勾选该角色再占位」；管理员放置成员未勾选角色 → 403「该角色未报名，无法排表」；勾选后 → 成功。
 - `fill_slot`：团长放置自己任意角色 → 成功（不受勾选约束）。
 - `get_member_characters`：成员 → 仅已勾选；团长 → 全部。
@@ -251,7 +279,15 @@ for rsc in db.query(RaidSignupCharacter).filter(
 - 管理员代报名：默认全部；目标无角色 → 400。
 - WS：`raid:signup` payload 含 `characters`；`raid:signup_chars_changed` 增量。
 
-既有用例适配（**≥1 规则**使无角色报名变为 400，波及约 10 个用例）：凡「报名一个无角色用户」的用例需先 `_mkchar` 建一个角色再报名，如 `test_signup_success_and_detail`、`test_signup_duplicate_blocked`、`test_signup_ws_broadcast`、`test_self_cancel_locked_blocked`、`test_admin_signup_for_other`、`test_admin_signup_other_duplicate_blocked`、`test_member_characters_cross_user_visible`（第二个报名用户需建角色）、`test_bot_signup_by_account`、`test_bot_signup_by_nickname`、`test_bot_signup_duplicate`、`test_bot_signup_ws_broadcast`、`test_bot_cancel_locked_blocked`。`test_member_characters_empty_roster` 语义改为「无角色用户报名 → 400」。
+既有用例适配分两类：
+
+**（a）硬破坏（断言 200 但报名无角色用户 → 400，必须补 `_mkchar`）**：`test_signup_success_and_detail`、`test_signup_duplicate_blocked`、`test_signup_ws_broadcast`、`test_admin_signup_for_other`、`test_admin_signup_other_duplicate_blocked`、`test_admin_signup_ws_broadcast_target_user`、`test_public.py::test_public_list_and_wave`、`test_public_raids.py::test_public_raid_detail`（后两者在**建角色之前**调 `helpers.signup()`）、`test_bot_signup_by_account`、`test_bot_signup_by_nickname`、`test_bot_signup_duplicate`、`test_bot_signup_ws_broadcast`。
+
+**（b）setup 意义损失（仍通过但报名失败，建议补 `_mkchar` 保住语义）**：`test_self_cancel_locked_blocked`、`test_bot_cancel_locked_blocked`（锁定检查先于报名存在性，400 后锁定仍得 403）、`test_member_characters_cross_user_visible`（第二个报名用户）、`test_delete_raid_with_signups`、`test_member_characters_user_not_found`。
+
+`test_member_characters_empty_roster` 语义改为「无角色用户报名 → 400」。
+
+另：`helpers.py` 的 `signup()` 辅助还被 `test_raids.py` / `test_admin_adjust.py` 使用；`test_admin_management.py` 则内联 `POST /api/raids/{rid}/signup`（不经辅助函数）。这些调用点均先建角色或前置 400/403 先触发（安全），改动后应再确认报名仍 200。
 
 ### 前端
 
@@ -269,10 +305,10 @@ for rsc in db.query(RaidSignupCharacter).filter(
 
 - `backend/app/models.py` — 新增 `RaidSignupCharacter`；`RaidSignup` 补 `characters` 关系（`cascade="all, delete-orphan"`）
 - `backend/app/schemas.py` — 新增 `SignupCharacterOut` / `SignupIn`；`RaidSignupOut` 加 `characters`；`BotSignupIn` 加 `character_ids`
-- `backend/app/routers/raids.py` — `_signup_user`/`_selected_ids` 助手；signup 收 body；新增追加/取消勾选端点；`fill_slot` 角色级校验；`_detail`/`get_member_characters` 过滤
+- `backend/app/routers/raids.py` — `_signup_user`/`_selected_ids` 助手；signup 收 body；新增追加/取消勾选端点；`fill_slot` 角色级校验；`_detail`/`get_member_characters` 过滤；**`_remove_signup` 批量删除改 ORM 删除（关键缺陷修复）**
 - `backend/app/routers/bot.py` — `bot_signup` 用 `_signup_user`
 - `backend/app/services/characters.py` — `delete_character_if_free` 清理勾选子行 + 清空报名
-- `backend/tests/*` — 新增用例 + 既有用例补 `_mkchar`
+- `backend/tests/*` — 新增用例 + 既有用例补 `_mkchar`（含 `test_public.py` / `test_public_raids.py` 的 signup 调用点）
 - `frontend/src/types.ts` — `SignupCharacter` / `RaidSignup.characters`
 - `frontend/src/stores/raid.ts` — WS 事件
 - `frontend/src/components/SignupModal.vue` — 新增
