@@ -215,7 +215,8 @@ def _signup_user(db: Session, raid: Raid, user: User,
 ```python
     signups = [RaidSignupOut(user=UserOut.model_validate(db.get(User, raid.created_by)),
                              created_at=None)]
-    for rs in db.query(RaidSignup).options(selectinload(RaidSignup.user)) \
+    for rs in db.query(RaidSignup).options(selectinload(RaidSignup.user),
+                                           selectinload(RaidSignup.characters)) \
             .filter(RaidSignup.raid_id == raid.id,
                     RaidSignup.user_id != raid.created_by) \
             .order_by(RaidSignup.created_at).all():
@@ -320,10 +321,10 @@ async def signup(rid: int, body: SignupIn | None = None,
 
 - [ ] **Step 3: bot.py 的 bot_signup 端点**
 
-`bot.py` 导入 `_raid_or_404, _remove_signup` 处改为追加 `_signup_user`：
+`bot.py` 导入 `_raid_or_404, _remove_signup` 处改为（`_signup_characters` 用于广播 payload）：
 
 ```python
-from ..routers.raids import _raid_or_404, _remove_signup, _signup_user
+from ..routers.raids import _raid_or_404, _remove_signup, _signup_characters, _signup_user
 ```
 
 `bot_signup`（第 120 行）中，把「建 `RaidSignup`」替换为 `_signup_user`：
@@ -345,8 +346,6 @@ from ..routers.raids import _raid_or_404, _remove_signup, _signup_user
             "raid": {"id": raid.id, "name": raid.name,
                      "starts_at": raid.starts_at.isoformat()}}
 ```
-
-> 说明：`bot.py` 的广播需要 `_signup_characters`，从 `raids.py` 一并导入：`from ..routers.raids import _raid_or_404, _remove_signup, _signup_characters, _signup_user`。
 
 - [ ] **Step 4: 提交**
 
@@ -462,13 +461,9 @@ git commit -m "feat: 追加/取消勾选报名角色端点（取消撤占位，�
 
 - [ ] **Step 1: fill_slot 加角色级校验**
 
-`fill_slot`（第 235 行）中，在既有 `_participates` 校验块之后立即插入：
+`fill_slot`（第 235 行）中，**在既有 `_participates` 校验块之后、`removed` 逻辑之前**插入下面整个新校验块——文件里已存在的 `_participates` 块**不要动**，只需把下面这个角色级校验插到它后面：
 
 ```python
-    if not _participates(db, raid, char.user_id):
-        if user.is_admin:
-            raise HTTPException(403, "该用户未报名，无法排表")
-        raise HTTPException(403, "请先报名再占位")
     # 团长自己的角色不受勾选约束；其余须已勾选该角色
     if char.user_id != raid.created_by and char.id not in _selected_ids(db, raid, char.user_id):
         if user.is_admin:
@@ -1021,7 +1016,7 @@ export interface RaidSignup { user: User; created_at: string | null; characters:
 
 - [ ] **Step 3: stores/raid.spec.ts**
 
-- 既有 `raid:signup` 用例（第 88 行 `applyEvent(store, { type: 'raid:signup', user: u, created_at: ... })`）补 `characters: []`（否则 `npm run build` 的 vue-tsc 类型检查会报缺字段）。
+- 既有 `raid:signup` 用例中**两处** `applyEvent(store, { type: 'raid:signup', user: u, created_at: ... })`（第 88 行与第 92 行）都补 `characters: []`（否则 `npm run build` 的 vue-tsc 类型检查会报缺字段）。
 - 追加用例：
 
 ```ts
@@ -1412,6 +1407,10 @@ async function onToggleSignupChar(cid: number, checked: boolean) {
     if (checked) await api.post(`/api/raids/${store.raid.id}/signup/characters/${cid}`)
     else await api.del(`/api/raids/${store.raid.id}/signup/characters/${cid}`)
     await load()
+    // 同步本地勾选态，让管理弹窗复选框即时反映（API 失败则不更新 → 自动还原）
+    signupSelected.value = checked
+      ? [...signupSelected.value, cid]
+      : signupSelected.value.filter(x => x !== cid)
   } catch (e: any) { notifyError(e.message) }
 }
 async function onRemoveSignupChar(cid: number) {
@@ -1429,11 +1428,11 @@ async function onRemoveSignupChar(cid: number) {
 
 - [ ] **Step 3: 模板：报名按钮开弹窗**
 
-模板中「报名」按钮改绑 `openSignupModal`：
+模板中「报名」按钮改绑 `openSignupModal` 并补 `data-test="signup"`（供测试定位）：
 
 ```html
           <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
-                  @click="openSignupModal">报名</button>
+                  data-test="signup" @click="openSignupModal">报名</button>
 ```
 
 - [ ] **Step 4: 模板：报名面板渲染角色芯片 + 本人行可管理**
@@ -1526,21 +1525,45 @@ const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters:
 
 - [ ] **Step 3: 追加用例**
 
-在 `RaidDetailView enhance` describe 内追加：
+在 `RaidDetailView enhance` describe 内追加。**必须挂载一个不在 signups 里的用户**（`mountView` 默认把 `auth.user` 设为 admin=团长，已在 signups → 报名按钮不渲染），故按既有第二个 mount 模式手写：
 
 ```ts
-  it('报名按钮打开 SignupModal（signup 模式）', async () => {
-    const { wrapper } = await mountView([adminRow, memberRow])
+  it('未报名用户可见报名按钮，点击打开 SignupModal（signup 模式）', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 99, username: 'newbie', nickname: '新人', is_admin: false, avatar: null, is_banned: false }
+    const store = useRaidStore()
+    store.raid = makeRaid([adminRow, memberRow])
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids/1') return makeRaid([adminRow, memberRow])
+      return []
+    })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/raids/:id', component: RaidDetailView }],
+    })
+    await router.push('/raids/1')
+    await router.isReady()
+    const wrapper = mount(RaidDetailView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
+          SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
+          SignupModal: true, teleport: true,
+        },
+      },
+    })
     await flushPromises()
-    await wrapper.find('button:not(.dnf-btn-sm)').trigger('click')  // 「报名」按钮
+    expect(wrapper.find('[data-test="signup"]').exists()).toBe(true)
+    await wrapper.find('[data-test="signup"]').trigger('click')
     await flushPromises()
     const modal = wrapper.findComponent({ name: 'SignupModal' })
     expect(modal.exists()).toBe(true)
     expect(modal.props('mode')).toBe('signup')
   })
 ```
-
-> 说明：若「报名」按钮选择器不稳，改用带 `data-test="signup"` 的定位——给模板报名按钮补 `data-test="signup"` 后按 `[data-test="signup"]` 选择。
 
 - [ ] **Step 4: 运行确认通过**
 
@@ -1589,7 +1612,7 @@ git status
 
 - [ ] **Step 1: 追加条目**
 
-`CHANGELOG.md` [Unreleased] 区追加（仿既有条目格式）：
+`CHANGELOG.md` 当前无 `[Unreleased]` 区（最新为 `[v1.9] - 2026-09-28`）。在文件顶部新增 `## [Unreleased]` 节（置于 `[v1.9]` 之前），其下加：
 
 ```
 - 攻坚报名升级为角色级：报名时勾选愿意上场的角色（默认全部），团长只能排成员已勾选的角色；报名后可随时追加/取消勾选角色，取消勾选会撤销该角色占位；机器人/管理员代报名默认勾选全部角色；无角色用户无法报名。
