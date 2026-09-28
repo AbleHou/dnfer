@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from ..models import Vote, VoteBallot, VoteOption
@@ -33,6 +34,10 @@ def vote_list_item(db: Session, vote: Vote) -> VoteListItem:
     return VoteListItem(id=vote.id, title=vote.title, multi_choice=vote.multi_choice,
                         open=vote.open, created_at=vote.created_at, closed_at=vote.closed_at,
                         total_voters=_total_voters(db, vote))
+
+
+def list_votes(db: Session) -> list[VoteListItem]:
+    return [vote_list_item(db, v) for v in db.query(Vote).order_by(Vote.id.desc()).all()]
 
 
 def vote_detail(db: Session, vote: Vote, viewer_user_id: int | None = None) -> VoteDetail:
@@ -110,4 +115,8 @@ def cast_vote(db: Session, vote: Vote, user_id: int | None,
     else:
         for oid in option_ids:
             db.add(VoteBallot(vote_id=vote.id, user_id=None, option_id=oid))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # 并发重复投票兜底：唯一约束命中 → 视为已投
+        db.rollback()
+        raise HTTPException(400, "你已投票")

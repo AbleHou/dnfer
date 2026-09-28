@@ -3,16 +3,16 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_user
 from ..db import get_db
-from ..models import User, Vote
+from ..models import User
 from ..schemas import VoteBallotIn, VoteDetail, VoteListItem
-from ..services.votes import _vote_or_404, cast_vote, vote_detail, vote_list_item
+from ..services.votes import _vote_or_404, cast_vote, list_votes, vote_detail
 
 router = APIRouter(prefix="/api/votes", tags=["votes"])
 
 
 @router.get("", response_model=list[VoteListItem])
-def list_votes(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return [vote_list_item(db, v) for v in db.query(Vote).order_by(Vote.id.desc()).all()]
+def list_vote_items(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return list_votes(db)
 
 
 @router.get("/{vid}", response_model=VoteDetail)

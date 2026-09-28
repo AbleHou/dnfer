@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session
 from .. import jobs as job_data
 from ..auth import hash_password, require_api_token
 from ..db import get_db
-from ..models import Character, RaidSignup, User, Vote
+from ..models import Character, RaidSignup, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
                        BotCharactersOut, BotRegisterIn, BotSignupIn, PublicVoteBallotIn,
                        UserOut, VoteDetail, VoteListItem)
 from ..routers.raids import _raid_or_404, _remove_signup
 from ..services.characters import character_out
-from ..services.votes import _vote_or_404, cast_vote, vote_detail, vote_list_item
+from ..services.votes import _vote_or_404, cast_vote, list_votes, vote_detail
 from ..ws import manager
 
 router = APIRouter(prefix="/api/public", tags=["bot"],
@@ -162,8 +162,8 @@ async def bot_cancel_signup(rid: int, body: BotSignupIn, db: Session = Depends(g
                      "starts_at": raid.starts_at.isoformat()}}
 
 @router.get("/votes", response_model=list[VoteListItem])
-def list_votes(db: Session = Depends(get_db)):
-    return [vote_list_item(db, v) for v in db.query(Vote).order_by(Vote.id.desc()).all()]
+def list_vote_items(db: Session = Depends(get_db)):
+    return list_votes(db)
 
 
 @router.get("/votes/{vid}", response_model=VoteDetail)
