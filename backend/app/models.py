@@ -101,3 +101,40 @@ class RaidSignup(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     raid: Mapped[Raid] = relationship(back_populates="signups")
     user: Mapped[User] = relationship()
+
+class Vote(Base):
+    __tablename__ = "votes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str] = mapped_column(Text, default="")
+    multi_choice: Mapped[bool] = mapped_column(Boolean, default=False)
+    open: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    options: Mapped[list["VoteOption"]] = relationship(back_populates="vote",
+                                                       order_by="VoteOption.id",
+                                                       cascade="all, delete-orphan")
+    ballots: Mapped[list["VoteBallot"]] = relationship(back_populates="vote",
+                                                       cascade="all, delete-orphan")
+
+class VoteOption(Base):
+    __tablename__ = "vote_options"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    vote_id: Mapped[int] = mapped_column(ForeignKey("votes.id"), index=True)
+    text: Mapped[str] = mapped_column(String(128))
+    vote: Mapped[Vote] = relationship(back_populates="options")
+    ballots: Mapped[list["VoteBallot"]] = relationship(back_populates="option",
+                                                       cascade="all, delete-orphan")
+
+class VoteBallot(Base):
+    __tablename__ = "vote_ballots"
+    __table_args__ = (UniqueConstraint("vote_id", "user_id", "option_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    vote_id: Mapped[int] = mapped_column(ForeignKey("votes.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)  # None=匿名票
+    option_id: Mapped[int] = mapped_column(ForeignKey("vote_options.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    vote: Mapped[Vote] = relationship(back_populates="ballots")
+    option: Mapped[VoteOption] = relationship(back_populates="ballots")
+    user: Mapped[User | None] = relationship()
