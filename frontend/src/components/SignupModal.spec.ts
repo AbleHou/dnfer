@@ -8,10 +8,10 @@ vi.mock('../api/client', () => ({ api: apiMock, getToken: vi.fn(() => 'tok') }))
 
 const chars = [
   { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
-    parent_name: 'swordman_male', class_type: '输出', fame: 1, simulated_damage: 5,
+    parent_name: 'swordman_male', class_type: '输出', fame: 52000, simulated_damage: 5,
     sustained_dps: 2, buff_amount: null },
   { id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
-    parent_name: 'priest_male', class_type: '辅助', fame: 1, simulated_damage: null,
+    parent_name: 'priest_male', class_type: '辅助', fame: 9000, simulated_damage: null,
     sustained_dps: null, buff_amount: 9000 },
 ]
 
@@ -47,6 +47,13 @@ describe('SignupModal', () => {
     await wrapper.find('[data-act="char-2"]').setValue(false)
     await wrapper.find('[data-act="submit"]').trigger('click')
     expect(wrapper.emitted('submit')).toBeUndefined()
+  })
+
+  it('显示角色名望便于区分', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    expect(wrapper.text()).toContain('名望 52000')
+    expect(wrapper.text()).toContain('名望 9000')
   })
 
   it('manage 模式勾选态由 selectedIds 派生，切换透传 toggle', async () => {

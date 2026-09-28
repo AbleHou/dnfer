@@ -71,6 +71,7 @@ function submit() {
                @change="toggle(c.id)" />
         <span>{{ c.name }}</span>
         <span style="color:var(--dnf-text-faint);font-size:12px">{{ c.job_title }}</span>
+        <span style="margin-left:auto;color:var(--dnf-text-muted);font-size:12px">名望 {{ c.fame }}</span>
       </label>
       <p v-if="error" style="color:var(--dnf-danger)">{{ error }}</p>
     </div>
