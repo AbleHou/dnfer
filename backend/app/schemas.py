@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -233,3 +233,61 @@ class AdminCharacterRow(CharacterOut):
 class CharacterQueryResult(BaseModel):
     items: list[AdminCharacterRow]
     total: int
+
+class VoteCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=128)
+    description: str = Field(default="", max_length=2000)
+    multi_choice: bool = False
+    options: list[Annotated[str, Field(min_length=1, max_length=128)]] = Field(min_length=2, max_length=20)
+
+    @model_validator(mode="after")
+    def _distinct_options(self):
+        stripped = [o.strip() for o in self.options]
+        if any(not o for o in stripped):
+            raise ValueError("选项不能为空")
+        if len(set(stripped)) < 2:
+            raise ValueError("至少需要两个不同选项")
+        self.options = stripped
+        return self
+
+class VoteOptionOut(BaseModel):
+    id: int
+    text: str
+    count: int
+    voters: list[str]
+
+class VoteListItem(BaseModel):
+    id: int
+    title: str
+    multi_choice: bool
+    open: bool
+    created_at: datetime
+    closed_at: datetime | None
+    total_voters: int
+
+class VoteDetail(BaseModel):
+    id: int
+    title: str
+    description: str
+    multi_choice: bool
+    open: bool
+    created_at: datetime
+    closed_at: datetime | None
+    options: list[VoteOptionOut]
+    total_voters: int
+    my_option_ids: list[int] = []
+    my_voted: bool = False
+
+class VoteBallotIn(BaseModel):
+    option_ids: list[int] = Field(min_length=1)
+    anonymous: bool = False
+
+class PublicVoteBallotIn(VoteBallotIn):
+    account: str | None = Field(default=None, min_length=1, max_length=64)
+    nickname: str | None = Field(default=None, min_length=1, max_length=64)
+
+    @model_validator(mode="after")
+    def _exactly_one_identity(self):
+        if (self.account is None) == (self.nickname is None):
+            raise ValueError("account 与 nickname 必须恰好提供一个")
+        return self
