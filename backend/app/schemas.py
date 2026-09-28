@@ -282,7 +282,9 @@ class VoteBallotIn(BaseModel):
     option_ids: list[int] = Field(min_length=1)
     anonymous: bool = False
 
-class PublicVoteBallotIn(VoteBallotIn):
+class PublicVoteBallotIn(BaseModel):
+    """机器人代投：群聊公开，必为实名投票（不支持匿名）。"""
+    option_ids: list[int] = Field(min_length=1)
     account: str | None = Field(default=None, min_length=1, max_length=64)
     nickname: str | None = Field(default=None, min_length=1, max_length=64)
 

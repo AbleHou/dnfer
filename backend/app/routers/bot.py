@@ -177,5 +177,5 @@ def cast_ballot(vid: int, body: PublicVoteBallotIn, db: Session = Depends(get_db
     if user.is_banned:
         raise HTTPException(403, "该用户已被封禁")
     vote = _vote_or_404(db, vid)
-    cast_vote(db, vote, user.id, body.option_ids, body.anonymous)
+    cast_vote(db, vote, user.id, body.option_ids, False)  # 机器人代投恒实名
     return vote_detail(db, vote)

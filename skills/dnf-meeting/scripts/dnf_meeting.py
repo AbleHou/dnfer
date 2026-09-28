@@ -4,7 +4,7 @@
 用法：
   DNFER_API_TOKEN=xxx python dnf_meeting.py current
   DNFER_API_TOKEN=xxx python dnf_meeting.py list
-  DNFER_API_TOKEN=xxx python dnf_meeting.py vote <identifier> <选项文本...> [--anon]
+  DNFER_API_TOKEN=xxx python dnf_meeting.py vote <identifier> <选项文本...>
 
 stdout 只输出机器可读 JSON；人读中文摘要写到 stderr。
 非 2xx / 网络错误时 stdout 为 {"ok": false, "status": ..., "error": ...}。
@@ -123,14 +123,12 @@ def cmd_list(args) -> int:
     return 0
 
 
-def _ballot_call(vote_id: int, identifier: str, option_ids: list[int],
-                 anon: bool) -> dict:
-    """昵称优先、404 回退账号（仿 dnfer_raid._signup_call）。"""
+def _ballot_call(vote_id: int, identifier: str, option_ids: list[int]) -> dict:
+    """昵称优先、404 回退账号（仿 dnfer_raid._signup_call）。群聊公开，代投恒实名。"""
     url = f"{_base()}/api/public/votes/{vote_id}/ballots"
 
     def call(field: str, value: str) -> dict:
-        return _request("POST", url, {field: value, "option_ids": option_ids,
-                                      "anonymous": anon})
+        return _request("POST", url, {field: value, "option_ids": option_ids})
     result = call("nickname", identifier)
     if result.get("ok") is False and result.get("status") == 404:
         result = call("account", identifier)
@@ -159,12 +157,12 @@ def cmd_vote(args) -> int:
                       "error": f"选项「{'、'.join(missing)}」不存在，可选：{opts}"})
     if not detail["multi_choice"] and len(ids) != 1:
         return _fail({"ok": False, "status": 400, "error": "单选投票只能投一个选项"})
-    resp = _ballot_call(vote["id"], args.identifier, ids, args.anon)
+    resp = _ballot_call(vote["id"], args.identifier, ids)
     if resp.get("ok") is False:
         return _fail(resp)
     picked = [o["text"] for o in detail["options"] if o["id"] in ids]
     out = {"ok": True, "vote": {"id": detail["id"], "title": detail["title"],
-                                "picked": picked, "anonymous": args.anon}}
+                                "picked": picked}}
     print(json.dumps(out, ensure_ascii=False))
     who = args.identifier
     print(f"[dnf-meeting] 已投：{who} → {detail['title']}：{'、'.join(picked)}", file=sys.stderr)
@@ -184,7 +182,6 @@ def main() -> int:
     p_vote = sub.add_parser("vote", help="替玩家投当前打开的投票")
     p_vote.add_argument("identifier", help="DNfer 账号 username 或昵称")
     p_vote.add_argument("options", nargs="+", help="选项文本（多选用空格分隔多个）")
-    p_vote.add_argument("--anon", action="store_true", help="投为匿名票")
     p_vote.set_defaults(func=cmd_vote)
 
     args = parser.parse_args()

@@ -36,8 +36,10 @@ DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnf_meeting.py vote 872557240 打
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
-  python scripts/dnf_meeting.py vote 872557240 打 周六 --anon
+  python scripts/dnf_meeting.py vote 872557240 打 周六
 ```
+
+> 机器人代投恒为实名投票（群聊公开，不提供匿名）。
 
 - stdout 为机器可读 JSON；stderr 为中文摘要。
 - 命令失败时退出码非 0，stdout 为 `{"ok":false,...}`。

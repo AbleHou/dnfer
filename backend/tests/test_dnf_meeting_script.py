@@ -43,12 +43,12 @@ def test_ballot_call_nickname_404_falls_back_to_account(monkeypatch):
             return {"ok": False, "status": 404, "error": "账号或昵称不存在"}
         return {"ok": True}
     monkeypatch.setattr(dnf_meeting, "_request", fake_request)
-    result = dnf_meeting._ballot_call(7, "872557240", [1], False)
+    result = dnf_meeting._ballot_call(7, "872557240", [1])
     assert result["ok"] is True
     assert len(calls) == 2
     assert calls[0][1].endswith("/api/public/votes/7/ballots")
-    assert calls[0][2] == {"nickname": "872557240", "option_ids": [1], "anonymous": False}
-    assert calls[1][2] == {"account": "872557240", "option_ids": [1], "anonymous": False}
+    assert calls[0][2] == {"nickname": "872557240", "option_ids": [1]}
+    assert calls[1][2] == {"account": "872557240", "option_ids": [1]}
 
 
 def test_ballot_call_non404_no_fallback(monkeypatch):
@@ -57,7 +57,7 @@ def test_ballot_call_non404_no_fallback(monkeypatch):
         calls.append((method, url, body))
         return {"ok": False, "status": 400, "error": "你已投票"}
     monkeypatch.setattr(dnf_meeting, "_request", fake_request)
-    result = dnf_meeting._ballot_call(7, "某人", [1], False)
+    result = dnf_meeting._ballot_call(7, "某人", [1])
     assert result == {"ok": False, "status": 400, "error": "你已投票"}
     assert len(calls) == 1
 
@@ -67,6 +67,6 @@ def test_ballot_call_success_vote_detail_is_success(monkeypatch):
     def fake_request(method, url, body=None):
         return {"id": 7, "title": "要不要开荒", "open": True}
     monkeypatch.setattr(dnf_meeting, "_request", fake_request)
-    result = dnf_meeting._ballot_call(7, "某人", [1], True)
+    result = dnf_meeting._ballot_call(7, "某人", [1])
     assert result.get("ok") is not False
     assert result["id"] == 7

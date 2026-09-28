@@ -136,6 +136,13 @@ def test_public_vote_endpoints(client, admin_headers, db):
     r = client.post(f"/api/public/votes/{vid}/ballots", headers=bot,
                     json={"option_ids": [1]})
     assert r.status_code == 422
+    # 机器人代投不支持匿名：传 anonymous 被忽略（Pydantic 忽略额外字段）→ 结果仍实名
+    _, anon_u = register_user(client, "u10", "机器人实名")
+    r = client.post(f"/api/public/votes/{vid}/ballots", headers=bot,
+                    json={"nickname": "机器人实名", "option_ids": [1], "anonymous": True})
+    assert r.status_code == 200
+    opt1 = next(o for o in r.json()["options"] if o["id"] == 1)
+    assert opt1["voters"] == ["机器人实名"]
 
 
 def test_cast_vote_concurrent_race_fallback(client, admin_headers, db):

@@ -27,9 +27,9 @@ python scripts/dnf_meeting.py list
 python scripts/dnf_meeting.py vote 872557240 打
 python scripts/dnf_meeting.py vote 龙应藏进云里 周五晚上
 python scripts/dnf_meeting.py vote 872557240 打 周六  # 多选
-# 投匿名票
-python scripts/dnf_meeting.py vote 872557240 打 --anon
 ```
+
+> 机器人代投恒为实名投票（群聊公开，不提供匿名）。
 
 stdout 只输出 JSON，直接解析它。`current` 的 `vote.options[]` 里有各选项 `text/count/voters`；`vote` 成功时 `vote.picked` 是被投中的选项文本列表。
 
@@ -39,7 +39,6 @@ stdout 只输出 JSON，直接解析它。`current` 的 `vote.options[]` 里有�
 |---|---|
 | 「当前投票 / 投票结果」 | `current` → 回复标题 + 各选项 `选项：n 票（投票人）` |
 | 「（QQ号或昵称）投（选项文本）」 | `vote <QQ号或昵称> <选项文本...>` |
-| 「（QQ号或昵称）投匿名的（选项）」 | `vote <QQ号或昵称> <选项文本> --anon` |
 | 「投票列表 / 历史投票」 | `list` |
 
 - 投票目标一律为「当前打开的投票」；`current` 返回 `vote=null` 时回复「当前没有进行中的投票」。
@@ -51,7 +50,7 @@ stdout 只输出 JSON，直接解析它。`current` 的 `vote.options[]` 里有�
 | stdout | 回复 |
 |---|---|
 | `{"ok":true,"vote":null,"reason":"no_open"}` | 「当前没有进行中的投票」 |
-| `vote` 成功 `{"ok":true,"vote":{...}}` | 「已帮 昵称/账号 投了《标题》：选项A、选项B」（`--anon` 时加一句「（匿名）」） |
+| `vote` 成功 `{"ok":true,"vote":{...}}` | 「已帮 昵称/账号 投了《标题》：选项A、选项B」 |
 | `{"ok":false,"status":400,"error":"你已投票"}` | 「该成员已投过这个投票了」 |
 | `{"ok":false,"status":400,"error":"投票已结束"}` | 「这个投票已结束」 |
 | `{"ok":false,"status":400,"error":"选项「X」不存在，可选：…"}` | 转述可用选项 |
