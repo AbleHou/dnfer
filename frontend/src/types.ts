@@ -35,4 +35,3 @@ export interface VoteListItem { id: number; title: string; multi_choice: boolean
 export interface VoteDetail { id: number; title: string; description: string; multi_choice: boolean;
   open: boolean; created_at: string; closed_at: string | null; options: VoteOptionItem[];
   total_voters: number; my_option_ids: number[]; my_voted: boolean }
-export interface VoteCreatePayload { title: string; description: string; multi_choice: boolean; options: string[] }

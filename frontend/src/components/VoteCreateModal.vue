@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import { api } from '../api/client'
 import { notifyError, notifySuccess } from '../lib/notify'
-import type { VoteCreatePayload } from '../types'
+import type { VoteDetail } from '../types'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'created'): void }>()
@@ -30,7 +30,7 @@ async function create() {
   if (new Set(list).size !== list.length) { error.value = '选项不能重复'; return }
   busy.value = true; error.value = ''
   try {
-    await api.post<VoteCreatePayload>('/api/admin/votes', {
+    await api.post<VoteDetail>('/api/admin/votes', {
       title: title.value.trim(), description: description.value.trim(),
       multi_choice: multiChoice.value, options: list,
     })
