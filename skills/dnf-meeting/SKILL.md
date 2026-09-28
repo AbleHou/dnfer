@@ -31,7 +31,7 @@ python scripts/dnf_meeting.py vote 872557240 打 周六  # 多选
 python scripts/dnf_meeting.py vote 872557240 打 --anon
 ```
 
-stdout 只输出 JSON，直接解析它。`current`/`vote` 的 `vote.options` 里有各选项 `text/count/voters`。
+stdout 只输出 JSON，直接解析它。`current` 的 `vote.options[]` 里有各选项 `text/count/voters`；`vote` 成功时 `vote.picked` 是被投中的选项文本列表。
 
 ## 触发映射
 
@@ -56,6 +56,7 @@ stdout 只输出 JSON，直接解析它。`current`/`vote` 的 `vote.options` �
 | `{"ok":false,"status":400,"error":"投票已结束"}` | 「这个投票已结束」 |
 | `{"ok":false,"status":400,"error":"选项「X」不存在，可选：…"}` | 转述可用选项 |
 | `{"ok":false,"status":400,"error":"单选投票只能投一个选项"}` | 「单选投票，只投一个选项即可」 |
+| `{"ok":false,"status":400,"error":"选项重复"}` | 「选项重复了，一个选项投一次即可」 |
 | `{"ok":false,"status":403,"error":"该用户已被封禁"}` | 「该成员已被封禁，无法投票」 |
 | `{"ok":false,"status":404,"error":"账号或昵称不存在"}` | 「这个账号/昵称还没注册，请发送『你的QQ号注册』自助注册」 |
 | `{"ok":false,"error":...}`（无 status，Token/网络） | 「系统暂时不可用，稍后再试」 |
