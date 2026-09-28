@@ -282,6 +282,11 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
         if user.is_admin:
             raise HTTPException(403, "该用户未报名，无法排表")
         raise HTTPException(403, "请先报名再占位")
+    # 团长自己的角色不受勾选约束；其余须已勾选该角色
+    if char.user_id != raid.created_by and char.id not in _selected_ids(db, raid, char.user_id):
+        if user.is_admin:
+            raise HTTPException(403, "该角色未报名，无法排表")
+        raise HTTPException(403, "请先勾选该角色再占位")
     removed: list[Slot] = []
     if body.replace:
         # 冲突即替换：同一角色已在其他格（任意波）或同玩家同波已有角色时，
@@ -635,7 +640,13 @@ def get_member_characters(rid: int, user_id: int, user: User = Depends(get_curre
         raise HTTPException(404, "用户不存在")
     if not _participates(db, raid, user_id):
         raise HTTPException(404, "该用户未参与本场攻坚")
-    chars = db.scalars(select(Character).where(Character.user_id == user_id)
-                       .order_by(Character.id)).all()
+    if user_id == raid.created_by:
+        # 团长不受勾选约束：返回全部角色
+        chars = db.scalars(select(Character).where(Character.user_id == user_id)
+                           .order_by(Character.id)).all()
+    else:
+        rs = db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
+                                         RaidSignup.user_id == user_id).first()
+        chars = [rsc.character for rsc in rs.characters]
     return PlayerCharacters(user=UserOut.model_validate(target),
                             characters=[character_out(c) for c in chars])
