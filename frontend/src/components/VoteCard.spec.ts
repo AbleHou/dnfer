@@ -56,17 +56,19 @@ describe('VoteCard', () => {
   })
   it('实名投票成功后回填我的选择', async () => {
     const wrapper = mount(VoteCard, { props: { vote: openVote } })
-    await wrapper.find('[data-act="opt-1"]').trigger('click')
+    await wrapper.find('[data-act="opt-1"]').trigger('click')  // 本地选中 [1]
     await wrapper.find('[data-act="vote"]').trigger('click')
     await flushPromises()
     expect(wrapper.emitted('refresh')).toHaveLength(1)
-    // 模拟父组件刷新后返回已投票详情（my_voted 从 false → true）
+    // 父组件刷新返回已投票详情，但 my_option_ids 与本地点击不同 → 必须靠 watcher 覆盖残留
     const voted = {
       ...openVote,
-      my_voted: true, my_option_ids: [1],
-      options: [{ ...openVote.options[0], count: 1, voters: ['某人'] }, openVote.options[1]],
+      my_voted: true, my_option_ids: [2],
+      options: [openVote.options[0], { ...openVote.options[1], count: 1, voters: ['某人'] }],
     }
     await wrapper.setProps({ vote: voted })
-    expect(wrapper.find('.vote-option.selected').exists()).toBe(true)
+    const lis = wrapper.findAll('.vote-option')
+    expect(lis[0].classes()).not.toContain('selected')  // 旧残留 [1] 被覆盖
+    expect(lis[1].classes()).toContain('selected')      // 由 my_option_ids=[2] 回填
   })
 })
