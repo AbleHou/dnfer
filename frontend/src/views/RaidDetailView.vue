@@ -49,7 +49,7 @@ const signupCharsByUser = computed<Record<number, number[]>>(() => {
   const m: Record<number, number[]> = {}
   for (const s of store.raid?.signups ?? []) {
     if (s.created_at === null) continue  // 团长固定行跳过（否则空数组会过滤掉团长全部角色）
-    m[s.user.id] = s.characters?.map(c => c.id) ?? []
+    m[s.user.id] = s.characters.map(c => c.id)
   }
   return m
 })
@@ -241,7 +241,7 @@ async function onSaveRaid() {
           </button>
           <span>{{ s.user.nickname }}</span>
           <span v-if="s.created_at === null" class="dnf-badge dnf-badge-ok">团长</span>
-          <div v-if="s.created_at !== null && s.characters?.length" class="signup-chips">
+          <div v-if="s.created_at !== null && s.characters.length" class="signup-chips">
             <span v-for="c in s.characters" :key="c.id" class="signup-chip">
               {{ c.name }}
               <button v-if="s.user.id === auth.user?.id && !store.raid.locked"

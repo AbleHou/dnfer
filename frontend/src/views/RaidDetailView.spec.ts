@@ -33,8 +33,8 @@ vi.mock('../lib/notify', () => ({
 
 const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false }
 const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
-const adminRow = { user: admin, created_at: null }
-const memberRow = { user: member, created_at: '2026-09-22T10:00:00' }
+const adminRow = { user: admin, created_at: null, characters: [] }
+const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters: [] }
 
 function makeRaid(signups: Raid['signups']): Raid {
   return {
@@ -67,7 +67,7 @@ async function mountView(signups: Raid['signups']) {
       stubs: {
         'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
         SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
-        teleport: true,
+        SignupModal: true, teleport: true,
       },
     },
   }), auth, store }
@@ -122,7 +122,7 @@ describe('RaidDetailView enhance', () => {
         stubs: {
           'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
           SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
-          teleport: true,
+          SignupModal: true, teleport: true,
         },
       },
     })
@@ -162,5 +162,41 @@ describe('RaidDetailView enhance', () => {
     await wrapper.find('[data-test="save-raid"]').trigger('click')
     await flushPromises()
     expect(apiMock.put).toHaveBeenCalledWith('/api/raids/1', { name: '新名字', starts_at: '2026-09-20T14:00:00' })
+  })
+
+  it('未报名用户可见报名按钮，点击打开 SignupModal（signup 模式）', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 99, username: 'newbie', nickname: '新人', is_admin: false, avatar: null, is_banned: false }
+    const store = useRaidStore()
+    store.raid = makeRaid([adminRow, memberRow])
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids/1') return makeRaid([adminRow, memberRow])
+      return []
+    })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/raids/:id', component: RaidDetailView }],
+    })
+    await router.push('/raids/1')
+    await router.isReady()
+    const wrapper = mount(RaidDetailView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
+          SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
+          SignupModal: true, teleport: true,
+        },
+      },
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-test="signup"]').exists()).toBe(true)
+    await wrapper.find('[data-test="signup"]').trigger('click')
+    await flushPromises()
+    const modal = wrapper.findComponent({ name: 'SignupModal' })
+    expect(modal.exists()).toBe(true)
+    expect(modal.props('mode')).toBe('signup')
   })
 })
