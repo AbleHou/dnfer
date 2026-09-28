@@ -85,14 +85,25 @@ describe('raid store', () => {
     const store = useRaidStore()
     store.raid = makeRaid()
     const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
-    applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00' })
+    applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00', characters: [] })
     expect(store.raid!.signups).toHaveLength(1)
     expect(store.raid!.signups[0].user.id).toBe(9)
     // 同用户重复事件 → 去重
-    applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:01:00' })
+    applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:01:00', characters: [] })
     expect(store.raid!.signups).toHaveLength(1)
     applyEvent(store, { type: 'raid:signup_removed', user_id: 9 })
     expect(store.raid!.signups).toHaveLength(0)
+  })
+
+  it('raid:signup_chars_changed 更新对应行勾选角色', () => {
+    setActivePinia(createPinia())
+    const store = useRaidStore()
+    store.raid = makeRaid()
+    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
+    applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00', characters: [] })
+    const chars = [{ id: 1, name: '剑魂', job_title: '极诣·剑魂', class_type: '输出' as const }]
+    applyEvent(store, { type: 'raid:signup_chars_changed', user_id: 9, characters: chars })
+    expect(store.raid!.signups[0].characters).toEqual(chars)
   })
 
   it('applies raid:updated', () => {

@@ -7,7 +7,8 @@ export interface AdminCharacterRow extends Character {
   owner_id: number; owner_nickname: string; owner_username: string; owner_is_banned: boolean
 }
 export interface CharacterQueryResult { items: AdminCharacterRow[]; total: number }
-export interface RaidSignup { user: User; created_at: string | null }
+export interface SignupCharacter { id: number; name: string; job_title: string; class_type: ClassType }
+export interface RaidSignup { user: User; created_at: string | null; characters: SignupCharacter[] }
 export interface Character { id: number; name: string; job_name: string; job_title: string;
   parent_name: string; class_type: ClassType; fame: number;
   simulated_damage: number | null; sustained_dps: number | null; buff_amount: number | null }

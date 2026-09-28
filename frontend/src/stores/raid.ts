@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
-import type { Raid, RaidSignup, Slot, User } from '../types'
+import type { Raid, RaidSignup, SignupCharacter, Slot, User } from '../types'
 
 export type WsEvent =
   | { type: 'slot:filled'; slot: Slot }
@@ -10,7 +10,8 @@ export type WsEvent =
   | { type: 'wave:removed'; index: number }
   | { type: 'raid:locked' }
   | { type: 'raid:unlocked' }
-  | { type: 'raid:signup'; user: User; created_at: string | null }
+  | { type: 'raid:signup'; user: User; created_at: string | null; characters: SignupCharacter[] }
+  | { type: 'raid:signup_chars_changed'; user_id: number; characters: SignupCharacter[] }
   | { type: 'raid:signup_removed'; user_id: number }
   | { type: 'raid:updated'; name: string; starts_at: string }
 
@@ -56,8 +57,13 @@ export function applyEvent(store: ReturnType<typeof useRaidStore>, ev: WsEvent) 
     case 'raid:signup':
       raid.signups ??= []
       raid.signups = raid.signups.filter(s => s.user.id !== ev.user.id)
-      raid.signups.push({ user: ev.user, created_at: ev.created_at })
+      raid.signups.push({ user: ev.user, created_at: ev.created_at, characters: ev.characters ?? [] })
       break
+    case 'raid:signup_chars_changed': {
+      const row = raid.signups.find(s => s.user.id === ev.user_id)
+      if (row) row.characters = ev.characters
+      break
+    }
     case 'raid:signup_removed':
       raid.signups ??= []
       raid.signups = raid.signups.filter(s => s.user.id !== ev.user_id)
