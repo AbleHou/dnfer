@@ -2,10 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import VoteCard from './VoteCard.vue'
+import { confirmDialog } from '../lib/notify'
 
 const { apiMock } = vi.hoisted(() => ({ apiMock: { post: vi.fn(), del: vi.fn() } }))
 vi.mock('../api/client', () => ({ api: apiMock, getToken: vi.fn(() => 'tok') }))
-vi.mock('../lib/notify', () => ({ notifyError: vi.fn(), notifySuccess: vi.fn(), notifyWarning: vi.fn() }))
+vi.mock('../lib/notify', () => ({
+  confirmDialog: vi.fn(async () => true), notifyError: vi.fn(), notifySuccess: vi.fn(), notifyWarning: vi.fn(),
+}))
 
 const openVote = {
   id: 1, title: '要不要开荒', description: '', multi_choice: false, open: true,
@@ -36,6 +39,20 @@ describe('VoteCard', () => {
     await flushPromises()
     expect(apiMock.post).toHaveBeenCalledWith('/api/votes/1/ballots',
       { option_ids: [1], anonymous: true })
+  })
+  it('非管理员不显示关闭按钮', async () => {
+    const wrapper = mount(VoteCard, { props: { vote: openVote } })
+    expect(wrapper.find('[data-act="close"]').exists()).toBe(false)
+  })
+  it('管理员可关闭投票并触发 refresh', async () => {
+    apiMock.post.mockResolvedValue(openVote)
+    const wrapper = mount(VoteCard, { props: { vote: openVote, isAdmin: true } })
+    expect(wrapper.find('[data-act="close"]').exists()).toBe(true)
+    await wrapper.find('[data-act="close"]').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/admin/votes/1/close')
+    expect(wrapper.emitted('refresh')).toHaveLength(1)
   })
   it('已实名投票不显示投票按钮', async () => {
     const voted = { ...openVote, my_voted: true, my_option_ids: [1],

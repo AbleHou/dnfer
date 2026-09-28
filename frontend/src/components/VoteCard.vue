@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { api } from '../api/client'
-import { notifyError, notifySuccess, notifyWarning } from '../lib/notify'
+import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { VoteDetail } from '../types'
 
-const props = defineProps<{ vote: VoteDetail }>()
+const props = defineProps<{ vote: VoteDetail; isAdmin?: boolean }>()
 const emit = defineEmits<{ (e: 'refresh'): void }>()
 
 const maskUp = ref(false)        // 面罩状态（纯前端）
@@ -41,6 +41,16 @@ async function submitVote() {
     emit('refresh')
   } catch (e: any) { notifyError(e.message) }
 }
+
+async function closeVote() {
+  const ok = await confirmDialog({ content: `确认关闭投票「${props.vote.title}」？关闭后不可再投票` })
+  if (!ok) return
+  try {
+    await api.post(`/api/admin/votes/${props.vote.id}/close`)
+    notifySuccess('投票已关闭')
+    emit('refresh')
+  } catch (e: any) { notifyError(e.message) }
+}
 </script>
 
 <template>
@@ -51,6 +61,7 @@ async function submitVote() {
         {{ isOpen ? '进行中' : '已结束' }}</span>
       <span v-if="isMulti" class="dnf-badge">多选</span>
       <span class="vote-voters">{{ vote.total_voters }} 人已投</span>
+      <button v-if="isAdmin && isOpen" class="dnf-btn dnf-btn-sm" data-act="close" @click="closeVote">关闭投票</button>
     </div>
     <p v-if="vote.description" class="vote-desc">{{ vote.description }}</p>
     <div v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-mask">
@@ -75,13 +86,15 @@ async function submitVote() {
     </ul>
     <p v-if="votedAnon" class="vote-note">你已匿名投票，本会话内无法修改或撤销</p>
     <p v-else-if="isOpen && vote.my_voted" class="vote-note">你已投票</p>
-    <button v-if="isOpen && !votedAnon && !vote.my_voted" class="dnf-btn dnf-btn-primary dnf-btn-sm"
+    <button v-if="isOpen && !votedAnon && !vote.my_voted" class="dnf-btn dnf-btn-primary dnf-btn-sm vote-submit"
             data-act="vote" @click="submitVote">投票</button>
   </div>
 </template>
 
 <style scoped>
+.vote-card { padding:16px }
 .vote-head { display:flex; align-items:center; gap:8px; margin-bottom:8px }
+.vote-submit { margin-top:12px }
 .vote-title { font-size:15px; color:var(--dnf-text,#e6e9ef) }
 .vote-voters { font-size:12px; color:var(--dnf-text-muted,#9aa3b2); margin-left:auto }
 .vote-desc { color:var(--dnf-text-muted,#9aa3b2); margin:4px 0 8px }
