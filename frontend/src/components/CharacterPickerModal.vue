@@ -9,8 +9,9 @@ import type { Character, Duty, PlayerCharacters, CharacterPlacement } from '../t
 
 const props = withDefaults(defineProps<{
   open: boolean; adminMode?: boolean; signupUserIds?: number[]
+  signupCharsByUser?: Record<number, number[]>
   placed?: Record<number, CharacterPlacement>
-}>(), { placed: () => ({}) })
+}>(), { placed: () => ({}), signupCharsByUser: () => ({}) })
 const emit = defineEmits<{ (e: 'close'): void; (e: 'select', c: Character, duty: Duty): void }>()
 const auth = useAuthStore()
 const characters = ref<Character[]>([])
@@ -27,16 +28,21 @@ watch(() => props.open, async (open) => {
       .filter(p => ids.has(p.user.id))
     const mine = players.value.find(p => p.user.id === auth.user?.id) ?? players.value[0]
     playerId.value = mine?.user.id ?? null
-    characters.value = mine?.characters ?? []
+    characters.value = filterBySignup(mine?.characters ?? [])
   } else {
-    characters.value = await api.get<Character[]>('/api/me/characters')
+    characters.value = filterBySignup(await api.get<Character[]>('/api/me/characters'))
   }
 }, { immediate: true })
 
+function filterBySignup(list: Character[]): Character[] {
+  const key = props.adminMode ? (playerId.value ?? -1) : (auth.user?.id ?? -1)
+  const ids = props.signupCharsByUser[key]
+  return ids ? list.filter(c => ids.includes(c.id)) : list
+}
 function onPlayerChange(id: number) {
   playerId.value = id
   selected.value = null
-  characters.value = players.value.find(p => p.user.id === id)?.characters ?? []
+  characters.value = filterBySignup(players.value.find(p => p.user.id === id)?.characters ?? [])
 }
 function choose(c: Character) { selected.value = c; duty.value = defaultDuty(c.class_type) }
 function confirmPick() { if (selected.value) emit('select', selected.value, duty.value) }
