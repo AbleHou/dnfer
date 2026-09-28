@@ -2,6 +2,37 @@
 
 本项目所有值得记录的版本变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [v1.8] - 2026-09-24
+
+管理面板拆分为三个独立页面，新增用户管理（用户搜索 / 软封禁 / 按玩家管理角色 / 角色富查询）。
+
+### 新增
+
+- **管理面板拆三页**：管理入口拆分为「邀请码管理 / 用户管理 / 副本管理」三个独立页面 + 子导航（AdminNav），删除原 AdminView；`/admin` 重定向到 `/admin/codes`
+- **用户管理页**：上半角色富查询区（职业类别输出/辅助、具体职业、角色名关键词、归属玩家四类筛选；名望/模拟伤害/持续输出/增益量/角色名排序 + 升降序切换；分页），下半用户列表区（昵称/用户名模糊搜索，展示管理员标记、角色数、封禁状态）
+- **角色富查询**：`GET /api/admin/characters/query` 按 job_name / class_type / keyword / owner 筛选，5 种排序（数值列 NULLS LAST + id tie-break），limit(≤200)/offset 分页并返回过滤后 total
+- **按玩家管理角色**：`GET/POST /api/admin/users/{uid}/characters`、`PUT/DELETE .../characters/{cid}`；前端弹窗复用 CharacterForm（新增 `baseUrl` prop，默认 `/api/me/characters`）
+- **封禁 / 解封（软封禁）**：`POST /api/admin/users/{uid}/ban|unban`；被禁用户可登录查看，但禁止报名攻坚、禁止被排进位置、禁止新建攻坚，机器人替报名同样拒绝；封禁保留既有报名与占位、不广播 WS，解封恢复；规则上不可封禁管理员或自己
+- **用户列表增强**：`GET /api/admin/users?q=` 昵称/用户名模糊，返回 `character_count` / `is_banned`
+
+### 变更
+
+- **后端管理端点收敛**：admin 端点迁入 `routers/admin.py`（`/api/admin/*`，URL 与响应兼容），`auth.py` 回归纯认证
+- **共享角色逻辑抽取**：`character_out / validate_job / apply_character_payload / delete_character_if_free` 抽到 `services/characters.py`，members / raids / bot / admin 复用
+
+### 修复
+
+- **封禁信息泄露**：fill_slot 先校验角色归属再查封禁状态，避免向无权用户泄露封禁信息
+- **角色查询竞态**：筛选参数变化触发的并发查询加请求序号，旧响应不再覆盖新结果
+- **封禁按钮误显**：用户列表对管理员行隐藏封禁按钮（与「不可封管理员」规则一致）
+- **职业列表失败兜底**：`getJobs` 拉取失败时查询页不报错，职业筛选项留空即可用
+- **弹窗关闭刷新**：按玩家管理角色弹窗关闭后同时刷新角色查询与用户列表，保证角色数与查询行与弹窗内增删改一致
+
+### 工程
+
+- `User` 模型新增 `is_banned` 列 + 存量库幂等迁移 `migrate_users_ban`
+- `UserOut` 增加 `is_banned`（带默认），新增 `AdminUserOut` / `AdminCharacterRow` / `CharacterQueryResult` schema；前端 `types.ts` 同步补对应类型
+
 ## [v1.7] - 2026-09-23
 
 ### 新增
