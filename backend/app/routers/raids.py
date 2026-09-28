@@ -487,6 +487,71 @@ async def signup(rid: int, body: SignupIn | None = None,
     return {"ok": True}
 
 
+@router.post("/{rid}/signup/characters/{cid}")
+async def add_signup_character(rid: int, cid: int,
+                               user: User = Depends(get_current_user),
+                               db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if user.is_banned:
+        raise HTTPException(403, "你已被封禁，无法报名")
+    if user.id == raid.created_by:
+        raise HTTPException(400, "团长无需报名")
+    if raid.locked:
+        raise HTTPException(403, "攻坚已锁定，无法修改报名")
+    rs = _own_signup(db, raid, user)
+    char = db.get(Character, cid)
+    if char is None or char.user_id != user.id:
+        raise HTTPException(400, "只能勾选自己的角色")
+    if any(rsc.character_id == cid for rsc in rs.characters):
+        raise HTTPException(400, "该角色已在报名中")
+    rs.characters.append(RaidSignupCharacter(character_id=cid))
+    db.commit()
+    await manager.broadcast(rid, {"type": "raid:signup_chars_changed",
+                                  "user_id": user.id,
+                                  "characters": [c.model_dump() for c in _signup_characters(rs)]})
+    return {"ok": True}
+
+
+@router.delete("/{rid}/signup/characters/{cid}")
+async def remove_signup_character(rid: int, cid: int,
+                                  user: User = Depends(get_current_user),
+                                  db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if user.is_banned:
+        raise HTTPException(403, "你已被封禁，无法报名")
+    if user.id == raid.created_by:
+        raise HTTPException(400, "团长无需报名")
+    if raid.locked:
+        raise HTTPException(403, "攻坚已锁定，无法修改报名")
+    rs = _own_signup(db, raid, user)
+    target = next((rsc for rsc in rs.characters if rsc.character_id == cid), None)
+    if target is None:
+        raise HTTPException(400, "该角色不在报名中")
+    if len(rs.characters) <= 1:
+        raise HTTPException(400, "至少保留一个角色")
+    # 撤销该角色在本场全部波次的占位
+    removed = db.query(Slot).filter(Slot.wave.has(raid_id=raid.id),
+                                    Slot.character_id == cid).all()
+    for s in removed:
+        _clear_slot(s)
+    db.delete(target)
+    db.commit()
+    for s in removed:
+        await manager.broadcast(rid, {"type": "slot:removed", "slot_id": s.id})
+    await manager.broadcast(rid, {"type": "raid:signup_chars_changed",
+                                  "user_id": user.id,
+                                  "characters": [c.model_dump() for c in _signup_characters(rs)]})
+    return {"ok": True}
+
+
+def _own_signup(db: Session, raid: Raid, user: User) -> RaidSignup:
+    rs = db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
+                                     RaidSignup.user_id == user.id).first()
+    if rs is None:
+        raise HTTPException(400, "你尚未报名")
+    return rs
+
+
 async def _remove_signup(db: Session, raid: Raid, user_id: int) -> dict:
     """删除报名行（ORM 级联清 raid_signup_characters）+ 撤下该用户全部占位，并广播。"""
     rs = db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
