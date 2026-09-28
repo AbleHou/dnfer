@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session, selectinload
 from .. import jobs as job_data
 from ..auth import get_current_user, require_admin
 from ..db import get_db
-from ..models import Character, Dungeon, Raid, RaidSignup, Slot, User, Wave
+from ..models import (Character, Dungeon, Raid, RaidSignup, RaidSignupCharacter,
+                      Slot, User, Wave)
 from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, PlayerCharacters,
                        RaidCreate, RaidDetail, RaidListItem, RaidSignupOut,
-                       RaidUpdate, SignupUserIn, SlotMutationResult, SlotOut,
-                       UserOut, WaveOut)
+                       RaidUpdate, SignupCharacterOut, SignupIn, SignupUserIn,
+                       SlotMutationResult, SlotOut, UserOut, WaveOut)
 from ..services.characters import character_out
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
@@ -65,6 +66,51 @@ def _participates(db: Session, raid: Raid, user_id: int) -> bool:
     return db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
                                        RaidSignup.user_id == user_id).first() is not None
 
+def _signup_char_out(c: Character) -> SignupCharacterOut:
+    meta = job_data.job_meta(c.job_name) or {}
+    return SignupCharacterOut(id=c.id, name=c.name,
+                              job_title=meta.get("title", ""),
+                              class_type=c.class_type)
+
+
+def _signup_characters(rs: RaidSignup) -> list[SignupCharacterOut]:
+    """报名行勾选的角色（SignupCharacterOut 列表，保持插入顺序）。"""
+    return [_signup_char_out(rsc.character) for rsc in rs.characters]
+
+
+def _signup_out(rs: RaidSignup) -> RaidSignupOut:
+    return RaidSignupOut(user=UserOut.model_validate(rs.user),
+                         created_at=rs.created_at,
+                         characters=_signup_characters(rs))
+
+
+def _selected_ids(db: Session, raid: Raid, user_id: int) -> set[int]:
+    """某用户在本场报名中勾选的角色 id 集合。"""
+    rs = db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
+                                     RaidSignup.user_id == user_id).first()
+    return {rsc.character_id for rsc in rs.characters} if rs else set()
+
+
+def _signup_user(db: Session, raid: Raid, user: User,
+                 character_ids: list[int] | None = None) -> RaidSignup:
+    """建报名行 + 勾选角色（signup / admin_signup / bot_signup 复用）。
+    character_ids=None → 该用户全部角色；显式空列表 → 400。"""
+    if character_ids is None:
+        character_ids = [c.id for c in db.scalars(
+            select(Character).where(Character.user_id == user.id)).all()]
+    else:
+        character_ids = list(dict.fromkeys(character_ids))  # 去重，防唯一约束 500
+    if not character_ids:
+        raise HTTPException(400, "至少选择一个角色")
+    owned = set(db.scalars(select(Character.id).where(
+        Character.user_id == user.id)).all())
+    if not set(character_ids).issubset(owned):
+        raise HTTPException(400, "只能勾选自己的角色")
+    rs = RaidSignup(raid_id=raid.id, user_id=user.id)
+    rs.characters = [RaidSignupCharacter(character_id=cid) for cid in character_ids]
+    db.add(rs)
+    return rs
+
 def _detail(db: Session, raid: Raid) -> RaidDetail:
     waves = []
     for w in raid.waves:
@@ -72,12 +118,12 @@ def _detail(db: Session, raid: Raid) -> RaidDetail:
                              slots=[_slot_out(s) for s in w.slots]))
     signups = [RaidSignupOut(user=UserOut.model_validate(db.get(User, raid.created_by)),
                              created_at=None)]
-    for rs in db.query(RaidSignup).options(selectinload(RaidSignup.user)) \
+    for rs in db.query(RaidSignup).options(selectinload(RaidSignup.user),
+                                           selectinload(RaidSignup.characters)) \
             .filter(RaidSignup.raid_id == raid.id,
                     RaidSignup.user_id != raid.created_by) \
             .order_by(RaidSignup.created_at).all():
-        signups.append(RaidSignupOut(user=UserOut.model_validate(rs.user),
-                                     created_at=rs.created_at))
+        signups.append(_signup_out(rs))
     return RaidDetail(id=raid.id, name=raid.name, dungeon_id=raid.dungeon_id,
                       dungeon_name=raid.dungeon.name, size=raid.size,
                       locked=raid.locked, starts_at=raid.starts_at, waves=waves,
@@ -441,9 +487,11 @@ async def signup(rid: int, user: User = Depends(get_current_user), db: Session =
 
 
 async def _remove_signup(db: Session, raid: Raid, user_id: int) -> dict:
-    """删除报名行 + 撤下该用户全部占位，并广播。"""
-    db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
-                                RaidSignup.user_id == user_id).delete()
+    """删除报名行（ORM 级联清 raid_signup_characters）+ 撤下该用户全部占位，并广播。"""
+    rs = db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
+                                     RaidSignup.user_id == user_id).first()
+    if rs is not None:
+        db.delete(rs)  # ORM 级联清 raid_signup_characters 子行
     removed = db.query(Slot) \
         .filter(Slot.wave.has(raid_id=raid.id),
                 Slot.character.has(user_id=user_id)).all()
