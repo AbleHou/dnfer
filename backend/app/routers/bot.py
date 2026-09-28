@@ -8,11 +8,13 @@ from sqlalchemy.orm import Session
 from .. import jobs as job_data
 from ..auth import hash_password, require_api_token
 from ..db import get_db
-from ..models import Character, RaidSignup, User
+from ..models import Character, RaidSignup, User, Vote
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
-                       BotCharactersOut, BotRegisterIn, BotSignupIn, UserOut)
+                       BotCharactersOut, BotRegisterIn, BotSignupIn, PublicVoteBallotIn,
+                       UserOut, VoteDetail, VoteListItem)
 from ..routers.raids import _raid_or_404, _remove_signup
 from ..services.characters import character_out
+from ..services.votes import _vote_or_404, cast_vote, vote_detail, vote_list_item
 from ..ws import manager
 
 router = APIRouter(prefix="/api/public", tags=["bot"],
@@ -158,3 +160,22 @@ async def bot_cancel_signup(rid: int, body: BotSignupIn, db: Session = Depends(g
             "user": UserOut.model_validate(user).model_dump(),
             "raid": {"id": raid.id, "name": raid.name,
                      "starts_at": raid.starts_at.isoformat()}}
+
+@router.get("/votes", response_model=list[VoteListItem])
+def list_votes(db: Session = Depends(get_db)):
+    return [vote_list_item(db, v) for v in db.query(Vote).order_by(Vote.id.desc()).all()]
+
+
+@router.get("/votes/{vid}", response_model=VoteDetail)
+def get_vote(vid: int, db: Session = Depends(get_db)):
+    return vote_detail(db, _vote_or_404(db, vid))
+
+
+@router.post("/votes/{vid}/ballots", response_model=VoteDetail)
+def cast_ballot(vid: int, body: PublicVoteBallotIn, db: Session = Depends(get_db)):
+    user = _get_user(db, body.account, body.nickname)
+    if user.is_banned:
+        raise HTTPException(403, "该用户已被封禁")
+    vote = _vote_or_404(db, vid)
+    cast_vote(db, vote, user.id, body.option_ids, body.anonymous)
+    return vote_detail(db, vote)
