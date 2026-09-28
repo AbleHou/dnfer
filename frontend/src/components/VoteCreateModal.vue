@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import { api } from '../api/client'
 import { notifyError, notifySuccess } from '../lib/notify'
+import type { VoteCreatePayload } from '../types'
 
-defineProps<{ open: boolean }>()
+const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'created'): void }>()
 
 const title = ref('')
@@ -20,6 +21,7 @@ function reset() {
   title.value = ''; description.value = ''; multiChoice.value = false
   options.value = ['', '']; error.value = ''
 }
+watch(() => props.open, (v) => { if (v) reset() })
 
 async function create() {
   const list = options.value.map(o => o.trim()).filter(Boolean)
@@ -28,7 +30,7 @@ async function create() {
   if (new Set(list).size !== list.length) { error.value = '选项不能重复'; return }
   busy.value = true; error.value = ''
   try {
-    await api.post('/api/admin/votes', {
+    await api.post<VoteCreatePayload>('/api/admin/votes', {
       title: title.value.trim(), description: description.value.trim(),
       multi_choice: multiChoice.value, options: list,
     })
@@ -62,3 +64,9 @@ async function create() {
     </div>
   </n-modal>
 </template>
+
+<style scoped>
+.vote-form { display:flex; flex-direction:column; gap:10px }
+.vote-check { display:flex; align-items:center; gap:6px; color:var(--dnf-text-muted,#9aa3b2) }
+.vote-opt-row { display:flex; gap:8px; align-items:center }
+</style>

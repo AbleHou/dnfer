@@ -11,8 +11,11 @@ const maskUp = ref(false)        // 面罩状态（纯前端）
 const votedAnon = ref(false)     // 本会话内已匿名投过（后端无身份可查）
 const selected = ref<number[]>([])
 
-watch(() => props.vote, () => {
-  if (!votedAnon.value) selected.value = [...props.vote.my_option_ids]
+let prevMyVoted = false
+watch(() => props.vote, (v) => {
+  if (votedAnon.value) return
+  if (v.my_voted && !prevMyVoted) selected.value = [...v.my_option_ids]
+  prevMyVoted = v.my_voted
 }, { immediate: true })
 
 const isOpen = computed(() => props.vote.open)
@@ -50,7 +53,7 @@ async function submitVote() {
       <span class="vote-voters">{{ vote.total_voters }} 人已投</span>
     </div>
     <p v-if="vote.description" class="vote-desc">{{ vote.description }}</p>
-    <div v-if="isOpen && !votedAnon" class="vote-mask">
+    <div v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-mask">
       <button class="dnf-btn dnf-btn-sm" data-act="mask" @click="maskUp = !maskUp">
         {{ maskUp ? '拉下面罩' : '拉起面罩' }}</button>
       <span v-if="maskUp" class="vote-note">面罩已拉起：本次投票将记作匿名</span>
@@ -76,3 +79,19 @@ async function submitVote() {
             data-act="vote" @click="submitVote">投票</button>
   </div>
 </template>
+
+<style scoped>
+.vote-head { display:flex; align-items:center; gap:8px; margin-bottom:8px }
+.vote-title { font-size:15px; color:var(--dnf-text,#e6e9ef) }
+.vote-voters { font-size:12px; color:var(--dnf-text-muted,#9aa3b2); margin-left:auto }
+.vote-desc { color:var(--dnf-text-muted,#9aa3b2); margin:4px 0 8px }
+.vote-mask { margin:8px 0; display:flex; gap:8px; align-items:center }
+.vote-note { font-size:12px; color:var(--dnf-text-faint,#7a8291) }
+.vote-options { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px }
+.vote-option { border:1px solid var(--dnf-border,#3a3f4b); border-radius:6px; padding:8px 10px; transition:border-color .15s }
+.vote-option.selected { border-color:var(--dnf-accent,#ffd54a) }
+.vote-option-row { display:flex; justify-content:space-between; align-items:center; gap:8px }
+button.vote-option-row { width:100%; background:none; border:none; color:inherit; cursor:pointer; text-align:left; padding:0; font-size:14px }
+.vote-opt-count { color:var(--dnf-text-muted,#9aa3b2); font-size:12px }
+.vote-foot { margin-top:10px }
+</style>

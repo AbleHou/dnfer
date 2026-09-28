@@ -12,9 +12,11 @@ const showCreate = ref(false)
 let timer: number | undefined
 
 async function load() {
-  const list = await api.get<VoteListItem[]>('/api/votes')
-  votes.value = await Promise.all(
-    list.map(v => api.get<VoteDetail>(`/api/votes/${v.id}`)))
+  try {
+    const list = await api.get<VoteListItem[]>('/api/votes')
+    votes.value = await Promise.all(
+      list.map(v => api.get<VoteDetail>(`/api/votes/${v.id}`)))
+  } catch { /* 轮询失败静默，保留旧数据 */ }
 }
 function startPolling() { timer = window.setInterval(load, 5000) }
 function stopPolling() { if (timer) { clearInterval(timer); timer = undefined } }
