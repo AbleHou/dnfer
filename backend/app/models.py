@@ -101,6 +101,18 @@ class RaidSignup(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     raid: Mapped[Raid] = relationship(back_populates="signups")
     user: Mapped[User] = relationship()
+    characters: Mapped[list["RaidSignupCharacter"]] = relationship(
+        back_populates="signup", cascade="all, delete-orphan")
+
+class RaidSignupCharacter(Base):
+    __tablename__ = "raid_signup_characters"
+    __table_args__ = (UniqueConstraint("signup_id", "character_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    signup_id: Mapped[int] = mapped_column(ForeignKey("raid_signups.id"), index=True)
+    character_id: Mapped[int] = mapped_column(ForeignKey("characters.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    signup: Mapped["RaidSignup"] = relationship(back_populates="characters")
+    character: Mapped["Character"] = relationship()
 
 class Vote(Base):
     __tablename__ = "votes"
