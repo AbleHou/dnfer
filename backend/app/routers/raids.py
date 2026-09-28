@@ -505,7 +505,11 @@ async def add_signup_character(rid: int, cid: int,
     if any(rsc.character_id == cid for rsc in rs.characters):
         raise HTTPException(400, "该角色已在报名中")
     rs.characters.append(RaidSignupCharacter(character_id=cid))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # 并发重复勾选兜底：唯一约束命中 → 视为已勾选
+        db.rollback()
+        raise HTTPException(400, "该角色已在报名中")
     await manager.broadcast(rid, {"type": "raid:signup_chars_changed",
                                   "user_id": user.id,
                                   "characters": [c.model_dump() for c in _signup_characters(rs)]})
