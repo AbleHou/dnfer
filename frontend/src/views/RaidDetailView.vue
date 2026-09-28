@@ -15,6 +15,7 @@ import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib
 import { buildPlacementMap } from '../lib/placement'
 import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
+import SignupModal from '../components/SignupModal.vue'
 import { NDatePicker, NInput, NModal } from 'naive-ui'
 import type { Character, CharacterPlacement, Duty, RaidSignup, Slot, User } from '../types'
 
@@ -39,6 +40,19 @@ const memberModalUser = ref<User | null>(null)
 const showEditRaid = ref(false)
 const editName = ref('')
 const editStartsAt = ref<string | null>(null)
+const showSignupModal = ref(false)
+const signupMode = ref<'signup' | 'manage'>('signup')
+const signupSelected = ref<number[]>([])
+const myRow = computed(() =>
+  store.raid?.signups.find(s => s.user.id === auth.user?.id) ?? null)
+const signupCharsByUser = computed<Record<number, number[]>>(() => {
+  const m: Record<number, number[]> = {}
+  for (const s of store.raid?.signups ?? []) {
+    if (s.created_at === null) continue  // 团长固定行跳过（否则空数组会过滤掉团长全部角色）
+    m[s.user.id] = s.characters?.map(c => c.id) ?? []
+  }
+  return m
+})
 
 async function load() { await store.load(rid) }
 
@@ -55,10 +69,51 @@ function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape' && movingSlot.valu
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => { disconnect?.(); window.removeEventListener('keydown', onKeydown) })
 
-async function onSignup() {
+function openSignupModal() {
+  signupMode.value = 'signup'
+  showSignupModal.value = true
+}
+async function onSignupSubmit(ids: number[]) {
   if (!store.raid) return
-  try { await api.post(`/api/raids/${store.raid.id}/signup`); notifySuccess('报名成功'); await load() }
-  catch (e: any) { notifyError(e.message) }
+  try {
+    await api.post(`/api/raids/${store.raid.id}/signup`, { character_ids: ids })
+    notifySuccess('报名成功')
+    showSignupModal.value = false
+    await load()
+  } catch (e: any) { notifyError(e.message) }
+}
+function openManageSignup() {
+  if (!myRow.value) return
+  signupMode.value = 'manage'
+  signupSelected.value = myRow.value.characters.map(c => c.id)
+  showSignupModal.value = true
+}
+async function onToggleSignupChar(cid: number, checked: boolean) {
+  if (!store.raid) return
+  if (!checked && placed.value[cid]) {
+    const ok = await confirmDialog({ content: '该角色已占位，取消勾选将撤销其占位，确认？' })
+    if (!ok) return
+  }
+  try {
+    if (checked) await api.post(`/api/raids/${store.raid.id}/signup/characters/${cid}`)
+    else await api.del(`/api/raids/${store.raid.id}/signup/characters/${cid}`)
+    await load()
+    // 同步本地勾选态，让管理弹窗复选框即时反映（API 失败则不更新 → 自动还原）
+    signupSelected.value = checked
+      ? [...signupSelected.value, cid]
+      : signupSelected.value.filter(x => x !== cid)
+  } catch (e: any) { notifyError(e.message) }
+}
+async function onRemoveSignupChar(cid: number) {
+  if (!store.raid) return
+  if (placed.value[cid]) {
+    const ok = await confirmDialog({ content: '该角色已占位，取消勾选将撤销其占位，确认？' })
+    if (!ok) return
+  }
+  try {
+    await api.del(`/api/raids/${store.raid.id}/signup/characters/${cid}`)
+    await load()
+  } catch (e: any) { notifyError(e.message) }
 }
 async function onCancelSelf() {
   if (!store.raid) return
@@ -173,7 +228,7 @@ async function onSaveRaid() {
         <span style="color:var(--dnf-text-faint)">{{ store.raid.signups.length }} 人（含团长）</span>
         <span style="margin-left:auto;display:flex;gap:8px">
           <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
-                  @click="onSignup">报名</button>
+                  data-test="signup" @click="openSignupModal">报名</button>
           <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
                   data-test="signup-plus" @click="showMemberPicker = true">＋</button>
         </span>
@@ -186,6 +241,20 @@ async function onSaveRaid() {
           </button>
           <span>{{ s.user.nickname }}</span>
           <span v-if="s.created_at === null" class="dnf-badge dnf-badge-ok">团长</span>
+          <div v-if="s.created_at !== null && s.characters?.length" class="signup-chips">
+            <span v-for="c in s.characters" :key="c.id" class="signup-chip">
+              {{ c.name }}
+              <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
+                      class="chip-x" :data-act="'rm-char-' + c.id"
+                      @click="onRemoveSignupChar(c.id)">×</button>
+            </span>
+            <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
+                    class="dnf-btn dnf-btn-sm" data-act="add-char"
+                    @click="openManageSignup">＋ 添加角色</button>
+          </div>
+          <button v-else-if="s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
+                  class="dnf-btn dnf-btn-sm" data-act="add-char"
+                  @click="openManageSignup">＋ 添加角色</button>
           <button v-if="auth.isAdmin && s.created_at !== null" class="dnf-btn dnf-btn-sm"
                   @click="onCancelUser(s)">取消报名</button>
           <button v-else-if="s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
@@ -212,7 +281,8 @@ async function onSaveRaid() {
                      @pickUp="onPickUp" @remove="onRemoveFromMenu" />
 
     <CharacterPickerModal :open="pickSlot != null" :admin-mode="auth.isAdmin"
-                          :signup-user-ids="signupUserIds" :placed="placed"
+                          :signup-user-ids="signupUserIds" :signup-chars-by-user="signupCharsByUser"
+                          :placed="placed"
                           @close="pickSlot = null" @select="onSelectCharacter" />
 
     <n-modal :show="showEditRaid" preset="card" title="修改攻坚" style="width:min(360px,92vw)"
@@ -241,6 +311,10 @@ async function onSaveRaid() {
 
     <SignupMemberPicker :open="showMemberPicker" :rid="rid" :exclude-user-ids="signupUserIds"
                         @close="showMemberPicker = false" @signedUp="load" />
+
+    <SignupModal :open="showSignupModal" :mode="signupMode" :selected-ids="signupSelected"
+                 @close="showSignupModal = false"
+                 @submit="onSignupSubmit" @toggle="onToggleSignupChar" />
   </div>
 </template>
 
@@ -249,4 +323,12 @@ async function onSaveRaid() {
   display: inline-flex; padding: 0; margin: 0;
   background: none; border: none; cursor: pointer;
 }
+.signup-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; align-items: center; }
+.signup-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 6px; border: 1px solid var(--dnf-border); border-radius: 10px;
+  font-size: 12px; color: var(--dnf-text-muted);
+}
+.chip-x { background: none; border: none; cursor: pointer; color: var(--dnf-text-faint); padding: 0 2px; }
+.chip-x:hover { color: var(--dnf-danger, red); }
 </style>
