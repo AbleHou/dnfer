@@ -97,7 +97,8 @@ def _signup_user(db: Session, raid: Raid, user: User,
     character_ids=None → 该用户全部角色；显式空列表 → 400。"""
     if character_ids is None:
         character_ids = [c.id for c in db.scalars(
-            select(Character).where(Character.user_id == user.id)).all()]
+            select(Character).where(Character.user_id == user.id)
+            .order_by(Character.id)).all()]
     else:
         character_ids = list(dict.fromkeys(character_ids))  # 去重，防唯一约束 500
     if not character_ids:
