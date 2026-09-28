@@ -29,3 +29,10 @@ export interface RaidListItem { id: number; name: string; dungeon_id: number; du
   size: number; locked: boolean; starts_at: string; wave_count: number; signup_count: number; my_signed_up: boolean }
 export interface CodeItem { id: number; code: string; used_by: number | null; used_at: string | null;
   expires_at: string | null; single_use: boolean }
+export interface VoteOptionItem { id: number; text: string; count: number; voters: string[] }
+export interface VoteListItem { id: number; title: string; multi_choice: boolean; open: boolean;
+  created_at: string; closed_at: string | null; total_voters: number }
+export interface VoteDetail { id: number; title: string; description: string; multi_choice: boolean;
+  open: boolean; created_at: string; closed_at: string | null; options: VoteOptionItem[];
+  total_voters: number; my_option_ids: number[]; my_voted: boolean }
+export interface VoteCreatePayload { title: string; description: string; multi_choice: boolean; options: string[] }

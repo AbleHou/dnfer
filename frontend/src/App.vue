@@ -15,6 +15,7 @@ const profileOpen = ref(false)
 const menuOptions = computed<any[]>(() => [
   { label: '攻坚列表', key: 'raids' },
   { label: '我的角色', key: 'characters' },
+  { label: '秘党会议', key: 'votes' },
   ...(auth.isAdmin ? [{ label: '管理', key: 'admin' }] : []),
   { type: 'divider', key: 'd1' },
   { label: '退出', key: 'logout' },
@@ -26,7 +27,7 @@ function logout() {
 }
 function onMenuSelect(key: string) {
   if (key === 'logout') { logout(); return }
-  const path = ({ raids: '/', characters: '/characters', admin: '/admin' } as Record<string, string>)[key]
+  const path = ({ raids: '/', characters: '/characters', votes: '/votes', admin: '/admin' } as Record<string, string>)[key]
   if (path) router.push(path)
 }
 </script>
@@ -37,6 +38,7 @@ function onMenuSelect(key: string) {
       <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
       <router-link to="/" class="nav-link">攻坚列表</router-link>
       <router-link to="/characters" class="nav-link">我的角色</router-link>
+      <router-link to="/votes" class="nav-link">秘党会议</router-link>
       <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">管理</router-link>
       <span class="nav-right">
         <button class="nav-user" title="个人信息" @click="profileOpen = true">
