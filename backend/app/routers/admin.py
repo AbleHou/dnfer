@@ -7,9 +7,10 @@ from ..db import get_db
 from ..models import Character, RegistrationCode, User
 from ..schemas import (AdminCharacterRow, AdminUserOut, CharacterIn, CharacterOut,
                        CharacterQueryResult, CodeCreate, CodeOut, PlayerCharacters,
-                       UserOut)
+                       UserOut, VoteCreate, VoteDetail)
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
+from ..services.votes import _vote_or_404, close_vote, create_vote, vote_detail
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -174,3 +175,17 @@ def unban_user(uid: int, admin: User = Depends(require_admin), db: Session = Dep
     db.commit()
     db.refresh(target)
     return _admin_user_out(db, target)
+
+@router.post("/votes", response_model=VoteDetail)
+def create_vote_endpoint(body: VoteCreate, admin: User = Depends(require_admin),
+                         db: Session = Depends(get_db)):
+    return vote_detail(db, create_vote(db, admin.id, body))
+
+
+@router.post("/votes/{vid}/close", response_model=VoteDetail)
+def close_vote_endpoint(vid: int, admin: User = Depends(require_admin),
+                        db: Session = Depends(get_db)):
+    vote = _vote_or_404(db, vid)
+    if not vote.open:
+        raise HTTPException(400, "投票已是关闭状态")
+    return vote_detail(db, close_vote(db, vote))
