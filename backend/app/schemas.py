@@ -86,12 +86,22 @@ class RaidUpdate(BaseModel):
     name: str | None = None
     starts_at: datetime | None = None
 
+class SignupCharacterOut(BaseModel):
+    id: int
+    name: str
+    job_title: str
+    class_type: str
+
 class RaidSignupOut(BaseModel):
     user: UserOut
     created_at: datetime | None  # 团长固定行（无真实报名记录）为 None
+    characters: list[SignupCharacterOut] = []  # 团长固定行为空列表
 
 class SignupUserIn(BaseModel):
     user_id: int
+
+class SignupIn(BaseModel):
+    character_ids: list[int] | None = None  # None=默认全部角色
 
 class RaidListItem(BaseModel):
     id: int
@@ -214,6 +224,7 @@ class BotRegisterIn(BaseModel):
 class BotSignupIn(BaseModel):
     account: str | None = Field(default=None, min_length=1, max_length=64)
     nickname: str | None = Field(default=None, min_length=1, max_length=64)
+    character_ids: list[int] | None = None  # None=默认全部角色
 
     @model_validator(mode="after")
     def _exactly_one_identity(self):
