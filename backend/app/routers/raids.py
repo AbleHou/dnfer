@@ -461,7 +461,8 @@ async def move_slot(rid: int, slot_id: int, body: MoveIn,
                         removed_slots=[_slot_out(s) for s in removed])
 
 @router.post("/{rid}/signup")
-async def signup(rid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def signup(rid: int, body: SignupIn | None = None,
+                 user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
     if user.is_banned:
         raise HTTPException(403, "你已被封禁，无法报名")
@@ -472,8 +473,7 @@ async def signup(rid: int, user: User = Depends(get_current_user), db: Session =
     if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
                                    RaidSignup.user_id == user.id).first():
         raise HTTPException(400, "你已报名")
-    rs = RaidSignup(raid_id=rid, user_id=user.id)
-    db.add(rs)
+    rs = _signup_user(db, raid, user, body.character_ids if body else None)
     try:
         db.commit()
     except IntegrityError:  # 并发重复报名兜底：唯一约束命中 → 视为已报名
@@ -482,7 +482,8 @@ async def signup(rid: int, user: User = Depends(get_current_user), db: Session =
     db.refresh(rs)
     await manager.broadcast(rid, {"type": "raid:signup",
                                   "user": UserOut.model_validate(user).model_dump(),
-                                  "created_at": rs.created_at.isoformat()})
+                                  "created_at": rs.created_at.isoformat(),
+                                  "characters": [c.model_dump() for c in _signup_characters(rs)]})
     return {"ok": True}
 
 
@@ -541,8 +542,7 @@ async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(requi
     if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
                                    RaidSignup.user_id == target.id).first():
         raise HTTPException(400, "该用户已报名")
-    rs = RaidSignup(raid_id=rid, user_id=target.id)
-    db.add(rs)
+    rs = _signup_user(db, raid, target, None)  # 代报名默认全部角色
     try:
         db.commit()
     except IntegrityError:  # 并发重复报名兜底
@@ -552,7 +552,8 @@ async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(requi
     # 广播的是「目标用户」而非管理员
     await manager.broadcast(rid, {"type": "raid:signup",
                                   "user": UserOut.model_validate(target).model_dump(),
-                                  "created_at": rs.created_at.isoformat()})
+                                  "created_at": rs.created_at.isoformat(),
+                                  "characters": [c.model_dump() for c in _signup_characters(rs)]})
     return {"ok": True}
 
 

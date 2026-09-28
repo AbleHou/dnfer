@@ -12,7 +12,7 @@ from ..models import Character, RaidSignup, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
                        BotCharactersOut, BotRegisterIn, BotSignupIn, PublicVoteBallotIn,
                        UserOut, VoteDetail, VoteListItem)
-from ..routers.raids import _raid_or_404, _remove_signup
+from ..routers.raids import _raid_or_404, _remove_signup, _signup_characters, _signup_user
 from ..services.characters import character_out
 from ..services.votes import _vote_or_404, cast_vote, list_votes, vote_detail
 from ..ws import manager
@@ -130,8 +130,7 @@ async def bot_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db))
     if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
                                    RaidSignup.user_id == user.id).first():
         raise HTTPException(400, "该用户已报名")
-    rs = RaidSignup(raid_id=rid, user_id=user.id)
-    db.add(rs)
+    rs = _signup_user(db, raid, user, body.character_ids)
     try:
         db.commit()
     except IntegrityError:  # 并发重复报名兜底
@@ -140,7 +139,8 @@ async def bot_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db))
     db.refresh(rs)
     await manager.broadcast(rid, {"type": "raid:signup",
                                   "user": UserOut.model_validate(user).model_dump(),
-                                  "created_at": rs.created_at.isoformat()})
+                                  "created_at": rs.created_at.isoformat(),
+                                  "characters": [c.model_dump() for c in _signup_characters(rs)]})
     return {"ok": True,
             "user": UserOut.model_validate(user).model_dump(),
             "raid": {"id": raid.id, "name": raid.name,
