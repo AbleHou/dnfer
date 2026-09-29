@@ -11,13 +11,14 @@ export interface SignupCharacter { id: number; name: string; job_title: string; 
 export interface RaidSignup { user: User; created_at: string | null; characters: SignupCharacter[] }
 export interface Character { id: number; name: string; job_name: string; job_title: string;
   parent_name: string; class_type: ClassType; fame: number;
-  simulated_damage: number | null; sustained_dps: number | null; buff_amount: number | null }
+  simulated_damage: number | null; sustained_dps: number | null; buff_amount: number | null;
+  sun_buff: number | null }
 export interface PlayerCharacters { user: User; characters: Character[] }
 export interface Slot { id: number; squad_index: number; row_index: number;
   character_id: number | null; character_name: string | null;
   character_class: ClassType | null; job_name: string | null; job_title: string | null;
   fame: number | null; simulated_damage: number | null; sustained_dps: number | null;
-  buff_amount: number | null; owner_id: number | null; owner_nickname: string | null;
+  buff_amount: number | null; sun_buff: number | null; owner_id: number | null; owner_nickname: string | null;
   owner_avatar: string | null; duty: Duty | null; version: number }
 export interface CharacterPlacement { wave_index: number; squad_index: number; duty: Duty }
 export interface JobChild { id: number; name: string; title: string; class_type: ClassType }

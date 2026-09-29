@@ -13,10 +13,10 @@ beforeEach(() => vi.clearAllMocks())
 
 const playerA = { user: { id: 1, username: 'hong', nickname: '小红', is_admin: false },
   characters: [{ id: 11, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
-    parent_name: 'swordman_male', class_type: '输出', fame: 52000, simulated_damage: 5, sustained_dps: 2, buff_amount: null }] }
+    parent_name: 'swordman_male', class_type: '输出', fame: 52000, simulated_damage: 5, sustained_dps: 2, buff_amount: null, sun_buff: null }] }
 const mine = { user: { id: 9, username: 'admin', nickname: '群主', is_admin: true },
   characters: [{ id: 12, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
-    parent_name: 'priest_male', class_type: '辅助', fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 9000 }] }
+    parent_name: 'priest_male', class_type: '辅助', fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null }] }
 
 describe('CharacterPickerModal admin mode', () => {
   it('管理员模式拉全玩家角色，默认选中管理员自己', async () => {
@@ -105,10 +105,10 @@ describe('CharacterPickerModal signupCharsByUser', () => {
     characters: [
       { id: 11, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
         parent_name: 'swordman_male', class_type: '输出', fame: 52000, simulated_damage: 5,
-        sustained_dps: 2, buff_amount: null },
+        sustained_dps: 2, buff_amount: null, sun_buff: null },
       { id: 21, name: '奶2', job_name: 'crusader_male', job_title: '神启·圣骑士',
         parent_name: 'priest_male', class_type: '辅助', fame: 1, simulated_damage: null,
-        sustained_dps: null, buff_amount: 9000 },
+        sustained_dps: null, buff_amount: 9000, sun_buff: null },
     ],
   }
 

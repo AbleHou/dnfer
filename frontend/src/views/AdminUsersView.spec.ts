@@ -16,7 +16,7 @@ const users = [{ id: 2, username: 'a', nickname: '阿甲', is_admin: false, avat
   is_banned: false, character_count: 1 }]
 const query = { items: [{ id: 9, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
-  simulated_damage: null, sustained_dps: null, buff_amount: null,
+  simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
   owner_id: 2, owner_nickname: '阿甲', owner_username: 'a', owner_is_banned: false }], total: 1 }
 const jobs = [{ id: 1, name: 'swordman_male', title: '鬼剑士(男)',
   children: [{ id: 11, name: 'weapon_master', title: '极诣·剑魂', class_type: '输出' as const }] }]
@@ -76,7 +76,7 @@ describe('AdminUsersView', () => {
     apiMock.get.mockResolvedValueOnce({ items: [{
       id: 1, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
       parent_name: 'priest_male', class_type: '辅助', fame: 1,
-      simulated_damage: null, sustained_dps: null, buff_amount: 9000,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
       owner_id: 3, owner_nickname: '队员', owner_username: 'm', owner_is_banned: false,
     }], total: 1 })
     apiMock.getJobs.mockResolvedValueOnce([{

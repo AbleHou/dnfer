@@ -15,7 +15,7 @@ vi.mock('../lib/notify', () => ({
 const user = { id: 7, username: 'p', nickname: '玩家', is_admin: false, avatar: null, is_banned: false }
 const chars = [{ id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
-  simulated_damage: null, sustained_dps: null, buff_amount: null }]
+  simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null }]
 
 describe('AdminUserCharactersModal', () => {
   beforeEach(() => { vi.clearAllMocks(); apiMock.get.mockResolvedValue(chars); apiMock.getJobs.mockResolvedValue([]) })

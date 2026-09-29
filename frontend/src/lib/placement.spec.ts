@@ -6,7 +6,7 @@ function slot(id: number, characterId: number | null, squad: number, duty: strin
   return { id, squad_index: squad, row_index: 0, character_id: characterId,
     character_name: characterId ? 'x' : null, character_class: characterId ? '输出' : null,
     job_name: characterId ? 'weapon_master' : null, job_title: null, fame: null,
-    simulated_damage: null, sustained_dps: null, buff_amount: null,
+    simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
     owner_id: characterId, owner_nickname: null, owner_avatar: null,
     duty: duty as any, version: 0 }
 }

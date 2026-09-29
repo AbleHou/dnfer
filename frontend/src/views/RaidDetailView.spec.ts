@@ -57,7 +57,7 @@ function makeRaidWithPlacement(signups: Raid['signups']): Raid {
     slots: [{
       id: 1, squad_index: 0, row_index: 0, character_id: 10, character_name: '剑魂',
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂',
-      fame: 52000, simulated_damage: 5, sustained_dps: 2, buff_amount: null,
+      fame: 52000, simulated_damage: 5, sustained_dps: 2, buff_amount: null, sun_buff: null,
       owner_id: member.id, owner_nickname: '队员', owner_avatar: null, duty: '主C', version: 1,
     }],
   }]

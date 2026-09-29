@@ -42,6 +42,7 @@ describe('MyCharactersView job picker', () => {
     return {
       id, name, job_name: 'x', job_title: 't', parent_name: 'p',
       class_type, fame, simulated_damage: null, sustained_dps: null, buff_amount: null,
+      sun_buff: null,
     }
   }
 
@@ -77,7 +78,7 @@ describe('MyCharactersView job picker', () => {
     const char = {
       id: 1, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
       parent_name: 'priest_male', class_type: '辅助', fame: 1,
-      simulated_damage: null, sustained_dps: null, buff_amount: 9000,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
     }
     apiMock.get.mockResolvedValueOnce([char])
     const wrapper = mount(MyCharactersView)
@@ -98,12 +99,12 @@ describe('MyCharactersView job picker', () => {
     const charA = {
       id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: 'swordman_male', class_type: '输出', fame: 100,
-      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
     }
     const charB = {
       id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
       parent_name: 'priest_male', class_type: '辅助', fame: 200,
-      simulated_damage: null, sustained_dps: null, buff_amount: 9000,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
     }
     apiMock.get.mockResolvedValueOnce([charA, charB])
     const wrapper = mount(MyCharactersView)
@@ -123,7 +124,7 @@ describe('MyCharactersView job picker', () => {
     const char = {
       id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: 'swordman_male', class_type: '输出', fame: 100,
-      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
     }
     apiMock.get.mockResolvedValueOnce([char])
     const wrapper = mount(MyCharactersView)
@@ -149,7 +150,7 @@ describe('MyCharactersView job picker', () => {
     const char = {
       id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: 'swordman_male', class_type: '输出', fame: 100,
-      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
     }
     apiMock.get.mockResolvedValueOnce([char])
     const wrapper = mount(MyCharactersView)
@@ -212,12 +213,12 @@ describe('MyCharactersView job picker', () => {
     const charA = {
       id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: 'swordman_male', class_type: '输出', fame: 100,
-      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
     }
     const charB = {
       id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
       parent_name: 'priest_male', class_type: '辅助', fame: 200,
-      simulated_damage: null, sustained_dps: null, buff_amount: 9000,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
     }
     apiMock.get.mockResolvedValueOnce([charA, charB])
     const wrapper = mount(MyCharactersView)

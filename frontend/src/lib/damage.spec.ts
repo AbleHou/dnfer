@@ -7,7 +7,7 @@ function slot(partial: Partial<Slot>): Slot {
     id: 1, squad_index: 0, row_index: 0,
     character_id: null, character_name: null, character_class: null,
     job_name: null, job_title: null, fame: null,
-    simulated_damage: null, sustained_dps: null, buff_amount: null,
+    simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
     owner_id: null, owner_nickname: null, owner_avatar: null, duty: null, version: 1,
     ...partial,
   }
