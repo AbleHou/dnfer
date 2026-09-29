@@ -33,7 +33,7 @@ function onCellClick() {
 const attrs = computed(() => {
   const s = props.slot
   if (s.character_class === '输出') return `模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
-  if (s.character_class === '辅助') return `增益 ${fmtBuff(s.buff_amount)}`
+  if (s.character_class === '辅助') return `增益 ${fmtBuff(s.buff_amount)} · 太阳 ${fmtBuff(s.sun_buff)}`
   return ''
 })
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }

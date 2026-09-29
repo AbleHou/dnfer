@@ -65,4 +65,12 @@ describe('SlotCell admin interactions', () => {
     expect((wrapper.emitted('remove')?.[0][0] as Slot).id).toBe(1)
     expect(wrapper.emitted('manage')).toBeUndefined()
   })
+
+  it('辅助占位格显示增益量与太阳增益', () => {
+    const s: Slot = { ...occupied(1), character_class: '辅助', job_name: 'crusader_male',
+      job_title: '神启·圣骑士', buff_amount: 9000, sun_buff: 3000 }
+    const wrapper = mount(SlotCell, { props: { slot: s, squadIndex: 0, editable: false, pickable: false } })
+    expect(wrapper.text()).toContain('增益 9000')
+    expect(wrapper.text()).toContain('太阳 3000')
+  })
 })

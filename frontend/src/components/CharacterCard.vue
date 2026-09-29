@@ -22,7 +22,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
       <div style="color:var(--dnf-text-faint);font-size:12px">
         {{ character.class_type === '输出'
           ? `模拟 ${fmtDps(character.simulated_damage)} · 秒伤 ${fmtDps(character.sustained_dps)}`
-          : `增益 ${fmtBuff(character.buff_amount)}` }}
+          : `增益 ${fmtBuff(character.buff_amount)} · 太阳 ${fmtBuff(character.sun_buff)}` }}
       </div>
     </div>
     <span v-if="placement" class="placed-badge">

@@ -61,4 +61,19 @@ describe('MemberCharactersModal', () => {
     expect(wrapper.text()).toContain('神启·圣骑士（男）')
     expect(wrapper.text()).not.toContain('极诣·剑魂（')   // weapon_master 单性别不带后缀
   })
+
+  it('辅助角色卡片显示增益量与太阳增益', async () => {
+    apiMock.get.mockResolvedValue({ user, characters: [
+      { id: 12, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+        parent_name: 'priest_male', class_type: '辅助', fame: 1,
+        simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null },
+    ] })
+    const wrapper = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {} },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('增益')          // 渲染「增益 9000」
+    expect(wrapper.text()).toContain('太阳')          // 渲染「太阳 暂无」（sun_buff null）
+  })
 })

@@ -233,4 +233,15 @@ describe('MyCharactersView job picker', () => {
     expect(wrapper.find('button[data-job="crusader_male"]').text()).toContain('神启·圣骑士（男）')
     expect(wrapper.text()).toContain('已选：神启·圣骑士（男）（辅助职业）')
   })
+
+  it('辅助角色卡片显示增益量与太阳增益', async () => {
+    const char = { id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+      parent_name: 'priest_male', class_type: '辅助', fame: 1,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: 3000 }
+    apiMock.get.mockResolvedValueOnce([char])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    expect(wrapper.text()).toContain('增益 9000')
+    expect(wrapper.text()).toContain('太阳 3000')
+  })
 })

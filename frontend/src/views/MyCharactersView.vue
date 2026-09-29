@@ -84,7 +84,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
             <div style="color:var(--dnf-text-faint);font-size:12px">
               {{ c.class_type === '输出'
                 ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}`
-                : `增益 ${fmtBuff(c.buff_amount)}` }}
+                : `增益 ${fmtBuff(c.buff_amount)} · 太阳 ${fmtBuff(c.sun_buff)}` }}
             </div>
           </div>
         </div>
