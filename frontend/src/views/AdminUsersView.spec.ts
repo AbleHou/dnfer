@@ -72,4 +72,22 @@ describe('AdminUsersView', () => {
     expect(confirmDialog).toHaveBeenCalled()
     expect(apiMock.post).toHaveBeenCalledWith('/api/admin/users/2/unban')
   })
+  it('角色查询表与职业筛选显示男女双版性别后缀', async () => {
+    apiMock.get.mockResolvedValueOnce({ items: [{
+      id: 1, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+      parent_name: 'priest_male', class_type: '辅助', fame: 1,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000,
+      owner_id: 3, owner_nickname: '队员', owner_username: 'm', owner_is_banned: false,
+    }], total: 1 })
+    apiMock.getJobs.mockResolvedValueOnce([{
+      id: 8, name: 'priest_male', title: '圣职者(男)', children: [
+        { id: 0, name: 'crusader_male', title: '神启·圣骑士', class_type: '辅助' },
+      ],
+    }])
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('神启·圣骑士（男）')
+  })
 })

@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
 import AdminUserCharactersModal from '../components/AdminUserCharactersModal.vue'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
+import { jobGenderTitle } from '../lib/job'
 import type { AdminCharacterRow, AdminUser, CharacterQueryResult, JobCategory, User } from '../types'
 
 // ---- 角色查询区 ----
@@ -119,7 +120,7 @@ onMounted(() => {
         </select>
         <select v-model="jobName" class="dnf-select" data-filter="job">
           <option value="">全部职业</option>
-          <option v-for="j in flatJobs" :key="j.id" :value="j.name">{{ j.title }}</option>
+          <option v-for="j in flatJobs" :key="j.id" :value="j.name">{{ jobGenderTitle(j.name, j.title) }}</option>
         </select>
         <input v-model="keyword" placeholder="角色名" class="dnf-input" data-filter="keyword" />
         <input v-model="owner" placeholder="归属玩家" class="dnf-input" data-filter="owner" />
@@ -145,7 +146,7 @@ onMounted(() => {
         <tbody>
           <tr v-for="c in queryItems" :key="c.id">
             <td>{{ c.name }}</td>
-            <td>{{ c.job_title }}</td>
+            <td>{{ jobGenderTitle(c.job_name, c.job_title) }}</td>
             <td>{{ c.class_type }}</td>
             <td>{{ c.fame }}</td>
             <td>{{ c.class_type === '输出' ? fmtNum(c.simulated_damage) : '—' }}</td>
