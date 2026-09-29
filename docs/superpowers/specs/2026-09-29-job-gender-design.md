@@ -67,11 +67,13 @@ export function jobGenderTitle(jobName: string | null | undefined, title: string
 | `components/CharacterCard.vue:20` | `{{ character.job_title }}` | `{{ jobGenderTitle(character.job_name, character.job_title) }}` |
 | `components/SignupModal.vue:88` | `{{ c.job_title }}` | `{{ jobGenderTitle(c.job_name, c.job_title) }}` |
 | `views/MyCharactersView.vue:83` | `{{ c.job_title }}` | `{{ jobGenderTitle(c.job_name, c.job_title) }}` |
-| `views/AdminUsersView.vue:148` | `<td>{{ c.job_title }}</td>` | `<td>{{ jobGenderTitle(c.job_name, c.job_title) }}</td>` |
+| `views/AdminUsersView.vue:148`（查询表） | `<td>{{ c.job_title }}</td>` | `<td>{{ jobGenderTitle(c.job_name, c.job_title) }}</td>` |
+| `views/AdminUsersView.vue:122`（职业筛选下拉） | `{{ j.title }}` | `{{ jobGenderTitle(j.name, j.title) }}`（否则光明骑士男/女两个选项无法区分） |
 | `components/CharacterForm.vue:73`（职业按钮）与 `:77`（已选行） | `{{ child.title }}` / `已选：{{ selectedJob.title }}` | `{{ jobGenderTitle(child.name, child.title) }}` / `已选：{{ jobGenderTitle(selectedJob.name, selectedJob.title) }}` |
 
 - `CharacterCard`/`SignupModal`/`MyCharactersView`/`AdminUsersView` 需新增 `import { jobGenderTitle } from '../lib/job'`（`CharacterCard` 已有 `jobIcon` import，合并即可）。
 - `CharacterForm` 已 import `categoryIcon, jobIcon, handleIconError`，补 `jobGenderTitle`。
+- **注意**：测试 fixture 里的 title（如 `神启·圣骑士`）与 `职业信息.json` 源数据（`光启·光明骑士`）不同，属历史 fixture，勿“修正”为源数据以免牵连无关断言。
 
 ## 4. 测试
 
@@ -81,7 +83,9 @@ export function jobGenderTitle(jobName: string | null | undefined, title: string
   - `infighter` + `光启·蓝拳圣使` → `光启·蓝拳圣使（男）`（男版无 `_male` 后缀，验证显式映射）
   - 单性别 `weapon_master` + `极诣·剑魂` → 原样
   - `null`/`undefined` jobName 或 title → 容错返回 title
-- 组件 spec：核对 `SignupModal.spec` / `MyCharactersView.spec` / `CharacterPickerModal.spec` / `MemberCharactersModal.spec` / `AdminUsersView.spec` / `CharacterForm.spec` 中是否有对 job_title 的**精确**断言（`toBe`/`toContain` 精确串）会因加后缀受影响；`toContain('神启·圣骑士')` 仍成立（子串），仅需补后缀出现/不出现的用例。
+- 组件 spec：
+  - **`MyCharactersView.spec.ts:89` 会真实破坏**：断言 `toContain('已选：神启·圣骑士（辅助职业）')`，而 CharacterForm「已选」行改为 `已选：神启·圣骑士（男）（辅助职业）`——`（男）` 插在断言子串中间，`toContain` 失败。需把该断言改为 `toContain('已选：神启·圣骑士（男）（辅助职业）')`。
+  - 其余组件 spec 仅用 `toContain('神启·圣骑士')`/`toContain('极诣·剑魂')` 等子串断言，加后缀后子串仍成立，**不破坏**，只需新增后缀出现/不出现的用例。
   - 新增用例示例（以 SignupModal 为例，fixture 已有 `crusader_male` 的奶）：职业列显示 `神启·圣骑士（男）`；`weapon_master` 的剑魂仍 `极诣·剑魂` 不带后缀。
 
 ## 5. 文档
