@@ -229,6 +229,7 @@ describe('MyCharactersView job picker', () => {
     await flushPromises()
     await wrapper.find('button[data-cat="priest_male"]').trigger('click')
     await wrapper.find('button[data-job="crusader_male"]').trigger('click')
+    expect(wrapper.find('button[data-job="crusader_male"]').text()).toContain('神启·圣骑士（男）')
     expect(wrapper.text()).toContain('已选：神启·圣骑士（男）（辅助职业）')
   })
 })
