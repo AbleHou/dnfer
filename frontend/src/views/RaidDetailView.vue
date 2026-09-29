@@ -314,6 +314,8 @@ async function onSaveRaid() {
 .avatar-btn {
   display: inline-flex; padding: 0; margin: 0;
   background: none; border: none; cursor: pointer;
+  /* 重置浏览器默认 button 排版（黑底小字），使内部文本与普通 span 一致地继承主题字体/颜色 */
+  font: inherit; color: inherit; line-height: inherit;
 }
 .signup-group {
   display: flex; align-items: center; gap: 8px;
@@ -325,6 +327,6 @@ async function onSaveRaid() {
   flex: 1; justify-content: flex-start;
   gap: 6px; min-width: 0; text-align: left;
 }
-.signup-nick { font-weight: 500; white-space: nowrap; }
+.signup-nick { white-space: nowrap; }
 .signup-count { font-size: 12px; color: var(--dnf-text-muted,#9aa3b2); white-space: nowrap; }
 </style>
