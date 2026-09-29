@@ -192,3 +192,22 @@ def test_get_both_params(client):
     r = client.get("/api/public/characters", params={"account": "x", "nickname": "y"},
                    headers=TOKEN)
     assert r.status_code == 400
+
+def test_upsert_sun_buff(client):
+    h, _ = register_user(client, "p21", "机器人奶")
+    # 创建带 sun_buff
+    r = client.post("/api/public/characters", headers=TOKEN, json={"account": "p21",
+        "characters": [{"name": "奶", "job_name": "crusader_male",
+                        "buff_amount": 9000, "sun_buff": 3000}]})
+    assert r.status_code == 200
+    assert r.json()["results"][0]["action"] == "created"
+    assert r.json()["results"][0]["character"]["sun_buff"] == 3000
+    # 编辑只提供 sun_buff → 部分更新生效、buff_amount 保留原值
+    r = client.post("/api/public/characters", headers=TOKEN, json={"account": "p21",
+        "characters": [{"name": "奶", "sun_buff": 3500}]})
+    assert r.status_code == 200
+    res = r.json()["results"][0]
+    assert res["action"] == "updated"
+    assert res["character"]["sun_buff"] == 3500
+    assert res["character"]["buff_amount"] == 9000   # 未提供 → 保留
+    assert client.get("/api/me/characters", headers=h).json()[0]["sun_buff"] == 3500

@@ -192,6 +192,7 @@ class BotCharacterIn(BaseModel):
     simulated_damage: int | None = None
     sustained_dps: int | None = None
     buff_amount: int | None = None
+    sun_buff: int | None = None
 
 class BotCharactersIn(BaseModel):
     account: str | None = Field(default=None, min_length=1, max_length=64)

@@ -51,6 +51,8 @@ def _apply_partial(c: Character, body: "BotCharacterIn") -> None:
         c.sustained_dps = body.sustained_dps
     if body.buff_amount is not None:
         c.buff_amount = body.buff_amount
+    if body.sun_buff is not None:
+        c.sun_buff = body.sun_buff
 
 @router.post("/characters", response_model=BotCharactersOut)
 def upsert_characters(body: BotCharactersIn, db: Session = Depends(get_db)):
@@ -71,7 +73,8 @@ def upsert_characters(body: BotCharactersIn, db: Session = Depends(get_db)):
                           class_type=job_data.class_type_for(job),
                           fame=item.fame if item.fame is not None else DEFAULT_FAME,
                           simulated_damage=item.simulated_damage,
-                          sustained_dps=item.sustained_dps, buff_amount=item.buff_amount)
+                          sustained_dps=item.sustained_dps, buff_amount=item.buff_amount,
+                          sun_buff=item.sun_buff)
             db.add(c)
             db.flush()
             seen[item.name] = c
