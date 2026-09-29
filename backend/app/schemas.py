@@ -130,6 +130,7 @@ class SlotOut(BaseModel):
     simulated_damage: int | None
     sustained_dps: int | None
     buff_amount: int | None
+    sun_buff: int | None
     owner_id: int | None
     owner_nickname: str | None
     owner_avatar: str | None

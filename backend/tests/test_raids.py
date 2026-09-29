@@ -331,3 +331,18 @@ def test_slot_out_includes_owner_avatar(client, admin_headers):
     slot2 = client.get(f"/api/raids/{rid}", headers=admin_headers) \
         .json()["waves"][0]["slots"][0]
     assert slot2["owner_avatar"] is None  # 未上传头像时为 null
+
+def test_slot_out_includes_sun_buff(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "p20", "太阳奶")
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "奶", "job_name": "crusader_male", "fame": 20000,
+        "buff_amount": 9000, "sun_buff": 3000}).json()["id"]
+    rid = make_raid(client, ah)["id"]
+    signup(client, rid, h)
+    slot = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    r = client.post(f"/api/raids/{rid}/slots/{slot['id']}/fill", headers=h,
+                    json={"character_id": cid})
+    assert r.status_code == 200
+    assert r.json()["slot"]["sun_buff"] == 3000
+    assert r.json()["slot"]["buff_amount"] == 9000
