@@ -28,7 +28,7 @@ onUnmounted(stopPolling)
 <template>
   <div class="dnf-page">
     <div class="page-head">
-      <h2 style="margin:0">秘党会议</h2>
+      <h2 style="margin:0">群会议</h2>
       <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-primary" data-act="create-toggle"
               @click="showCreate = !showCreate">＋ 发起投票</button>
     </div>
