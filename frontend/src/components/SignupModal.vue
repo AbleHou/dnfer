@@ -41,7 +41,7 @@ function fmtPower(n: number | null): string { return n == null ? '—' : String(
 function powerText(c: Character): string {
   return c.class_type === '输出'
     ? `${fmtPower(c.simulated_damage)}/${fmtPower(c.sustained_dps)}`
-    : fmtPower(c.buff_amount)
+    : `${fmtPower(c.buff_amount)}/${fmtPower(c.sun_buff)}`
 }
 
 function isChecked(cid: number): boolean {

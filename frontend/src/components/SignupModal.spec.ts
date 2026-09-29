@@ -96,4 +96,13 @@ describe('SignupModal', () => {
     const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
     expect(row2.textContent).toContain('神启·圣骑士（男）')
   })
+
+  it('辅助战力列显示增益量/太阳增益双值', async () => {
+    const withSun = chars.map((c, i) => i === 1 ? { ...c, sun_buff: 3000 } : { ...c, sun_buff: null })
+    apiMock.get.mockResolvedValue(withSun)
+    const wrapper = mountModal()
+    await flushPromises()
+    const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
+    expect(row2.querySelector('.c-power')?.textContent).toContain('9000/3000')
+  })
 })
