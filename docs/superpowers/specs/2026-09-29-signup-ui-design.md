@@ -34,19 +34,21 @@
   - 勾选框：`<input type="checkbox" :data-act="'char-' + c.id">`（保留原事件逻辑）。
   - 角色名：`c.name`。
   - 职业：`<img :src="jobIcon(c.job_name)" @error="handleIconError">` + `c.job_title`。
-  - 战力：输出 → `${fmtDps(c.simulated_damage)}/${fmtDps(c.sustained_dps)}`；辅助 → `${fmtBuff(c.buff_amount)}`；null → `—`。
+  - 战力：输出 → `${fmtPower(c.simulated_damage)}/${fmtPower(c.sustained_dps)}`；辅助 → `${fmtPower(c.buff_amount)}`；null → `—`。
   - 名望：`c.fame` 纯数字。
-- 行/表头使用投票卡片风格：边框 `--dnf-border`、圆角、`selected` 态强调 `--dnf-accent`（manage 模式勾选行可加 `.selected` 边框）。
+- 行/表头使用投票卡片风格：圆角、`selected` 态强调边框（manage 模式勾选行可加 `.selected` 边框）。
+- **CSS 变量兜底**：`--dnf-border` / `--dnf-accent` 未在 `dnf.css` `:root` 定义（投票卡片用带 fallback 的 `var(--dnf-border,#3a3f4b)` / `var(--dnf-accent,#ffd54a)`）。新增样式必须**沿用 VoteCard 的 fallback 写法**，否则边框/强调不渲染。
 - 样式放 `<style scoped>`。
 
 ### 2.2 格式化辅助
 
-`fmtDps(n: number | null): string`（输出战力）与 `fmtBuff(n: number | null): string`（辅助战力）：`n == null ? '—' : String(n)`。二者合并为一个 `fmtPower(n)` 即可，放 `<script setup>` 顶层。
+单一本地助手 `fmtPower(n: number | null): string`：`n == null ? '—' : String(n)`，放 `<script setup>` 顶层。
+注意：这是 **SignupModal 组件本地新助手**，语义（纯数值 / null 显示 `—`）与 `CharacterCard.vue` 等既有 `fmtDps`/`fmtBuff`（`'暂无'` / `${n}亿`）不同，**不要**复用或改名去“DRY”既有函数。
 
 ### 2.3 测试影响（`SignupModal.spec.ts`）
 
-- 「显示角色名望便于区分」用例断言 `名望 52000` → 改为断言表头「名望」与纯数值 `52000`（行内不再含“名望”前缀字样；文本 `toContain('52000')` 即可，避免与表头/职业数字误撞，用 `data-act="char-1"` 所在行 scope 断言更稳）。
-- 新增用例：输出角色战力显示 `5/2`、辅助角色战力显示 `9000`（基于现有 chars fixture：剑魂 `simulated_damage:5, sustained_dps:2`，奶 `buff_amount:9000`）。
+- 「显示角色名望便于区分」用例断言 `名望 52000` → 改为断言表头「名望」与纯数值 `52000`（行内不再含“名望”前缀字样），**按 `data-act="char-1"` 所在行 scope 断言**，避免与其它列数字误撞。
+- 新增用例：输出角色战力显示 `5/2`（剑魂 `simulated_damage:5, sustained_dps:2`）、辅助角色战力显示 `9000`（奶 `buff_amount:9000`）。注意奶的 `fame` 同为 `9000`——辅助战力断言**必须按 `data-act="char-2"` 行 scope**（`wrapper.find('[data-act="char-2"]')`）而非 wrapper 级 `toContain('9000')`，否则与名望列 `9000` 歧义。
 
 ## 3. 需求 2：`RaidDetailView.vue` 报名面板
 
@@ -56,7 +58,7 @@
 
 - **团长行**（`s.created_at === null`）：保持现状（头像按钮 + 昵称 + 「团长」badge）。
 - **非团长行**：渲染为圆角矩形分组块 `.signup-group`，内含三部分：
-  1. **`.signup-user`（按钮）**：`<UserAvatar>` + 昵称 + `{{ placedCount(s) }}/{{ s.characters.length }}`。点击 `memberModalUser = s.user`（与现在点头像一致，打开 `MemberCharactersModal` 查看该用户占位信息）。
+  1. **第一部分（按钮）**：`<UserAvatar>` + 昵称 + `{{ placedCount(s) }}/{{ s.characters.length }}`。点击 `memberModalUser = s.user`（与现在点头像一致，打开 `MemberCharactersModal` 查看该用户占位信息）。该按钮**必须保留 `avatar-btn` class**（既有用例 `wrapper.findAll('.avatar-btn')[1]` 依赖它），另加 `.signup-user` 类用于布局/样式（`flex:1` 撑满）。
   2. **「角色变更」按钮**：仅 `s.user.id === auth.user?.id && !store.raid.locked` 显示；`data-act="manage-chars"`；点击 `openManageSignup()`（复用现有逻辑，打开 SignupModal manage 模式）。
   3. **「取消报名」按钮**：红色 `dnf-btn-danger`，带 `confirmDialog`：
      - 管理员且 `s.created_at !== null`：显示（含锁定状态，维持现状），点击 `onCancelUser(s)`（已有确认框文案不变）。
@@ -83,7 +85,8 @@ function placedCount(s: RaidSignup): number {
 - 新增用例：
   - 本人（member 视角）行显示 `占位/报名` 计数与「角色变更」按钮，点击打开 SignupModal manage 模式（校验 `mode === 'manage'` 与 `selectedIds` 同步自 `myRow.characters`）。
   - 「取消报名」带确认框：`confirmDialog` 被调用（mock 返回 true → `DELETE /api/raids/{rid}/signup`）；返回 false → 不调 DELETE。
-  - fixture：`memberRow` 补 `characters`（如 `[{id, name, job_title, class_type}]`）以支持计数渲染；`placed` 需含对应占位以便断言 `占位/报名`。
+  - fixture：`memberRow` 补 `characters`（如 `[{id, name, job_title, class_type}]`）以支持计数渲染。占位计数 `placed` 是 `computed`（由 `store.raid.waves/slots` 经 `buildPlacementMap` 派生）——要断言非零 `占位/报名`，须在 **raid 的 `waves[].slots` 里加一个 `character_id` 命中的占位格**，而非只改 `memberRow`。
+  - 注意：既有 `mountView()` 辅助函数硬编码 `auth.user = admin`；新增的「本人（member 视角）」用例需像既有「普通用户不可见加号」用例那样单独构造 mount 路径（`auth.user = member`），**不要**直接复用 `mountView()`。
 
 ## 4. 文档
 
