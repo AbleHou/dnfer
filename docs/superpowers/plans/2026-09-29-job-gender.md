@@ -288,13 +288,15 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
         { id: 0, name: 'crusader_male', title: '神启·圣骑士', class_type: '辅助' },
       ],
     }])
-    const wrapper = mount(AdminUsersView, { global: { plugins: [] } })
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } },
+    })
     await flushPromises()
     expect(wrapper.text()).toContain('神启·圣骑士（男）')
   })
 ```
 
-> 若该 spec 现有 mount 需要特定 global 配置（如 router/AdminNav stub），沿用既有 `mountView` 辅助；用例只需断言「查询表/筛选任一处出现 `神启·圣骑士（男）`」即可。
+> 该 spec 现有用例均以 `{ global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } } }` 方式 mount（无命名辅助函数），照抄即可；用例只需断言「查询表/筛选任一处出现 `神启·圣骑士（男）`」。
 
 - [ ] **Step 2: 运行测试确认失败**
 
