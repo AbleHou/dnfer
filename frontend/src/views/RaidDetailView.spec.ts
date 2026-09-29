@@ -64,20 +64,15 @@ function makeRaidWithPlacement(signups: Raid['signups']): Raid {
   return raid
 }
 
-async function mountView(signups: Raid['signups'], user: User = admin) {
+async function mountView(signups: Raid['signups'], user: User = admin,
+                         snapshot: Raid = makeRaid(signups)) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
   auth.user = user
   const store = useRaidStore()
   store.raid = makeRaid(signups)
-  // 若测试已在 mountView 前预置 apiMock.get（如带占位格的快照），尊重之；否则装默认快照
-  if (!apiMock.get.getMockImplementation()) {
-    apiMock.get.mockImplementation(async (url: string) => {
-      if (url === '/api/raids/1') return makeRaid(signups)
-      return []
-    })
-  }
+  apiMock.get.mockImplementation(async (url: string) => url === '/api/raids/1' ? snapshot : [])
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/raids/:id', component: RaidDetailView }],
@@ -98,9 +93,6 @@ async function mountView(signups: Raid['signups'], user: User = admin) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // mockReset 会把实现重置为空函数（getMockImplementation 仍 truthy），无法用 getMockImplementation()
-  // 判断「测试是否预置」；直接置 undefined，让 mountView 的守卫只在测试未预置 apiMock.get 时装默认快照
-  apiMock.get.mockImplementation(undefined as never)
 })
 
 describe('RaidDetailView signup panel', () => {
@@ -228,12 +220,8 @@ describe('RaidDetailView enhance', () => {
   })
 
   it('本人（member）行显示占位/报名计数与角色变更按钮，点击打开 manage 弹窗', async () => {
-    const raid = makeRaidWithPlacement([adminRow, memberRow])
-    apiMock.get.mockImplementation(async (url: string) => {   // 让 load() 拉到带占位格的快照，避免依赖微任务时序
-      if (url === '/api/raids/1') return raid
-      return []
-    })
-    const { wrapper } = await mountView([adminRow, memberRow], member)
+    const { wrapper } = await mountView([adminRow, memberRow], member,
+      makeRaidWithPlacement([adminRow, memberRow]))
     await flushPromises()
     const group = wrapper.find('.signup-group')
     expect(group.text()).toContain('1/2')      // 占位 1 / 报名 2
