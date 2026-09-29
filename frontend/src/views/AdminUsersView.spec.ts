@@ -90,4 +90,22 @@ describe('AdminUsersView', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('神启·圣骑士（男）')
   })
+  it('角色查询表显示太阳增益列且排序可选', async () => {
+    apiMock.get.mockResolvedValueOnce({ items: [{
+      id: 1, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+      parent_name: 'priest_male', class_type: '辅助', fame: 1,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: 3000,
+      owner_id: 3, owner_nickname: '队员', owner_username: 'm', owner_is_banned: false,
+    }], total: 1 })
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('太阳增益')      // 表头
+    expect(wrapper.text()).toContain('3000')          // 查询行数值
+    await wrapper.find('[data-filter="sort"]').setValue('sun_buff')
+    await flushPromises()
+    const qcalls = apiMock.get.mock.calls.filter((c: any[]) => String(c[0]).includes('/query'))
+    expect(String(qcalls[qcalls.length - 1][0])).toContain('sort=sun_buff')
+  })
 })
