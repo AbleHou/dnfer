@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import { api } from '../api/client'
 import type { Character } from '../types'
-import { jobIcon, handleIconError as onIconError } from '../lib/job'
+import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 
 const props = withDefaults(defineProps<{
   open: boolean
@@ -85,7 +85,7 @@ function submit() {
           <span class="c-name">{{ c.name }}</span>
           <span class="c-job">
             <img :src="jobIcon(c.job_name)" @error="onIconError" class="job-icon" />
-            {{ c.job_title }}
+            {{ jobGenderTitle(c.job_name, c.job_title) }}
           </span>
           <span class="c-power">{{ powerText(c) }}</span>
           <span class="c-fame">{{ c.fame }}</span>

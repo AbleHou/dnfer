@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { jobIcon, handleIconError as onIconError } from '../lib/job'
+import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import type { Character, CharacterPlacement } from '../types'
 
@@ -17,7 +17,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
     <div style="flex:1">
       <b style="margin-right:6px">{{ character.name }}</b>
       <span style="color:var(--dnf-text-muted);font-size:12px">
-        {{ character.job_title }} · {{ character.class_type }} · 名望 {{ character.fame }}
+        {{ jobGenderTitle(character.job_name, character.job_title) }} · {{ character.class_type }} · 名望 {{ character.fame }}
       </span>
       <div style="color:var(--dnf-text-faint);font-size:12px">
         {{ character.class_type === '输出'

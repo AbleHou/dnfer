@@ -86,4 +86,14 @@ describe('SignupModal', () => {
     await wrapper.find('[data-act="char-2"]').setValue(true)
     expect(wrapper.emitted('toggle')).toEqual([[2, true]])
   })
+
+  it('男女双版职业显示性别后缀', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const row1 = wrapper.find('[data-act="char-1"]').element.closest('.signup-char') as HTMLElement
+    expect(row1.textContent).toContain('极诣·剑魂')
+    expect(row1.textContent).not.toContain('极诣·剑魂（')
+    const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
+    expect(row2.textContent).toContain('神启·圣骑士（男）')
+  })
 })
