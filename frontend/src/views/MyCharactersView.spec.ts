@@ -86,7 +86,7 @@ describe('MyCharactersView job picker', () => {
     expect(editBtn).toBeTruthy()
     await editBtn!.trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('已选：神启·圣骑士（辅助职业）')
+    expect(wrapper.text()).toContain('已选：神启·圣骑士（男）（辅助职业）')
     await wrapper.find('button[data-act="save"]').trigger('click')
     await flushPromises()
     const [url, body] = apiMock.put.mock.calls[0]
@@ -206,5 +206,29 @@ describe('MyCharactersView job picker', () => {
     await nextTick()
     expect(fameBtn.classes()).toContain('dnf-btn-primary')
     expect(typeBtn.classes()).not.toContain('dnf-btn-primary')
+  })
+
+  it('角色卡与职业选择器显示男女双版性别后缀', async () => {
+    const charA = {
+      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 100,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null,
+    }
+    const charB = {
+      id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+      parent_name: 'priest_male', class_type: '辅助', fame: 200,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000,
+    }
+    apiMock.get.mockResolvedValueOnce([charA, charB])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    expect(wrapper.text()).toContain('神启·圣骑士（男）')     // 卡片职业名
+    expect(wrapper.text()).not.toContain('极诣·剑魂（')      // 单性别不加
+    // 打开添加角色表单，职业按钮 title 带后缀
+    await wrapper.find('button').trigger('click')
+    await flushPromises()
+    await wrapper.find('button[data-cat="priest_male"]').trigger('click')
+    await wrapper.find('button[data-job="crusader_male"]').trigger('click')
+    expect(wrapper.text()).toContain('已选：神启·圣骑士（男）（辅助职业）')
   })
 })

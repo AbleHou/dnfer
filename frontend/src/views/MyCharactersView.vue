@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
-import { jobIcon, handleIconError as onIconError } from '../lib/job'
+import { jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { Character, JobCategory } from '../types'
 
@@ -80,7 +80,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
           <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
           <div>
             <b style="margin-right:6px">{{ c.name }}</b>
-            <span style="color:var(--dnf-text-muted);font-size:12px">{{ c.job_title }} · {{ c.class_type }} · 名望 {{ c.fame }}</span>
+            <span style="color:var(--dnf-text-muted);font-size:12px">{{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }} · 名望 {{ c.fame }}</span>
             <div style="color:var(--dnf-text-faint);font-size:12px">
               {{ c.class_type === '输出'
                 ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}`

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { api } from '../api/client'
-import { categoryIcon, jobIcon, handleIconError as onIconError } from '../lib/job'
+import { categoryIcon, jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import type { Character, JobCategory, JobChild } from '../types'
 
 const props = defineProps<{ categories: JobCategory[]; editing: Character | null; baseUrl?: string }>()
@@ -70,11 +70,11 @@ async function save() {
                   :class="{ active: selectedJob?.name === child.name }"
                   @click="selectedJob = child">
             <img :src="jobIcon(child.name)" alt="" @error="onIconError" style="width:36px;height:36px">
-            <span style="display:block;font-size:11px">{{ child.title }}</span>
+            <span style="display:block;font-size:11px">{{ jobGenderTitle(child.name, child.title) }}</span>
           </button>
         </div>
         <p v-if="selectedJob" style="color:var(--dnf-text-muted);font-size:12px;margin:4px 0 0">
-          已选：{{ selectedJob.title }}（{{ selectedJob.class_type }}职业）
+          已选：{{ jobGenderTitle(selectedJob.name, selectedJob.title) }}（{{ selectedJob.class_type }}职业）
         </p>
       </div>
     </div>
