@@ -102,7 +102,9 @@ async function save() {
     </template>
     <p v-else style="color:var(--dnf-text-faint);font-size:12px">请先选择职业</p>
     <p v-if="error" class="form-error">{{ error }}</p>
-    <button class="dnf-btn dnf-btn-primary" :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
-    <button class="dnf-btn" @click="emit('cancel')">取消</button>
+    <div style="display:flex;gap:8px">
+      <button class="dnf-btn dnf-btn-primary" :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+      <button class="dnf-btn" @click="emit('cancel')">取消</button>
+    </div>
   </div>
 </template>
