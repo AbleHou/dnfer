@@ -325,6 +325,7 @@ async function onSaveRaid() {
 }
 .signup-user {
   flex: 1; justify-content: flex-start;
+  align-items: center;   /* 头像/昵称/计数垂直居中，避免 stretch 把文本顶到顶部 */
   gap: 6px; min-width: 0; text-align: left;
 }
 .signup-nick { white-space: nowrap; }
