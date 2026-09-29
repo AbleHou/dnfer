@@ -49,11 +49,33 @@ describe('SignupModal', () => {
     expect(wrapper.emitted('submit')).toBeUndefined()
   })
 
+  it('显示表头：角色/职业/伤害/名望', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const head = wrapper.find('.signup-head')
+    expect(head.exists()).toBe(true)
+    expect(head.text()).toContain('角色')
+    expect(head.text()).toContain('职业')
+    expect(head.text()).toContain('伤害')
+    expect(head.text()).toContain('名望')
+  })
+
+  it('战力列：输出显示模拟/秒伤，辅助显示增益量（纯数值）', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const row1 = wrapper.find('[data-act="char-1"]').element.closest('.signup-char') as HTMLElement
+    expect(row1.textContent).toContain('5/2')     // 剑魂 simulated_damage:5, sustained_dps:2
+    const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
+    expect(row2.textContent).toContain('9000')    // 奶 buff_amount:9000（fame 同为 9000，需行内 scope 消歧）
+  })
+
   it('显示角色名望便于区分', async () => {
     const wrapper = mountModal()
     await flushPromises()
-    expect(wrapper.text()).toContain('名望 52000')
-    expect(wrapper.text()).toContain('名望 9000')
+    const row1 = wrapper.find('[data-act="char-1"]').element.closest('.signup-char') as HTMLElement
+    expect(row1.textContent).toContain('52000')
+    const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
+    expect(row2.textContent).toContain('9000')
   })
 
   it('manage 模式勾选态由 selectedIds 派生，切换透传 toggle', async () => {

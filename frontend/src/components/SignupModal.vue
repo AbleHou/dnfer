@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import { api } from '../api/client'
 import type { Character } from '../types'
+import { jobIcon, handleIconError as onIconError } from '../lib/job'
 
 const props = withDefaults(defineProps<{
   open: boolean
@@ -36,6 +37,13 @@ watch(() => props.open, async (open) => {
   }
 }, { immediate: true })
 
+function fmtPower(n: number | null): string { return n == null ? '—' : String(n) }
+function powerText(c: Character): string {
+  return c.class_type === '输出'
+    ? `${fmtPower(c.simulated_damage)}/${fmtPower(c.sustained_dps)}`
+    : fmtPower(c.buff_amount)
+}
+
 function isChecked(cid: number): boolean {
   return props.mode === 'manage'
     ? props.selectedIds.includes(cid)
@@ -66,13 +74,23 @@ function submit() {
       <p v-else-if="!characters.length" style="color:var(--dnf-text-faint)">
         还没有角色，去「我的角色」添加
       </p>
-      <label v-for="c in characters" :key="c.id" class="signup-char">
-        <input type="checkbox" :checked="isChecked(c.id)" :data-act="'char-' + c.id"
-               @change="toggle(c.id)" />
-        <span>{{ c.name }}</span>
-        <span style="color:var(--dnf-text-faint);font-size:12px">{{ c.job_title }}</span>
-        <span style="margin-left:auto;color:var(--dnf-text-muted);font-size:12px">名望 {{ c.fame }}</span>
-      </label>
+      <template v-else>
+        <div class="signup-head">
+          <span></span><span>角色</span><span>职业</span><span>伤害/增益</span><span>名望</span>
+        </div>
+        <label v-for="c in characters" :key="c.id" class="signup-char"
+               :class="{ selected: isChecked(c.id) }">
+          <input type="checkbox" :checked="isChecked(c.id)" :data-act="'char-' + c.id"
+                 @change="toggle(c.id)" />
+          <span class="c-name">{{ c.name }}</span>
+          <span class="c-job">
+            <img :src="jobIcon(c.job_name)" @error="onIconError" class="job-icon" />
+            {{ c.job_title }}
+          </span>
+          <span class="c-power">{{ powerText(c) }}</span>
+          <span class="c-fame">{{ c.fame }}</span>
+        </label>
+      </template>
       <p v-if="error" style="color:var(--dnf-danger)">{{ error }}</p>
     </div>
     <template #footer>
@@ -88,10 +106,28 @@ function submit() {
 </template>
 
 <style scoped>
+.signup-head, .signup-char {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto;
+  gap: 8px; align-items: center;
+}
+.signup-head {
+  font-size: 12px; color: var(--dnf-text-faint,#7a8291);
+  padding: 4px 8px;
+}
 .signup-char {
-  display: flex; align-items: center; gap: 8px;
   padding: 6px 8px; margin: 6px 0;
-  border: 1px solid var(--dnf-border); border-radius: 4px;
+  border: 1px solid var(--dnf-border,#3a3f4b); border-radius: 6px;
   cursor: pointer;
 }
+.signup-char.selected { border-color: var(--dnf-accent,#ffd54a); }
+.c-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-job {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--dnf-text-muted,#9aa3b2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.job-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.c-power { font-size: 12px; color: var(--dnf-text-muted,#9aa3b2); }
+.c-fame { font-size: 12px; color: var(--dnf-text-muted,#9aa3b2); text-align: right; }
 </style>
