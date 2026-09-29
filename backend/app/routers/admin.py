@@ -57,6 +57,7 @@ _SORT_COLS = {
     "simulated_damage": Character.simulated_damage,
     "sustained_dps": Character.sustained_dps,
     "buff_amount": Character.buff_amount,
+    "sun_buff": Character.sun_buff,
     "name": Character.name,
 }
 

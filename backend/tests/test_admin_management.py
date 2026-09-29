@@ -175,3 +175,28 @@ def test_banned_user_cannot_place_own_character(client, admin_headers, db):
     r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=h,
                     json={"character_id": char_id})
     assert r.status_code == 403
+
+def test_query_characters_sort_by_sun_buff(client, admin_headers, db):
+    _, u1 = register_user(client, "s1", "玩家一")
+    _add_char(db, u1["id"], name="奶甲", job="crusader_female", fame=100, class_type="辅助")
+    db.add(Character(user_id=u1["id"], name="奶乙", job_name="crusader_female",
+                     class_type="辅助", fame=200, simulated_damage=None,
+                     sustained_dps=None, buff_amount=500, sun_buff=3000))
+    db.commit()
+    r = client.get("/api/admin/characters/query",
+                   params={"sort": "sun_buff", "order": "asc"}, headers=admin_headers)
+    assert r.status_code == 200
+    names = [i["name"] for i in r.json()["items"]]
+    assert names[0] == "奶乙"      # sun_buff 3000 排最前
+    assert names[-1] == "奶甲"     # sun_buff NULL 经 NULLS LAST 排最后
+    r = client.get("/api/admin/characters/query",
+                   params={"sort": "sun_buff", "order": "desc"}, headers=admin_headers)
+    assert r.json()["items"][0]["name"] == "奶乙"
+
+def test_admin_create_character_with_sun_buff(client, admin_headers):
+    _, u = register_user(client, "s2", "玩家二")
+    r = client.post(f"/api/admin/users/{u['id']}/characters", headers=admin_headers,
+                    json={"name": "奶", "job_name": "crusader_male", "fame": 1,
+                          "buff_amount": 9000, "sun_buff": 2500})
+    assert r.status_code == 200
+    assert r.json()["sun_buff"] == 2500
