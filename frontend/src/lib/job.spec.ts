@@ -30,4 +30,21 @@ describe('jobGenderTitle', () => {
     expect(jobGenderTitle('unknown_job', 'x')).toBe('x')
     expect(jobGenderTitle('weapon_master', null)).toBe('')
   })
+  it('覆盖全部 10 对男女双版职业（20 个 job_name）', () => {
+    const pairs: Array<[string, '男' | '女']> = [
+      ['ranger_male', '男'], ['ranger_female', '女'],
+      ['launcher_male', '男'], ['launcher_female', '女'],
+      ['mechanic_male', '男'], ['mechanic_female', '女'],
+      ['spitfire_male', '男'], ['spitfire_female', '女'],
+      ['crusader_male', '男'], ['crusader_female', '女'],
+      ['infighter', '男'], ['infighter_female', '女'],
+      ['nenmaster_male', '男'], ['nenmaster_female', '女'],
+      ['striker_male', '男'], ['striker_female', '女'],
+      ['brawler_male', '男'], ['brawler_female', '女'],
+      ['grappler_male', '男'], ['grappler_female', '女'],
+    ]
+    for (const [jobName, g] of pairs) {
+      expect(jobGenderTitle(jobName, '职业名')).toBe(`职业名（${g}）`)
+    }
+  })
 })
