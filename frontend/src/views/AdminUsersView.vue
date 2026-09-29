@@ -183,12 +183,14 @@ onMounted(() => {
             <td>{{ u.character_count }}</td>
             <td>{{ u.is_banned ? '已封禁' : '正常' }}</td>
             <td style="white-space:nowrap">
-              <button class="dnf-btn dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</button>
-              <template v-if="!u.is_admin">
-                <button v-if="!u.is_banned" class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'ban-' + u.id"
-                        @click="toggleBan(u)">封禁</button>
-                <button v-else class="dnf-btn dnf-btn-sm" :data-act="'unban-' + u.id" @click="toggleBan(u)">解封</button>
-              </template>
+              <div style="display:flex;gap:8px">
+                <button class="dnf-btn dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</button>
+                <template v-if="!u.is_admin">
+                  <button v-if="!u.is_banned" class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'ban-' + u.id"
+                          @click="toggleBan(u)">封禁</button>
+                  <button v-else class="dnf-btn dnf-btn-sm" :data-act="'unban-' + u.id" @click="toggleBan(u)">解封</button>
+                </template>
+              </div>
             </td>
           </tr>
         </tbody>

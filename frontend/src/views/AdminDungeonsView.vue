@@ -68,8 +68,10 @@ async function delDungeon(d: Dungeon) {
           <tr v-for="d in dungeons" :key="d.id">
             <td>{{ d.name }}</td><td>{{ d.size }}</td><td>{{ d.description }}</td>
             <td style="white-space:nowrap">
-              <button class="dnf-btn dnf-btn-sm" @click="editDungeon(d)">编辑</button>
-              <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'del-' + d.id" @click="delDungeon(d)">删除</button>
+              <div style="display:flex;gap:8px">
+                <button class="dnf-btn dnf-btn-sm" @click="editDungeon(d)">编辑</button>
+                <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'del-' + d.id" @click="delDungeon(d)">删除</button>
+              </div>
             </td>
           </tr>
         </tbody>
