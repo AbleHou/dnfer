@@ -12,7 +12,8 @@ def character_out(c: Character) -> CharacterOut:
                         job_title=meta["title"], parent_name=meta["parent_name"],
                         class_type=c.class_type, fame=c.fame,
                         simulated_damage=c.simulated_damage,
-                        sustained_dps=c.sustained_dps, buff_amount=c.buff_amount)
+                        sustained_dps=c.sustained_dps, buff_amount=c.buff_amount,
+                        sun_buff=c.sun_buff)
 
 
 def validate_job(job_name: str) -> None:
@@ -28,6 +29,7 @@ def apply_character_payload(c: Character, body: CharacterIn) -> None:
     c.simulated_damage = body.simulated_damage
     c.sustained_dps = body.sustained_dps
     c.buff_amount = body.buff_amount
+    c.sun_buff = body.sun_buff
 
 
 def delete_character_if_free(db: Session, cid: int) -> None:

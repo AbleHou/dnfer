@@ -10,6 +10,7 @@ class CharacterIn(BaseModel):
     simulated_damage: int | None = None
     sustained_dps: int | None = None
     buff_amount: int | None = None
+    sun_buff: int | None = None
 
 class CharacterOut(BaseModel):
     id: int
@@ -22,6 +23,7 @@ class CharacterOut(BaseModel):
     simulated_damage: int | None
     sustained_dps: int | None
     buff_amount: int | None
+    sun_buff: int | None
 
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=64)

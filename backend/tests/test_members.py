@@ -71,3 +71,24 @@ def test_update_character_re_derives_class_type(client):
     assert r.json()["class_type"] == "辅助"
     assert r.json()["job_title"] == "光启·光明骑士"
     assert r.json()["parent_name"] == "priest_male"
+
+def test_character_sun_buff_round_trip(client):
+    h, _ = register_user(client, "p13", "奶妈")
+    r = client.post("/api/me/characters", headers=h, json={
+        "name": "小魔女", "job_name": "enchantress", "fame": 20000,
+        "buff_amount": 9500, "sun_buff": 3000})
+    assert r.status_code == 200
+    assert r.json()["sun_buff"] == 3000
+    cid = r.json()["id"]
+    # 创建后查询带出
+    assert client.get("/api/me/characters", headers=h).json()[0]["sun_buff"] == 3000
+    # 不带 sun_buff → null（旧字段默认行为保持）
+    r2 = client.post("/api/me/characters", headers=h, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1})
+    assert r2.json()["sun_buff"] is None
+    # 编辑更新 sun_buff
+    r = client.put(f"/api/me/characters/{cid}", headers=h, json={
+        "name": "小魔女", "job_name": "enchantress", "fame": 20000,
+        "buff_amount": 9500, "sun_buff": 3500})
+    assert r.status_code == 200
+    assert r.json()["sun_buff"] == 3500
