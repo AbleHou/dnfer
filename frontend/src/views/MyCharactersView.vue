@@ -79,7 +79,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
           <div>
-            <b>{{ c.name }}</b>
+            <b style="margin-right:6px">{{ c.name }}</b>
             <span style="color:var(--dnf-text-muted);font-size:12px">{{ c.job_title }} · {{ c.class_type }} · 名望 {{ c.fame }}</span>
             <div style="color:var(--dnf-text-faint);font-size:12px">
               {{ c.class_type === '输出'
