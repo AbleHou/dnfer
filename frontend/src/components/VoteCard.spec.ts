@@ -30,10 +30,10 @@ describe('VoteCard', () => {
       { option_ids: [1], anonymous: false })
     expect(wrapper.emitted('refresh')).toHaveLength(1)
   })
-  it('拉起面罩后匿名投票', async () => {
+  it('开启匿名投票后提交 anonymous=true', async () => {
     apiMock.post.mockResolvedValue(openVote)
     const wrapper = mount(VoteCard, { props: { vote: openVote } })
-    await wrapper.find('[data-act="mask"]').trigger('click')  // 拉起面罩
+    await wrapper.find('[data-act="mask"]').trigger('click')  // 开启匿名
     await wrapper.find('[data-act="opt-1"]').trigger('click')
     await wrapper.find('[data-act="vote"]').trigger('click')
     await flushPromises()

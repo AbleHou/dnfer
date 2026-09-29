@@ -7,7 +7,7 @@ import type { VoteDetail } from '../types'
 const props = defineProps<{ vote: VoteDetail; isAdmin?: boolean }>()
 const emit = defineEmits<{ (e: 'refresh'): void }>()
 
-const maskUp = ref(false)        // 面罩状态（纯前端）
+const maskUp = ref(false)        // 匿名投票状态（纯前端）
 const votedAnon = ref(false)     // 本会话内已匿名投过（后端无身份可查）
 const selected = ref<number[]>([])
 
@@ -66,8 +66,8 @@ async function closeVote() {
     <p v-if="vote.description" class="vote-desc">{{ vote.description }}</p>
     <div v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-mask">
       <button class="dnf-btn dnf-btn-sm" data-act="mask" @click="maskUp = !maskUp">
-        {{ maskUp ? '拉下面罩' : '拉起面罩' }}</button>
-      <span v-if="maskUp" class="vote-note">面罩已拉起：本次投票将记作匿名</span>
+        {{ maskUp ? '取消匿名' : '匿名投票' }}</button>
+      <span v-if="maskUp" class="vote-note">匿名已开启：本次投票将记作匿名</span>
     </div>
     <ul class="vote-options">
       <li v-for="o in vote.options" :key="o.id" class="vote-option"
