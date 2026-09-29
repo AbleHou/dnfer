@@ -11,7 +11,8 @@ const emit = defineEmits<{ (e: 'saved'): void; (e: 'cancel'): void }>()
 const form = ref({ name: props.editing?.name ?? '', fame: props.editing?.fame ?? null as number | null,
   simulated_damage: props.editing?.simulated_damage ?? null as number | null,
   sustained_dps: props.editing?.sustained_dps ?? null as number | null,
-  buff_amount: props.editing?.buff_amount ?? null as number | null })
+  buff_amount: props.editing?.buff_amount ?? null as number | null,
+  sun_buff: props.editing?.sun_buff ?? null as number | null })
 const selectedCat = ref<JobCategory | null>(
   props.categories.find(cat => cat.name === props.editing?.parent_name) ?? null)
 const selectedJob = ref<JobChild | null>(
@@ -23,7 +24,7 @@ const saving = ref(false)
 function onPickCategory(cat: JobCategory) { selectedCat.value = cat; selectedJob.value = null }
 
 watch(selectedJob, (j) => {
-  if (j?.class_type === '输出') form.value.buff_amount = null
+  if (j?.class_type === '输出') { form.value.buff_amount = null; form.value.sun_buff = null }
   else if (j?.class_type === '辅助') {
     form.value.simulated_damage = null; form.value.sustained_dps = null
   }
@@ -36,7 +37,8 @@ async function save() {
     const payload = { name: form.value.name, job_name: selectedJob.value.name,
       fame: Number(form.value.fame) || 0,
       simulated_damage: form.value.simulated_damage,
-      sustained_dps: form.value.sustained_dps, buff_amount: form.value.buff_amount }
+      sustained_dps: form.value.sustained_dps, buff_amount: form.value.buff_amount,
+      sun_buff: form.value.sun_buff }
     if (props.editing) await api.put(`${base()}/${props.editing.id}`, payload)
     else await api.post(base(), payload)
     emit('saved')
@@ -97,6 +99,10 @@ async function save() {
         <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
           <label for="char-buff" class="form-label">增益量：</label>
           <input id="char-buff" v-model.number="form.buff_amount" type="number" class="dnf-input" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-sun-buff" class="form-label">太阳增益：</label>
+          <input id="char-sun-buff" v-model.number="form.sun_buff" type="number" class="dnf-input" style="flex:1" />
         </div>
       </template>
     </template>
