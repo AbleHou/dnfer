@@ -73,7 +73,7 @@ describe('MemberCharactersModal', () => {
       global: { stubs: { teleport: true } },
     })
     await flushPromises()
-    expect(wrapper.text()).toContain('增益')          // 渲染「增益 9000」
-    expect(wrapper.text()).toContain('太阳')          // 渲染「太阳 暂无」（sun_buff null）
+    expect(wrapper.text()).toContain('增益 9000')
+    expect(wrapper.text()).toContain('太阳 暂无')
   })
 })
