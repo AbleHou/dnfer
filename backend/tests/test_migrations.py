@@ -84,3 +84,17 @@ def test_migrate_users_ban_adds_column():
         cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).all()}
         assert "is_banned" in cols
     migrate_users_ban(engine)  # 幂等：再次运行不报错
+
+def test_migrate_characters_sun_buff_adds_column():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE characters (
+            id INTEGER PRIMARY KEY, user_id INTEGER, name VARCHAR(64),
+            job_name VARCHAR(64), class_type VARCHAR(8), fame INTEGER,
+            simulated_damage INTEGER, sustained_dps INTEGER, buff_amount INTEGER)"""))
+    from app.migrations import migrate_characters_sun_buff
+    migrate_characters_sun_buff(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(characters)")).all()}
+        assert "sun_buff" in cols
+    migrate_characters_sun_buff(engine)  # 幂等：再次运行不报错

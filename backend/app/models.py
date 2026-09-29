@@ -41,6 +41,7 @@ class Character(Base):
     simulated_damage: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 输出
     sustained_dps: Mapped[int | None] = mapped_column(Integer, nullable=True)      # 输出
     buff_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)        # 辅助
+    sun_buff: Mapped[int | None] = mapped_column(Integer, nullable=True)        # 辅助：太阳增益
     owner: Mapped[User] = relationship(back_populates="characters")
 
 class Dungeon(Base):
