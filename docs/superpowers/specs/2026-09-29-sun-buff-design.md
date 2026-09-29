@@ -117,12 +117,12 @@ def migrate_characters_sun_buff(engine: Engine) -> None:
 - `test_members.py`：创建/编辑角色携带 `sun_buff`，`CharacterOut` 返回含该值；不带则 null
 - `test_admin_management.py`：admin 为用户建/改角色带 sun_buff；`/api/admin/characters/query?sort=sun_buff` 正常返回且排序生效
 - `test_bot_characters.py`：机器人录入/编辑角色 sun_buff（创建分支 + `_apply_partial` 分支）
-- `test_raids.py` / `test_smoke.py`：填角色后 slot 响应带出 `sun_buff`
+- `test_raids.py`：填角色后 slot 响应带出 `sun_buff`（`test_smoke.py` 仅为 import 冒烟测试，无 slot 断言，不涉及）
 - `test_migrations.py`：`migrate_characters_sun_buff` 幂等（重复调用不报错、列存在）
 
 ### 5.2 前端（vitest + vue-tsc）
 
-- 所有 `Character`/`Slot` 字面量 fixture 补 `sun_buff` 字段（`types.ts` 加必填会牵连 RaidList/RaidDetail/stores/components/views 各 spec）
+- `types.ts` 加必填 `sun_buff` 会牵连所有构造 `Character`/`Slot` 字面量的 spec（vue-tsc 编译失败），共 **13 个**文件需补 fixture 字段：`MyCharactersView.spec.ts`、`AdminUsersView.spec.ts`、`RaidDetailView.spec.ts`、`CharacterPickerModal.spec.ts`、`CharacterForm.spec.ts`、`AdminUserCharactersModal.spec.ts`、`MemberCharactersModal.spec.ts`、`SignupModal.spec.ts`、`SlotCell.spec.ts`、`stores/raid.spec.ts`、`composables/useSlotMove.spec.ts`、`lib/damage.spec.ts`、`lib/placement.spec.ts`（其中 `damage.spec.ts`/`placement.spec.ts`/`useSlotMove.spec.ts` 虽不读 `sun_buff`，仍需补字段过 vue-tsc）
 - `CharacterForm.spec`：选辅助显示太阳增益输入、选输出不显示、切换清空
 - `CharacterCard.spec`/`MyCharactersView.spec`/`SlotCell.spec`：辅助行显示「太阳」、输出行不显示
 - `SignupModal.spec`：辅助行战力列含 `增益/太阳` 双值
@@ -145,7 +145,7 @@ def migrate_characters_sun_buff(engine: Engine) -> None:
 - `backend/app/routers/admin.py`
 - `backend/app/routers/raids.py`
 - `backend/app/routers/bot.py`
-- `backend/tests/test_members.py`、`test_admin_management.py`、`test_bot_characters.py`、`test_raids.py`、`test_smoke.py`、`test_migrations.py`
+- `backend/tests/test_members.py`、`test_admin_management.py`、`test_bot_characters.py`、`test_raids.py`、`test_migrations.py`
 
 ### 前端
 
