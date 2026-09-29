@@ -15,7 +15,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
     <img :src="jobIcon(character.job_name)" @error="onIconError"
          style="width:28px;height:28px">
     <div style="flex:1">
-      <b>{{ character.name }}</b>
+      <b style="margin-right:6px">{{ character.name }}</b>
       <span style="color:var(--dnf-text-muted);font-size:12px">
         {{ character.job_title }} · {{ character.class_type }} · 名望 {{ character.fame }}
       </span>
