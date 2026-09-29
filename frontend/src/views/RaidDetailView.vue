@@ -104,21 +104,15 @@ async function onToggleSignupChar(cid: number, checked: boolean) {
       : signupSelected.value.filter(x => x !== cid)
   } catch (e: any) { notifyError(e.message) }
 }
-async function onRemoveSignupChar(cid: number) {
-  if (!store.raid) return
-  if (placed.value[cid]) {
-    const ok = await confirmDialog({ content: '该角色已占位，取消勾选将撤销其占位，确认？' })
-    if (!ok) return
-  }
-  try {
-    await api.del(`/api/raids/${store.raid.id}/signup/characters/${cid}`)
-    await load()
-  } catch (e: any) { notifyError(e.message) }
-}
 async function onCancelSelf() {
   if (!store.raid) return
+  const ok = await confirmDialog({ content: '确认取消本次报名？将撤下你已占位的角色' })
+  if (!ok) return
   try { await api.del(`/api/raids/${store.raid.id}/signup`); notifySuccess('已取消报名'); await load() }
   catch (e: any) { notifyError(e.message) }
+}
+function placedCount(s: RaidSignup): number {
+  return s.characters.filter(c => placed.value[c.id]).length
 }
 async function onCancelUser(s: RaidSignup) {
   if (!store.raid) return
@@ -234,32 +228,30 @@ async function onSaveRaid() {
         </span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
-        <div v-for="s in store.raid.signups" :key="s.user.id"
-             style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--dnf-border);border-radius:4px">
-          <button class="avatar-btn" @click="memberModalUser = s.user">
-            <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
-          </button>
-          <span>{{ s.user.nickname }}</span>
-          <span v-if="s.created_at === null" class="dnf-badge dnf-badge-ok">团长</span>
-          <div v-if="s.created_at !== null && s.characters.length" class="signup-chips">
-            <span v-for="c in s.characters" :key="c.id" class="signup-chip">
-              {{ c.name }}
-              <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
-                      class="chip-x" :data-act="'rm-char-' + c.id"
-                      @click="onRemoveSignupChar(c.id)">×</button>
-            </span>
-            <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
-                    class="dnf-btn dnf-btn-sm" data-act="add-char"
-                    @click="openManageSignup">＋ 添加角色</button>
+        <template v-for="s in store.raid.signups" :key="s.user.id">
+          <div v-if="s.created_at === null" class="signup-leader"
+               style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--dnf-border,#3a3f4b);border-radius:4px">
+            <button class="avatar-btn" @click="memberModalUser = s.user">
+              <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
+            </button>
+            <span>{{ s.user.nickname }}</span>
+            <span class="dnf-badge dnf-badge-ok">团长</span>
           </div>
-          <button v-else-if="s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
-                  class="dnf-btn dnf-btn-sm" data-act="add-char"
-                  @click="openManageSignup">＋ 添加角色</button>
-          <button v-if="auth.isAdmin && s.created_at !== null" class="dnf-btn dnf-btn-sm"
-                  @click="onCancelUser(s)">取消报名</button>
-          <button v-else-if="s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
-                  class="dnf-btn dnf-btn-sm" @click="onCancelSelf">取消报名</button>
-        </div>
+          <div v-else class="signup-group">
+            <button class="avatar-btn signup-user" @click="memberModalUser = s.user">
+              <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
+              <span class="signup-nick">{{ s.user.nickname }}</span>
+              <span class="signup-count">{{ placedCount(s) }}/{{ s.characters.length }}</span>
+            </button>
+            <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
+                    class="dnf-btn dnf-btn-sm" data-act="manage-chars"
+                    @click="openManageSignup">角色变更</button>
+            <button v-if="auth.isAdmin && s.created_at !== null"
+                    class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="onCancelUser(s)">取消报名</button>
+            <button v-else-if="s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
+                    class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="onCancelSelf">取消报名</button>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -323,12 +315,16 @@ async function onSaveRaid() {
   display: inline-flex; padding: 0; margin: 0;
   background: none; border: none; cursor: pointer;
 }
-.signup-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; align-items: center; }
-.signup-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 1px 6px; border: 1px solid var(--dnf-border); border-radius: 10px;
-  font-size: 12px; color: var(--dnf-text-muted);
+.signup-group {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--dnf-border,#3a3f4b); border-radius: 8px;
+  min-width: 0;
 }
-.chip-x { background: none; border: none; cursor: pointer; color: var(--dnf-text-faint); padding: 0 2px; }
-.chip-x:hover { color: var(--dnf-danger, red); }
+.signup-user {
+  flex: 1; justify-content: flex-start;
+  gap: 6px; min-width: 0; text-align: left;
+}
+.signup-nick { font-weight: 500; white-space: nowrap; }
+.signup-count { font-size: 12px; color: var(--dnf-text-muted,#9aa3b2); white-space: nowrap; }
 </style>

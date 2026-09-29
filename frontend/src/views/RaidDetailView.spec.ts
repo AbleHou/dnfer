@@ -6,7 +6,8 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import RaidDetailView from './RaidDetailView.vue'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore } from '../stores/raid'
-import type { Raid } from '../types'
+import type { Raid, User } from '../types'
+import { confirmDialog } from '../lib/notify'
 
 const { apiMock, notifyMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn() },
@@ -33,8 +34,12 @@ vi.mock('../lib/notify', () => ({
 
 const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false }
 const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
-const adminRow = { user: admin, created_at: null, characters: [] }
-const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters: [] }
+const memberChars = [
+  { id: 10, name: '剑魂', job_title: '极诣·剑魂', class_type: '输出' as const },
+  { id: 11, name: '奶', job_title: '神启·圣骑士', class_type: '辅助' as const },
+]
+const adminRow = { user: admin, created_at: null, characters: [] as typeof memberChars }
+const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters: memberChars }
 
 function makeRaid(signups: Raid['signups']): Raid {
   return {
@@ -44,17 +49,35 @@ function makeRaid(signups: Raid['signups']): Raid {
   }
 }
 
-async function mountView(signups: Raid['signups']) {
+// 放了 id=10 占位格的 raid（供「占位/报名」计数断言）
+function makeRaidWithPlacement(signups: Raid['signups']): Raid {
+  const raid = makeRaid(signups)
+  raid.waves = [{
+    id: 1, index: 1,
+    slots: [{
+      id: 1, squad_index: 0, row_index: 0, character_id: 10, character_name: '剑魂',
+      character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      fame: 52000, simulated_damage: 5, sustained_dps: 2, buff_amount: null,
+      owner_id: member.id, owner_nickname: '队员', owner_avatar: null, duty: '主C', version: 1,
+    }],
+  }]
+  return raid
+}
+
+async function mountView(signups: Raid['signups'], user: User = admin) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
-  auth.user = admin
+  auth.user = user
   const store = useRaidStore()
   store.raid = makeRaid(signups)
-  apiMock.get.mockImplementation(async (url: string) => {
-    if (url === '/api/raids/1') return makeRaid(signups)
-    return []
-  })
+  // 若测试已在 mountView 前预置 apiMock.get（如带占位格的快照），尊重之；否则装默认快照
+  if (!apiMock.get.getMockImplementation()) {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids/1') return makeRaid(signups)
+      return []
+    })
+  }
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/raids/:id', component: RaidDetailView }],
@@ -75,19 +98,23 @@ async function mountView(signups: Raid['signups']) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // mockReset 会把实现重置为空函数（getMockImplementation 仍 truthy），无法用 getMockImplementation()
+  // 判断「测试是否预置」；直接置 undefined，让 mountView 的守卫只在测试未预置 apiMock.get 时装默认快照
+  apiMock.get.mockImplementation(undefined as never)
 })
 
 describe('RaidDetailView signup panel', () => {
-  it('团长固定行不显示取消报名按钮', async () => {
+  it('团长行无取消报名按钮，非团长行有', async () => {
     const { wrapper } = await mountView([adminRow, memberRow])
     await flushPromises()
     expect(wrapper.text()).toContain('团长')
     expect(wrapper.text()).toContain('队员')
-    // 团长行无取消按钮；普通报名者行有
-    const rows = wrapper.findAll('div[style*="border: 1px solid var(--dnf-border)"]')
-    expect(rows.length).toBe(2)
-    expect(rows[0].text()).not.toContain('取消报名')
-    expect(rows[1].text()).toContain('取消报名')
+    const leader = wrapper.find('.signup-leader')
+    expect(leader.exists()).toBe(true)
+    expect(leader.text()).not.toContain('取消报名')
+    const group = wrapper.find('.signup-group')
+    expect(group.exists()).toBe(true)
+    expect(group.text()).toContain('取消报名')
   })
 })
 
@@ -198,5 +225,51 @@ describe('RaidDetailView enhance', () => {
     const modal = wrapper.findComponent({ name: 'SignupModal' })
     expect(modal.exists()).toBe(true)
     expect(modal.props('mode')).toBe('signup')
+  })
+
+  it('本人（member）行显示占位/报名计数与角色变更按钮，点击打开 manage 弹窗', async () => {
+    const raid = makeRaidWithPlacement([adminRow, memberRow])
+    apiMock.get.mockImplementation(async (url: string) => {   // 让 load() 拉到带占位格的快照，避免依赖微任务时序
+      if (url === '/api/raids/1') return raid
+      return []
+    })
+    const { wrapper } = await mountView([adminRow, memberRow], member)
+    await flushPromises()
+    const group = wrapper.find('.signup-group')
+    expect(group.text()).toContain('1/2')      // 占位 1 / 报名 2
+    const btn = wrapper.find('[data-act="manage-chars"]')
+    expect(btn.exists()).toBe(true)
+    await btn.trigger('click')
+    await flushPromises()
+    const modal = wrapper.findComponent({ name: 'SignupModal' })
+    expect(modal.exists()).toBe(true)
+    expect(modal.props('mode')).toBe('manage')
+    expect(modal.props('selectedIds')).toEqual([10, 11])
+  })
+
+  it('本人取消报名需确认，确认后 DELETE', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], member)
+    await flushPromises()
+    vi.mocked(confirmDialog).mockResolvedValueOnce(true)
+    await wrapper.find('.signup-group button.dnf-btn-danger').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.del).toHaveBeenCalledWith('/api/raids/1/signup')
+  })
+
+  it('本人取消报名：确认框取消则不请求', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], member)
+    await flushPromises()
+    vi.mocked(confirmDialog).mockResolvedValueOnce(false)
+    await wrapper.find('.signup-group button.dnf-btn-danger').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.del).not.toHaveBeenCalled()
+  })
+
+  it('管理员行不显示角色变更按钮', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    expect(wrapper.find('[data-act="manage-chars"]').exists()).toBe(false)
   })
 })
