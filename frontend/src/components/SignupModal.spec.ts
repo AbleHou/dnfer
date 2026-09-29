@@ -64,18 +64,18 @@ describe('SignupModal', () => {
     const wrapper = mountModal()
     await flushPromises()
     const row1 = wrapper.find('[data-act="char-1"]').element.closest('.signup-char') as HTMLElement
-    expect(row1.textContent).toContain('5/2')     // 剑魂 simulated_damage:5, sustained_dps:2
+    expect(row1.querySelector('.c-power')?.textContent).toContain('5/2')     // 剑魂 simulated_damage:5, sustained_dps:2
     const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
-    expect(row2.textContent).toContain('9000')    // 奶 buff_amount:9000（fame 同为 9000，需行内 scope 消歧）
+    expect(row2.querySelector('.c-power')?.textContent).toContain('9000')    // 奶 buff_amount:9000
   })
 
   it('显示角色名望便于区分', async () => {
     const wrapper = mountModal()
     await flushPromises()
     const row1 = wrapper.find('[data-act="char-1"]').element.closest('.signup-char') as HTMLElement
-    expect(row1.textContent).toContain('52000')
+    expect(row1.querySelector('.c-fame')?.textContent).toContain('52000')
     const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
-    expect(row2.textContent).toContain('9000')
+    expect(row2.querySelector('.c-fame')?.textContent).toContain('9000')
   })
 
   it('manage 模式勾选态由 selectedIds 派生，切换透传 toggle', async () => {
