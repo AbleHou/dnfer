@@ -215,6 +215,22 @@ def delete_raid(rid: int, admin: User = Depends(require_admin),
     db.commit()
     return {"ok": True}
 
+@router.put("/{rid}/slack-rules", response_model=SlackRuleSet)
+async def set_slack_rules(rid: int, body: SlackRuleSet, admin: User = Depends(require_admin),
+                          db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    row = db.query(RaidSlackRule).filter(RaidSlackRule.raid_id == rid).first()
+    if row is None:
+        row = RaidSlackRule(raid_id=rid)
+        db.add(row)
+    row.rules = body.model_dump()
+    row.updated_by = admin.id
+    row.updated_at = _now()
+    db.commit()
+    await manager.broadcast(rid, {"type": "raid:slack_rules_changed",
+                                  "slack_rules": body.model_dump()})
+    return body
+
 @router.post("/{rid}/lock")
 async def lock_raid(rid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
