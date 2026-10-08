@@ -8,6 +8,7 @@ import type { Character, CharacterPlacement, PlayerCharacters, User } from '../t
 const props = defineProps<{
   open: boolean; rid: number; user: User | null
   placed: Record<number, CharacterPlacement>
+  grayIds?: number[]
 }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const characters = ref<Character[]>([])
@@ -34,7 +35,7 @@ watch(() => [props.open, props.user?.id] as const, async ([open]) => {
     <div style="max-height:60vh;overflow:auto">
       <p v-if="!loading && !characters.length" style="color:var(--dnf-text-faint)">还没有角色</p>
       <CharacterCard v-for="c in characters" :key="c.id" :character="c"
-                     :placement="placed[c.id] ?? null" readonly />
+                     :placement="placed[c.id] ?? null" :grayed="grayIds?.includes(c.id) ?? false" readonly />
     </div>
   </n-modal>
 </template>

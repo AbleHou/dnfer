@@ -76,4 +76,15 @@ describe('MemberCharactersModal', () => {
     expect(wrapper.text()).toContain('增益 9000')
     expect(wrapper.text()).toContain('太阳 暂无')
   })
+
+  it('grayIds 命中的角色灰显', async () => {
+    apiMock.get.mockResolvedValue({ user, characters })
+    const wrapper = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {}, grayIds: [11] },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.find('.char-pick.grayed').exists()).toBe(true)
+    expect(wrapper.text()).toContain('剑魂')
+  })
 })

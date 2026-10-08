@@ -3,7 +3,7 @@ import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/
 import { SQUAD_NAMES } from '../lib/colors'
 import type { Character, CharacterPlacement } from '../types'
 
-defineProps<{ character: Character; placement: CharacterPlacement | null; active?: boolean; readonly?: boolean }>()
+defineProps<{ character: Character; placement: CharacterPlacement | null; active?: boolean; readonly?: boolean; grayed?: boolean }>()
 const emit = defineEmits<{ (e: 'click', c: Character): void }>()
 
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
@@ -11,7 +11,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 </script>
 
 <template>
-  <div class="char-pick" :class="{ active, readonly }" @click="!readonly && emit('click', character)">
+  <div class="char-pick" :class="{ active, readonly, grayed }" @click="!readonly && emit('click', character)">
     <img :src="jobIcon(character.job_name)" @error="onIconError"
          style="width:28px;height:28px">
     <div style="flex:1">
@@ -34,6 +34,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 <style scoped>
 .char-pick.readonly { cursor: default; }
 .char-pick.readonly:hover { border-color: var(--dnf-gold-deep); }
+.char-pick.grayed { opacity: .45; filter: grayscale(1); }
 .placed-badge {
   flex-shrink: 0; align-self: flex-start;
   background: var(--dnf-gold); color: #1a1205;
