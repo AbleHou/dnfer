@@ -13,6 +13,7 @@ const props = defineProps<{
   isAdmin?: boolean
   moveMode?: boolean
   moving?: boolean
+  grayed?: boolean
 }>()
 const emit = defineEmits<{
   (e: 'pick', slot: Slot): void
@@ -42,7 +43,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
 
 <template>
   <div class="slot-cell" :class="[
-    { occupied, pickable, empty: !occupied && !pickable, manageable, 'move-target': moveMode && !isMoving, moving: isMoving },
+    { occupied, pickable, empty: !occupied && !pickable, manageable, 'move-target': moveMode && !isMoving, moving: isMoving, grayed },
     `squad-${squadIndex}`,
   ]" @click="onCellClick">
     <template v-if="occupied">
@@ -70,3 +71,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
     <span v-else>—</span>
   </div>
 </template>
+
+<style scoped>
+.slot-cell.grayed { opacity: .45; filter: grayscale(1); }
+</style>

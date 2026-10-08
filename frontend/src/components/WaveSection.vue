@@ -13,6 +13,7 @@ const props = defineProps<{
   currentUserId: number | null
   moveMode?: boolean
   movingSlotId?: number | null
+  slackCharIds?: Set<number>
 }>()
 const emit = defineEmits<{
   (e: 'pick', slot: any): void
@@ -49,6 +50,7 @@ const totals = computed(() => squads.value.map(sumSquadDamage))
                     :editable="editable && (isAdmin || slot.owner_id === currentUserId)"
                     :pickable="editable && slot.character_id == null && !moveMode"
                     :is-admin="isAdmin" :move-mode="moveMode" :moving="slot.id === movingSlotId"
+                    :grayed="slackCharIds?.has(slot.character_id ?? -1) ?? false"
                     @pick="emit('pick', $event)" @duty="(s, d) => emit('duty', s, d)"
                     @remove="emit('remove', $event)" @manage="emit('manage', $event)"
                     @moveTo="emit('moveTo', $event)" />

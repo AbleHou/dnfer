@@ -73,4 +73,13 @@ describe('SlotCell admin interactions', () => {
     expect(wrapper.text()).toContain('增益 9000')
     expect(wrapper.text()).toContain('太阳 3000')
   })
+
+  it('grayed 占位格灰显', () => {
+    const wrapper = mount(SlotCell, { props: { slot: occupied(1), squadIndex: 0, editable: false, pickable: false, grayed: true } })
+    expect(wrapper.find('.slot-cell.grayed').exists()).toBe(true)
+  })
+  it('未 grayed 不加 class', () => {
+    const wrapper = mount(SlotCell, { props: { slot: occupied(1), squadIndex: 0, editable: false, pickable: false } })
+    expect(wrapper.find('.slot-cell.grayed').exists()).toBe(false)
+  })
 })
