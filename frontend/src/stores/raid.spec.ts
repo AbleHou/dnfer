@@ -6,7 +6,7 @@ import type { Raid } from '../types'
 function makeRaid(): Raid {
   return {
     id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: '2026-09-20T14:00:00',
-    size: 12, locked: false, signups: [],
+    size: 12, locked: false, signups: [], slack_rules: { criteria: [], exchange: [] },
     waves: [{ id: 1, index: 1, slots: Array.from({ length: 12 }, (_, i) => ({
       id: i + 1, squad_index: Math.floor(i / 4), row_index: i % 4,
       character_id: null, character_name: null, character_class: null, job_name: null, job_title: null, fame: null,
@@ -101,9 +101,20 @@ describe('raid store', () => {
     store.raid = makeRaid()
     const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
     applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00', characters: [] })
-    const chars = [{ id: 1, name: '剑魂', job_title: '极诣·剑魂', class_type: '输出' as const }]
+    const chars = [{ id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: '鬼剑士', class_type: '输出' as const, fame: 1, simulated_damage: 2,
+      sustained_dps: 3, buff_amount: null, sun_buff: null }]
     applyEvent(store, { type: 'raid:signup_chars_changed', user_id: 9, characters: chars })
     expect(store.raid!.signups[0].characters).toEqual(chars)
+  })
+
+  it('applies raid:slack_rules_changed', () => {
+    setActivePinia(createPinia())
+    const store = useRaidStore()
+    store.raid = makeRaid()
+    applyEvent(store, { type: 'raid:slack_rules_changed', slack_rules: {
+      criteria: [{ class_type: '输出', metric: 'fame', value: 125000 }], exchange: [] } })
+    expect(store.raid!.slack_rules.criteria[0].value).toBe(125000)
   })
 
   it('applies raid:updated', () => {

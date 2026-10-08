@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
-import type { Raid, RaidSignup, SignupCharacter, Slot, User } from '../types'
+import type { Character, Raid, RaidSignup, SlackRuleSet, Slot, User } from '../types'
 
 export type WsEvent =
   | { type: 'slot:filled'; slot: Slot }
@@ -10,10 +10,11 @@ export type WsEvent =
   | { type: 'wave:removed'; index: number }
   | { type: 'raid:locked' }
   | { type: 'raid:unlocked' }
-  | { type: 'raid:signup'; user: User; created_at: string | null; characters: SignupCharacter[] }
-  | { type: 'raid:signup_chars_changed'; user_id: number; characters: SignupCharacter[] }
+  | { type: 'raid:signup'; user: User; created_at: string | null; characters: Character[] }
+  | { type: 'raid:signup_chars_changed'; user_id: number; characters: Character[] }
   | { type: 'raid:signup_removed'; user_id: number }
   | { type: 'raid:updated'; name: string; starts_at: string }
+  | { type: 'raid:slack_rules_changed'; slack_rules: SlackRuleSet }
 
 export const useRaidStore = defineStore('raid', {
   state: () => ({ raid: null as Raid | null, needRefresh: false }),
@@ -72,6 +73,9 @@ export function applyEvent(store: ReturnType<typeof useRaidStore>, ev: WsEvent) 
     case 'raid:updated':
       raid.name = ev.name
       raid.starts_at = ev.starts_at
+      break
+    case 'raid:slack_rules_changed':
+      raid.slack_rules = ev.slack_rules
       break
   }
 }
