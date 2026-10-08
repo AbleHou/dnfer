@@ -226,7 +226,17 @@ async def set_slack_rules(rid: int, body: SlackRuleSet, admin: User = Depends(re
     row.rules = body.model_dump()
     row.updated_by = admin.id
     row.updated_at = _now()
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # 并发 upsert 兜底：唯一约束命中 → 重查并改更新（两个 PUT 都成功）
+        db.rollback()
+        row = db.query(RaidSlackRule).filter(RaidSlackRule.raid_id == rid).first()
+        if row is None:
+            raise
+        row.rules = body.model_dump()
+        row.updated_by = admin.id
+        row.updated_at = _now()
+        db.commit()
     await manager.broadcast(rid, {"type": "raid:slack_rules_changed",
                                   "slack_rules": body.model_dump()})
     return body
