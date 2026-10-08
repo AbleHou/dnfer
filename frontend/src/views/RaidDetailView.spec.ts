@@ -4,9 +4,11 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import RaidDetailView from './RaidDetailView.vue'
+import SlackRulesModal from '../components/SlackRulesModal.vue'
+import WaveSection from '../components/WaveSection.vue'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore } from '../stores/raid'
-import type { Raid, User } from '../types'
+import type { Character, Raid, User } from '../types'
 import { confirmDialog } from '../lib/notify'
 
 const { apiMock, notifyMock } = vi.hoisted(() => ({
@@ -34,9 +36,13 @@ vi.mock('../lib/notify', () => ({
 
 const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false }
 const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
-const memberChars = [
-  { id: 10, name: '剑魂', job_title: '极诣·剑魂', class_type: '输出' as const },
-  { id: 11, name: '奶', job_title: '神启·圣骑士', class_type: '辅助' as const },
+const memberChars: Character[] = [
+  { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂', parent_name: '鬼剑士',
+    class_type: '输出', fame: 52000, simulated_damage: 5, sustained_dps: 2,
+    buff_amount: null, sun_buff: null },
+  { id: 11, name: '奶', job_name: 'crusader_female', job_title: '神启·圣骑士', parent_name: '圣职者',
+    class_type: '辅助', fame: 40000, simulated_damage: null, sustained_dps: null,
+    buff_amount: 3000, sun_buff: 500 },
 ]
 const adminRow = { user: admin, created_at: null, characters: [] as typeof memberChars }
 const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters: memberChars }
@@ -44,7 +50,7 @@ const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters:
 function makeRaid(signups: Raid['signups']): Raid {
   return {
     id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: '2026-09-20T14:00:00',
-    size: 12, locked: false, signups,
+    size: 12, locked: false, signups, slack_rules: { criteria: [], exchange: [] },
     waves: [{ id: 1, index: 1, slots: [] }],
   }
 }
@@ -85,7 +91,7 @@ async function mountView(signups: Raid['signups'], user: User = admin,
       stubs: {
         'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
         SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
-        SignupModal: true, teleport: true,
+        SignupModal: true, SlackRulesModal: true, teleport: true,
       },
     },
   }), auth, store }
@@ -141,7 +147,7 @@ describe('RaidDetailView enhance', () => {
         stubs: {
           'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
           SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
-          SignupModal: true, teleport: true,
+          SignupModal: true, SlackRulesModal: true, teleport: true,
         },
       },
     })
@@ -206,7 +212,7 @@ describe('RaidDetailView enhance', () => {
         stubs: {
           'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
           SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
-          SignupModal: true, teleport: true,
+          SignupModal: true, SlackRulesModal: true, teleport: true,
         },
       },
     })
@@ -259,5 +265,41 @@ describe('RaidDetailView enhance', () => {
     const { wrapper } = await mountView([adminRow, memberRow])
     await flushPromises()
     expect(wrapper.find('[data-act="manage-chars"]').exists()).toBe(false)
+  })
+})
+
+describe('RaidDetailView slack rules', () => {
+  it('仅管理员可见划水规则设置按钮', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    expect(wrapper.find('[data-test="slack-rules"]').exists()).toBe(true)
+    const { wrapper: w2 } = await mountView([adminRow, memberRow], member)
+    await flushPromises()
+    expect(w2.find('[data-test="slack-rules"]').exists()).toBe(false)
+  })
+
+  it('提交规则调用 PUT', async () => {
+    apiMock.put.mockResolvedValue({})
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    await wrapper.find('[data-test="slack-rules"]').trigger('click')
+    const modal = wrapper.findComponent(SlackRulesModal)
+    const rules = { criteria: [{ class_type: '输出' as const, metric: 'fame' as const, value: 125000 }], exchange: [] }
+    modal.vm.$emit('submit', rules)
+    await flushPromises()
+    expect(apiMock.put).toHaveBeenCalledWith('/api/raids/1/slack-rules', rules)
+    expect(notifyMock.success).toHaveBeenCalled()
+  })
+
+  it('灰色角色 id 传递到 WaveSection', async () => {
+    const raid = makeRaid([adminRow, memberRow])
+    raid.slack_rules = {
+      criteria: [{ class_type: '输出', metric: 'fame', value: 200000 }],
+      exchange: [{ class_type: '输出', metric: 'fame', value: 300000, count: 1 }],
+    }
+    const { wrapper } = await mountView([adminRow, memberRow], admin, raid)
+    await flushPromises()
+    const ws = wrapper.findComponent(WaveSection)
+    expect((ws.props('slackCharIds') as Set<number>).has(10)).toBe(true)  // id10 fame 52000 划水且无兑换额度
   })
 })

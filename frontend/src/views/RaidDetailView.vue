@@ -7,6 +7,7 @@ import { useRaidStore, applyEvent } from '../stores/raid'
 import { connectRaidWs } from '../api/ws'
 import WaveSection from '../components/WaveSection.vue'
 import UserAvatar from '../components/UserAvatar.vue'
+import SlackRulesModal from '../components/SlackRulesModal.vue'
 import { formatDateTime } from '../utils/datetime'
 import CharacterPickerModal from '../components/CharacterPickerModal.vue'
 import SlotActionModal from '../components/SlotActionModal.vue'
@@ -17,7 +18,8 @@ import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
 import { NDatePicker, NInput, NModal } from 'naive-ui'
-import type { Character, CharacterPlacement, Duty, RaidSignup, Slot, User } from '../types'
+import { computeSlack } from '../lib/slack'
+import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User } from '../types'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -37,6 +39,7 @@ const placed = computed<Record<number, CharacterPlacement>>(() =>
   store.raid ? buildPlacementMap(store.raid) : {})
 const showMemberPicker = ref(false)
 const memberModalUser = ref<User | null>(null)
+const showSlackRules = ref(false)
 const showEditRaid = ref(false)
 const editName = ref('')
 const editStartsAt = ref<string | null>(null)
@@ -53,6 +56,14 @@ const signupCharsByUser = computed<Record<number, number[]>>(() => {
   }
   return m
 })
+const charsByUser = computed<Record<number, Character[]>>(() => {
+  const m: Record<number, Character[]> = {}
+  for (const s of store.raid?.signups ?? []) m[s.user.id] = s.characters
+  return m
+})
+const grayByUser = computed(() => computeSlack(
+  store.raid?.slack_rules ?? { criteria: [], exchange: [] }, charsByUser.value))
+const grayCharIds = computed(() => new Set(Object.values(grayByUser.value).flat()))
 
 async function load() { await store.load(rid) }
 
@@ -198,6 +209,13 @@ async function onSaveRaid() {
     await load()
   } catch (e: any) { notifyError(e.message) }
 }
+async function onSlackRulesSubmit(rules: SlackRuleSet) {
+  try {
+    await api.put(`/api/raids/${rid}/slack-rules`, rules)
+    notifySuccess('划水规则已保存')
+    showSlackRules.value = false
+  } catch (e: any) { notifyError(e.message) }
+}
 </script>
 
 <template>
@@ -210,6 +228,8 @@ async function onSaveRaid() {
         {{ store.raid.locked ? '已锁定' : '未锁定' }}
       </span>
       <span style="margin-left:auto;display:flex;gap:8px">
+        <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="slack-rules"
+                @click="showSlackRules = true">划水规则设置</button>
         <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</button>
         <button v-if="auth.isAdmin" class="dnf-btn" @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
         <button v-if="editable" class="dnf-btn dnf-btn-primary" @click="onAddWave">＋ 添加一波</button>
@@ -265,6 +285,7 @@ async function onSaveRaid() {
                  :can-delete="auth.isAdmin || (store.raid.waves.length > 1)"
                  :current-user-id="auth.user?.id ?? null"
                  :move-mode="movingSlot != null" :moving-slot-id="movingSlot?.id ?? null"
+                 :slack-char-ids="grayCharIds"
                  @pick="onPick" @duty="onDuty" @remove="onRemove"
                  @delete-wave="onDeleteWave" @manage="onManage" @moveTo="onMoveTo" />
 
@@ -299,7 +320,8 @@ async function onSaveRaid() {
     </n-modal>
 
     <MemberCharactersModal :open="memberModalUser != null" :rid="rid" :user="memberModalUser"
-                           :placed="placed" @close="memberModalUser = null" />
+                           :placed="placed" :gray-ids="memberModalUser ? (grayByUser[memberModalUser.id] ?? []) : []"
+                           @close="memberModalUser = null" />
 
     <SignupMemberPicker :open="showMemberPicker" :rid="rid" :exclude-user-ids="signupUserIds"
                         @close="showMemberPicker = false" @signedUp="load" />
@@ -307,6 +329,9 @@ async function onSaveRaid() {
     <SignupModal :open="showSignupModal" :mode="signupMode" :selected-ids="signupSelected"
                  @close="showSignupModal = false"
                  @submit="onSignupSubmit" @toggle="onToggleSignupChar" />
+
+    <SlackRulesModal :open="showSlackRules" :rules="store.raid.slack_rules"
+                     @close="showSlackRules = false" @submit="onSlackRulesSubmit" />
   </div>
 </template>
 
