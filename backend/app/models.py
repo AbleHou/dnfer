@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -67,6 +67,8 @@ class Raid(Base):
                                                order_by="Wave.index", cascade="all, delete-orphan")
     signups: Mapped[list["RaidSignup"]] = relationship(
         back_populates="raid", cascade="all, delete-orphan")
+    slack_rule: Mapped["RaidSlackRule | None"] = relationship(back_populates="raid",
+                                                              cascade="all, delete-orphan")
 
 class Wave(Base):
     __tablename__ = "waves"
@@ -114,6 +116,16 @@ class RaidSignupCharacter(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     signup: Mapped["RaidSignup"] = relationship(back_populates="characters")
     character: Mapped["Character"] = relationship()
+
+class RaidSlackRule(Base):
+    __tablename__ = "raid_slack_rules"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    raid_id: Mapped[int] = mapped_column(ForeignKey("raids.id", ondelete="CASCADE"),
+                                         unique=True, index=True)
+    rules: Mapped[dict] = mapped_column(JSON)      # {"criteria": [...], "exchange": [...]}
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+    raid: Mapped[Raid] = relationship(back_populates="slack_rule")
 
 class Vote(Base):
     __tablename__ = "votes"
