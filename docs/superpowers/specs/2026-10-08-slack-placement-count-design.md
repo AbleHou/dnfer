@@ -10,6 +10,7 @@
 - **占位选人灰显**：`CharacterPickerModal`（占位选人弹框）中，当前所选玩家的超额划水角色与既有弹框/表格一致地灰显（仅视觉参考，不阻止占位）。
 - **划水数（已确认）**：指该用户**划水总数**（符合判定规则的角色数，不扣除兑换额度）。
 - **划水数显示位置（已确认）**：①报名面板每个用户行（非团长）计数旁；②MemberCharactersModal（报名角色弹框）列表上方。团长报名行不显示，但打开团长弹框时显示其划水数（团长参与计算）。
+- **划水数基数**：报名行计数基于该用户**报名勾选的角色**（团长基于其全部角色），即 `charsByUser` 中各用户对应的角色集（与 `grayByUser` 同源），保证显示一致。
 - **显示条件（已确认）**：「划水 N」仅在该用户划水总数 > 0 时显示（避免无规则时大量「划水 0」噪音）。
 - **实现方案（已确认）**：方案 A——纯前端派生 + prop 传递；`lib/slack.ts` 内部抽共享 `slackingByUser`，新增 `slackCountByUser`，`computeSlack` 契约不变。
 
@@ -62,12 +63,12 @@ const currentPlayerId = computed(() =>
 
 ### 4.1 `frontend/src/views/RaidDetailView.vue`
 
-- import 改名避免与 computed 同名：`import { computeSlack, slackCountByUser as countSlackByUser } from '../lib/slack'`。
+- 新增 import：`import { computeSlack, slackCountByUser } from '../lib/slack'`（lib 函数名 `slackCountByUser` 与 view 的 computed 变量名 `slackCounts` 不同，无需改名）。
 - 新增 computed：
 
 ```ts
 const slackCounts = computed(() =>
-  countSlackByUser(store.raid?.slack_rules ?? { criteria: [], exchange: [] }, charsByUser.value))
+  slackCountByUser(store.raid?.slack_rules ?? { criteria: [], exchange: [] }, charsByUser.value))
 ```
 
 - 报名行（非团长 `.signup-group`）的 `signup-count` 后追加（仅 >0 显示）：
@@ -95,7 +96,7 @@ const slackCounts = computed(() =>
 
 ### 5.2 `CharacterPickerModal.spec.ts`
 
-- `grayByUser` prop 传递：管理员模式选某玩家时该玩家灰色 id 的角色灰显、非灰色不灰；成员模式按自己 id 灰显。（现有 spec 若 stub CharacterCard 则改断言 stub props。）
+- `grayByUser` prop 传递：管理员模式选某玩家时该玩家灰色 id 的角色灰显、非灰色不灰；成员模式按自己 id 灰显。两处 spec 均渲染真实 `CharacterCard`（不 stub），断言用真实渲染的 `.char-pick.grayed` class。
 
 ### 5.3 `MemberCharactersModal.spec.ts`
 
