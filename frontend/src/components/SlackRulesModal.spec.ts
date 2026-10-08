@@ -26,7 +26,7 @@ describe('SlackRulesModal', () => {
     const w = mountModal(true)
     const job = w.find('[data-field="criteria-job-0"]')
     await job.setValue('辅助')
-    const opts = w.findAll('[data-field="criteria-metric-0"] option').map(o => o.element.value)
+    const opts = w.findAll<HTMLOptionElement>('[data-field="criteria-metric-0"] option').map(o => o.element.value)
     expect(opts).toEqual(['buff_amount', 'sun_buff'])
   })
   it('添加/删除行与清空', async () => {
