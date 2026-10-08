@@ -214,6 +214,7 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
     await api.put(`/api/raids/${rid}/slack-rules`, rules)
     notifySuccess('划水规则已保存')
     showSlackRules.value = false
+    await load()  // WS 断连时兜底刷新（正常时 WS 已 patch slack_rules）
   } catch (e: any) { notifyError(e.message) }
 }
 </script>
