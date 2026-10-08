@@ -7,8 +7,11 @@ export interface AdminCharacterRow extends Character {
   owner_id: number; owner_nickname: string; owner_username: string; owner_is_banned: boolean
 }
 export interface CharacterQueryResult { items: AdminCharacterRow[]; total: number }
-export interface SignupCharacter { id: number; name: string; job_title: string; class_type: ClassType }
-export interface RaidSignup { user: User; created_at: string | null; characters: SignupCharacter[] }
+export type SlackMetric = 'fame' | 'simulated_damage' | 'sustained_dps' | 'buff_amount' | 'sun_buff'
+export interface SlackRuleCriterion { class_type: ClassType; metric: SlackMetric; value: number }
+export interface SlackRuleExchange { class_type: ClassType; metric: SlackMetric; value: number; count: number }
+export interface SlackRuleSet { criteria: SlackRuleCriterion[]; exchange: SlackRuleExchange[] }
+export interface RaidSignup { user: User; created_at: string | null; characters: Character[] }
 export interface Character { id: number; name: string; job_name: string; job_title: string;
   parent_name: string; class_type: ClassType; fame: number;
   simulated_damage: number | null; sustained_dps: number | null; buff_amount: number | null;
@@ -26,7 +29,7 @@ export interface JobCategory { id: number; name: string; title: string; children
 export interface Wave { id: number; index: number; slots: Slot[] }
 export interface Dungeon { id: number; name: string; size: number; description: string; created_at: string }
 export interface Raid { id: number; name: string; dungeon_id: number; dungeon_name: string;
-  size: number; locked: boolean; starts_at: string; waves: Wave[]; signups: RaidSignup[] }
+  size: number; locked: boolean; starts_at: string; waves: Wave[]; signups: RaidSignup[]; slack_rules: SlackRuleSet }
 export interface RaidListItem { id: number; name: string; dungeon_id: number; dungeon_name: string;
   size: number; locked: boolean; starts_at: string; wave_count: number; signup_count: number; my_signed_up: boolean }
 export interface CodeItem { id: number; code: string; used_by: number | null; used_at: string | null;
