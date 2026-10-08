@@ -357,4 +357,22 @@ describe('RaidDetailView slack count & picker gray', () => {
     const modal = wrapper.findComponent(MemberCharactersModal)
     expect(modal.props('slackCount')).toBe(1)
   })
+
+  it('团长弹框也显示其划水数', async () => {
+    const leaderWithChars = {
+      user: admin,
+      created_at: null,
+      characters: [{ id: 99, name: '团长输出', job_name: 'weapon_master', job_title: '极诣·剑魂',
+        parent_name: '鬼剑士', class_type: '输出' as const, fame: 50000, simulated_damage: 5,
+        sustained_dps: 2, buff_amount: null, sun_buff: null }],
+    }
+    const raid = makeRaid([leaderWithChars, memberRow])
+    raid.slack_rules = { criteria: [{ class_type: '输出', metric: 'fame', value: 200000 }], exchange: [] }
+    const { wrapper } = await mountView([leaderWithChars, memberRow], admin, raid)
+    await flushPromises()
+    await wrapper.find('.signup-leader .avatar-btn').trigger('click') // 打开团长弹框
+    await flushPromises()
+    const modal = wrapper.findComponent(MemberCharactersModal)
+    expect(modal.props('slackCount')).toBe(1)
+  })
 })
