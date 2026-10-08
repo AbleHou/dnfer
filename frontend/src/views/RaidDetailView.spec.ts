@@ -6,6 +6,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import RaidDetailView from './RaidDetailView.vue'
 import SlackRulesModal from '../components/SlackRulesModal.vue'
 import MemberCharactersModal from '../components/MemberCharactersModal.vue'
+import CharacterPickerModal from '../components/CharacterPickerModal.vue'
 import WaveSection from '../components/WaveSection.vue'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore } from '../stores/raid'
@@ -317,5 +318,43 @@ describe('RaidDetailView slack rules', () => {
     await flushPromises()
     const modal = wrapper.findComponent(MemberCharactersModal)
     expect((modal.props('grayIds') as number[]).includes(10)).toBe(true)
+  })
+})
+
+describe('RaidDetailView slack count & picker gray', () => {
+  it('报名行显示划水总数（仅>0，团长行不显示）', async () => {
+    const raid = makeRaid([adminRow, memberRow])
+    raid.slack_rules = { criteria: [{ class_type: '输出', metric: 'fame', value: 200000 }], exchange: [] }
+    const { wrapper } = await mountView([adminRow, memberRow], admin, raid)
+    await flushPromises()
+    // 成员：id10 输出 fame52000<200000 划水、id11 辅助不判 → 划水 1
+    expect(wrapper.find('.signup-group').text()).toContain('划水 1')
+    expect(wrapper.find('.signup-leader').text()).not.toContain('划水')
+  })
+
+  it('无规则时不显示划水', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    expect(wrapper.find('.signup-group').text()).not.toContain('划水')
+  })
+
+  it('grayByUser 传递到 CharacterPickerModal', async () => {
+    const raid = makeRaid([adminRow, memberRow])
+    raid.slack_rules = { criteria: [{ class_type: '输出', metric: 'fame', value: 200000 }], exchange: [] }
+    const { wrapper } = await mountView([adminRow, memberRow], admin, raid)
+    await flushPromises()
+    const picker = wrapper.findComponent(CharacterPickerModal)
+    expect((picker.props('grayByUser') as Record<number, number[]>)[3]).toContain(10) // member id3，灰色含 id10
+  })
+
+  it('slackCount 传递到 MemberCharactersModal', async () => {
+    const raid = makeRaid([adminRow, memberRow])
+    raid.slack_rules = { criteria: [{ class_type: '输出', metric: 'fame', value: 200000 }], exchange: [] }
+    const { wrapper } = await mountView([adminRow, memberRow], admin, raid)
+    await flushPromises()
+    await wrapper.find('.signup-user').trigger('click')
+    await flushPromises()
+    const modal = wrapper.findComponent(MemberCharactersModal)
+    expect(modal.props('slackCount')).toBe(1)
   })
 })

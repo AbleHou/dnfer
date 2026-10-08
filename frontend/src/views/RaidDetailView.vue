@@ -18,7 +18,7 @@ import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
 import { NDatePicker, NInput, NModal } from 'naive-ui'
-import { computeSlack } from '../lib/slack'
+import { computeSlack, slackCountByUser } from '../lib/slack'
 import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User } from '../types'
 
 const route = useRoute()
@@ -64,6 +64,8 @@ const charsByUser = computed<Record<number, Character[]>>(() => {
 const grayByUser = computed(() => computeSlack(
   store.raid?.slack_rules ?? { criteria: [], exchange: [] }, charsByUser.value))
 const grayCharIds = computed(() => new Set(Object.values(grayByUser.value).flat()))
+const slackCounts = computed(() =>
+  slackCountByUser(store.raid?.slack_rules ?? { criteria: [], exchange: [] }, charsByUser.value))
 
 async function load() { await store.load(rid) }
 
@@ -262,7 +264,7 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
             <button class="avatar-btn signup-user" @click="memberModalUser = s.user">
               <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
               <span class="signup-nick">{{ s.user.nickname }}</span>
-              <span class="signup-count">{{ placedCount(s) }}/{{ s.characters.length }}</span>
+              <span class="signup-count">{{ placedCount(s) }}/{{ s.characters.length }}<template v-if="(slackCounts[s.user.id] ?? 0) > 0"> · 划水 {{ slackCounts[s.user.id] }}</template></span>
             </button>
             <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
                     class="dnf-btn dnf-btn-sm" data-act="manage-chars"
@@ -296,7 +298,7 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
 
     <CharacterPickerModal :open="pickSlot != null" :admin-mode="auth.isAdmin"
                           :signup-user-ids="signupUserIds" :signup-chars-by-user="signupCharsByUser"
-                          :placed="placed"
+                          :placed="placed" :gray-by-user="grayByUser"
                           @close="pickSlot = null" @select="onSelectCharacter" />
 
     <n-modal :show="showEditRaid" preset="card" title="修改攻坚" style="width:min(360px,92vw)"
@@ -322,6 +324,7 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
 
     <MemberCharactersModal :open="memberModalUser != null" :rid="rid" :user="memberModalUser"
                            :placed="placed" :gray-ids="memberModalUser ? (grayByUser[memberModalUser.id] ?? []) : []"
+                           :slack-count="memberModalUser ? (slackCounts[memberModalUser.id] ?? 0) : 0"
                            @close="memberModalUser = null" />
 
     <SignupMemberPicker :open="showMemberPicker" :rid="rid" :exclude-user-ids="signupUserIds"
