@@ -13,7 +13,7 @@ function slot(id: number, characterId: number | null, squad: number, duty: strin
 
 function makeRaid(waves: Raid['waves']): Raid {
   return { id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: 'x',
-    size: 12, locked: false, signups: [], waves }
+    size: 12, locked: false, signups: [], slack_rules: { criteria: [], exchange: [] }, waves }
 }
 
 describe('buildPlacementMap', () => {
