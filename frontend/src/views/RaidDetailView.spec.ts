@@ -5,6 +5,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import RaidDetailView from './RaidDetailView.vue'
 import SlackRulesModal from '../components/SlackRulesModal.vue'
+import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import WaveSection from '../components/WaveSection.vue'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore } from '../stores/raid'
@@ -289,6 +290,7 @@ describe('RaidDetailView slack rules', () => {
     await flushPromises()
     expect(apiMock.put).toHaveBeenCalledWith('/api/raids/1/slack-rules', rules)
     expect(notifyMock.success).toHaveBeenCalled()
+    expect(modal.props('open')).toBe(false)
   })
 
   it('灰色角色 id 传递到 WaveSection', async () => {
@@ -301,5 +303,19 @@ describe('RaidDetailView slack rules', () => {
     await flushPromises()
     const ws = wrapper.findComponent(WaveSection)
     expect((ws.props('slackCharIds') as Set<number>).has(10)).toBe(true)  // id10 fame 52000 划水且无兑换额度
+  })
+
+  it('灰色角色 id 传递到 MemberCharactersModal', async () => {
+    const raid = makeRaid([adminRow, memberRow])
+    raid.slack_rules = {
+      criteria: [{ class_type: '输出', metric: 'fame', value: 200000 }],
+      exchange: [{ class_type: '输出', metric: 'fame', value: 300000, count: 1 }],
+    }
+    const { wrapper } = await mountView([adminRow, memberRow], admin, raid)
+    await flushPromises()
+    await wrapper.find('.signup-user').trigger('click')   // 打开成员弹框
+    await flushPromises()
+    const modal = wrapper.findComponent(MemberCharactersModal)
+    expect((modal.props('grayIds') as number[]).includes(10)).toBe(true)
   })
 })
