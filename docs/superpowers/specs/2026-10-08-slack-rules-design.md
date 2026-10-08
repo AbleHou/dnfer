@@ -102,12 +102,13 @@ class SlackRuleSet(BaseModel):
   - 加 `slack_rules=_load_slack_rules(db, raid)`（读行 → 解析 JSON → `SlackRuleSet`，无行返回空集）。
   - `_signup_characters` 改为返回 `[character_out(rsc.character) ...]`（保持插入顺序）。
   - 团长固定行 `characters` 由 `[]` 改为团长全部角色（`Character.id` 升序，与 `get_member_characters` 一致），保证团长也能算灰色。
+- **注意 `_signup_characters` 的复用面**：除 `_detail` 外，现有 `raid:signup`、`raid:signup_chars_changed` 广播与 `bot.py` 的报名广播都经 `_signup_characters` 构造——改型后这些 WS 负载自动变为完整 `CharacterOut`（后端测试只断言 `id`，不受影响；前端 WS 事件类型需同步改型，见 §4.5）。
 - 检查所有直接构造 `RaidDetail`/`RaidSignupOut` 的位置（`public.py` 复用 `_detail`，`RaidListItem` 不含 slack 不涉及）。
 
 ### 3.4 无需改动
 
 - `services/characters.py`（`character_out` 已返回全量数值）；`migrations.py`/`db.py`（新表 create_all 自动建）。
-- 删除不再使用的 `SignupCharacterOut`（确认无其他引用后）。
+- 删除不再使用的 `SignupCharacterOut`（确认无其他引用后）；`_signup_char_out` 助手在 `_signup_characters` 改用 `character_out` 后成死代码，一并删除。
 
 ## 4. 前端实现
 
@@ -120,7 +121,7 @@ export interface SlackRuleExchange { class_type: ClassType; metric: SlackMetric;
 export interface SlackRuleSet { criteria: SlackRuleCriterion[]; exchange: SlackRuleExchange[] }
 ```
 
-- `RaidSignup.characters`：`SignupCharacter[]` → **`Character[]`**（`SignupCharacter` 若无引用则删除）。
+- `RaidSignup.characters`：`SignupCharacter[]` → **`Character[]`**；`SignupCharacter` 随之删除（§4.5 的 WS 事件改型后确认无引用）。
 - `Raid` 加必填 `slack_rules: SlackRuleSet`。
 
 ### 4.2 计算库（`frontend/src/lib/slack.ts` + `slack.spec.ts`）
@@ -156,7 +157,8 @@ export interface SlackRuleSet { criteria: SlackRuleCriterion[]; exchange: SlackR
 ### 4.5 WS（`frontend/src/stores/raid.ts`）
 
 - `WsEvent` 新增 `{ type: 'raid:slack_rules_changed'; slack_rules: SlackRuleSet }`。
-- `applyEvent` 处理：`raid.slack_rules = ev.slack_rules`（灰度随之刷新）。`api/ws.ts` 泛型分发无需改动（计划阶段确认）。
+- **既有事件改型**：`{ type: 'raid:signup'; characters: SignupCharacter[] }` 与 `{ type: 'raid:signup_chars_changed'; characters: SignupCharacter[] }` 中的 `characters` 一并改为 **`Character[]`**（后端广播已随之变完整 `CharacterOut`），否则 `applyEvent` 中 `raid.signups.push(...)`/`row.characters = ev.characters` 会 vue-tsc 类型不匹配。
+- `applyEvent` 新增处理：`raid.slack_rules = ev.slack_rules`（灰度随之刷新）。`api/ws.ts` 泛型分发无需改动（计划阶段确认）。
 
 ### 4.6 灰显展示
 
@@ -187,7 +189,8 @@ export interface SlackRuleSet { criteria: SlackRuleCriterion[]; exchange: SlackR
 - `SlackRulesModal.spec.ts`：两节渲染、职业切换数值下拉选项、增删行、清空、提交 emit 规则。
 - `RaidDetailView.spec.ts`：管理员见「划水规则设置」、非管理员不见；提交调 PUT 并刷新；`grayByUser`/`grayCharIds` 传递到弹框与占位格。
 - `SlotCell.spec.ts`/`CharacterCard.spec.ts`：`grayed` 灰显 class。
-- **fixture 同步**：`RaidSignup.characters` 改 `Character[]` 后，所有构造 signup 的 spec（RaidDetailView、SignupModal、CharacterPickerModal、stores/raid 等）fixture 需含全量数值字段；`Raid.slack_rules` 必填需补 fixture。
+- **fixture 同步**：`RaidSignup.characters` 改 `Character[]` 后，构造 `RaidSignup` 的 spec（`RaidDetailView.spec.ts`、`stores/raid.spec.ts`）fixture 需含全量数值字段；**`stores/raid.spec.ts` 的 WS 事件 fixture 也要改**（`raid:signup`/`raid:signup_chars_changed` 的 `characters` 现为 `Character[]`，需含 `job_name`/`parent_name`/`fame` 等字段）；**所有构造完整 `Raid` 字面量的 spec（含 `lib/placement.spec.ts` 的 `makeRaid(waves)`）都需补 `slack_rules` 必填字段**。`SignupModal`/`CharacterPickerModal` 不构造 `RaidSignup` fixture，不受影响。
+- `MemberCharactersModal.spec.ts` 补 `grayIds` prop 用例（灰显角色正确传入 `CharacterCard`）。
 - `npm run build`（vue-tsc）通过。
 
 ## 6. 文档
