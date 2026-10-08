@@ -87,4 +87,30 @@ describe('MemberCharactersModal', () => {
     expect(wrapper.find('.char-pick.grayed').exists()).toBe(true)
     expect(wrapper.text()).toContain('剑魂')
   })
+
+  it('slackCount>0 显示划水数', async () => {
+    apiMock.get.mockResolvedValue({ user, characters })
+    const wrapper = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {}, slackCount: 2 },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('划水 2')
+  })
+
+  it('slackCount 缺省/0 不显示', async () => {
+    apiMock.get.mockResolvedValue({ user, characters })
+    const zero = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {}, slackCount: 0 },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(zero.text()).not.toContain('划水')
+    const omitted = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {} }, // 不传 slackCount
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(omitted.text()).not.toContain('划水')
+  })
 })

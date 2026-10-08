@@ -9,6 +9,7 @@ const props = defineProps<{
   open: boolean; rid: number; user: User | null
   placed: Record<number, CharacterPlacement>
   grayIds?: number[]
+  slackCount?: number
 }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const characters = ref<Character[]>([])
@@ -32,6 +33,7 @@ watch(() => [props.open, props.user?.id] as const, async ([open]) => {
            :title="user ? `${user.nickname} 的角色` : ''"
            style="width:min(420px,92vw)"
            @update:show="(s: boolean) => { if (!s) emit('close') }">
+    <p v-if="(slackCount ?? 0) > 0" class="slack-count">划水 {{ slackCount }}</p>
     <div style="max-height:60vh;overflow:auto">
       <p v-if="!loading && !characters.length" style="color:var(--dnf-text-faint)">还没有角色</p>
       <CharacterCard v-for="c in characters" :key="c.id" :character="c"
@@ -39,3 +41,7 @@ watch(() => [props.open, props.user?.id] as const, async ([open]) => {
     </div>
   </n-modal>
 </template>
+
+<style scoped>
+.slack-count { margin: 0 0 8px; font-size: 12px; color: var(--dnf-text-muted,#9aa3b2); }
+</style>
