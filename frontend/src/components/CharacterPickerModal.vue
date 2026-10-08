@@ -36,8 +36,7 @@ watch(() => props.open, async (open) => {
 }, { immediate: true })
 
 function filterBySignup(list: Character[]): Character[] {
-  const key = props.adminMode ? (playerId.value ?? -1) : (auth.user?.id ?? -1)
-  const ids = props.signupCharsByUser[key]
+  const ids = props.signupCharsByUser[currentPlayerId.value]
   return ids ? list.filter(c => ids.includes(c.id)) : list
 }
 function onPlayerChange(id: number) {
