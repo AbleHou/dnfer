@@ -129,3 +129,54 @@ describe('CharacterPickerModal signupCharsByUser', () => {
     expect(wrapper.text()).not.toContain('剑魂')
   })
 })
+
+describe('CharacterPickerModal grayByUser', () => {
+  function setup(grayByUser: Record<number, number[]>) {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/admin/characters') return [playerA, mine]
+      return []
+    })
+    return mount(CharacterPickerModal, {
+      props: { open: true, adminMode: true, signupUserIds: [1, 9], grayByUser },
+      global: { stubs: { teleport: true } },
+    })
+  }
+
+  it('默认玩家（管理员）的灰色角色灰显', async () => {
+    const wrapper = setup({ 9: [12] })
+    await flushPromises()
+    // 默认选管理员自己的「奶」id=12 → 灰显
+    const grayed = wrapper.find('.char-pick.grayed')
+    expect(grayed.exists()).toBe(true)
+    expect(grayed.text()).toContain('奶')
+  })
+  it('切换玩家后按该玩家灰色 id 灰显', async () => {
+    const wrapper = setup({ 1: [11] })
+    await flushPromises()
+    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', playerA.user.id)
+    await flushPromises()
+    const grayed = wrapper.find('.char-pick.grayed')
+    expect(grayed.exists()).toBe(true)
+    expect(grayed.text()).toContain('剑魂')
+  })
+  it('非灰色角色不灰显', async () => {
+    const wrapper = setup({ 9: [] }) // 管理员灰色 id 为空 → 奶不灰
+    await flushPromises()
+    expect(wrapper.find('.char-pick.grayed').exists()).toBe(false)
+    expect(wrapper.text()).toContain('奶')
+  })
+  it('成员模式按自己 id 灰显', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/me/characters') return [mine.characters[0]]
+      return []
+    })
+    const wrapper = mount(CharacterPickerModal, {
+      props: { open: true, adminMode: false, grayByUser: { 9: [12] } },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    const grayed = wrapper.find('.char-pick.grayed')
+    expect(grayed.exists()).toBe(true)
+    expect(grayed.text()).toContain('奶')
+  })
+})

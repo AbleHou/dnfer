@@ -11,7 +11,8 @@ const props = withDefaults(defineProps<{
   open: boolean; adminMode?: boolean; signupUserIds?: number[]
   signupCharsByUser?: Record<number, number[]>
   placed?: Record<number, CharacterPlacement>
-}>(), { placed: () => ({}), signupCharsByUser: () => ({}) })
+  grayByUser?: Record<number, number[]>
+}>(), { placed: () => ({}), signupCharsByUser: () => ({}), grayByUser: () => ({}) })
 const emit = defineEmits<{ (e: 'close'): void; (e: 'select', c: Character, duty: Duty): void }>()
 const auth = useAuthStore()
 const characters = ref<Character[]>([])
@@ -44,6 +45,8 @@ function onPlayerChange(id: number) {
   selected.value = null
   characters.value = filterBySignup(players.value.find(p => p.user.id === id)?.characters ?? [])
 }
+const currentPlayerId = computed(() =>
+  props.adminMode ? (playerId.value ?? -1) : (auth.user?.id ?? -1))
 function choose(c: Character) { selected.value = c; duty.value = defaultDuty(c.class_type) }
 function confirmPick() { if (selected.value) emit('select', selected.value, duty.value) }
 const playerOptions = computed(() => players.value.map(p => ({
@@ -63,6 +66,7 @@ const options = computed(() =>
                 style="margin-bottom:10px" />
       <CharacterCard v-for="c in characters" :key="c.id" :character="c"
                      :placement="placed[c.id] ?? null" :active="selected?.id === c.id"
+                     :grayed="(grayByUser?.[currentPlayerId] ?? []).includes(c.id)"
                      @click="choose(c)" />
       <p v-if="!characters.length" style="color:var(--dnf-text-faint)">还没有角色，去「我的角色」添加</p>
       <div v-if="selected" style="margin-top:12px;display:flex;gap:8px;align-items:center">
