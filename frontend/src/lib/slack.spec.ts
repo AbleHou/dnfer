@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { metricValue, isSlackingChar, charExchangeCount, computeSlack } from './slack'
+import { metricValue, isSlackingChar, charExchangeCount, computeSlack, slackCountByUser } from './slack'
 import type { Character, SlackRuleSet } from '../types'
 
 const output: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
@@ -49,5 +49,26 @@ describe('computeSlack', () => {
     const d: Character = { ...output, id: 4, fame: 30000, simulated_damage: 3 } // 划水无额度 → 灰
     expect(computeSlack(rules, { 5: [a, d] })).toEqual({ 5: [4] })
     expect(computeSlack({ criteria: [], exchange: [] }, { 5: [a] })).toEqual({ 5: [] })
+  })
+})
+
+describe('slackCountByUser', () => {
+  const rules: SlackRuleSet = {
+    criteria: [{ class_type: '输出', metric: 'fame', value: 60000 }],
+    exchange: [],
+  }
+  it('统计每人划水总数（不扣兑换额度）', () => {
+    const a: Character = { ...output, id: 1, fame: 50000 }
+    const b: Character = { ...output, id: 2, fame: 30000 }
+    const c: Character = { ...output, id: 3, fame: 95000 } // 非划水
+    expect(slackCountByUser(rules, { 5: [a, b, c], 6: [c] })).toEqual({ 5: 2, 6: 0 })
+  })
+  it('空规则为 0', () => {
+    const a: Character = { ...output, id: 1, fame: 50000 }
+    expect(slackCountByUser({ criteria: [], exchange: [] }, { 5: [a] })).toEqual({ 5: 0 })
+  })
+  it('职业不匹配与 null 指标不计入', () => {
+    // 辅助职业不匹配输出规则；输出角色 buff_amount 为 null
+    expect(slackCountByUser(rules, { 5: [support, output] })).toEqual({ 5: 1 })
   })
 })
