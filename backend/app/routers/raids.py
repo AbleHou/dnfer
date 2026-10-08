@@ -9,11 +9,12 @@ from .. import jobs as job_data
 from ..auth import get_current_user, require_admin
 from ..db import get_db
 from ..models import (Character, Dungeon, Raid, RaidSignup, RaidSignupCharacter,
-                      Slot, User, Wave)
-from ..schemas import (DutyIn, FillIn, FillResponse, MoveIn, PlayerCharacters,
-                       RaidCreate, RaidDetail, RaidListItem, RaidSignupOut,
-                       RaidUpdate, SignupCharacterOut, SignupIn, SignupUserIn,
-                       SlotMutationResult, SlotOut, UserOut, WaveOut)
+                      RaidSlackRule, Slot, User, Wave)
+from ..schemas import (CharacterOut, DutyIn, FillIn, FillResponse, MoveIn,
+                       PlayerCharacters, RaidCreate, RaidDetail, RaidListItem,
+                       RaidSignupOut, RaidUpdate, SignupIn, SignupUserIn,
+                       SlackRuleSet, SlotMutationResult, SlotOut, UserOut,
+                       WaveOut)
 from ..services.characters import character_out
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
@@ -67,16 +68,14 @@ def _participates(db: Session, raid: Raid, user_id: int) -> bool:
     return db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id,
                                        RaidSignup.user_id == user_id).first() is not None
 
-def _signup_char_out(c: Character) -> SignupCharacterOut:
-    meta = job_data.job_meta(c.job_name) or {}
-    return SignupCharacterOut(id=c.id, name=c.name,
-                              job_title=meta.get("title", ""),
-                              class_type=c.class_type)
+def _signup_characters(rs: RaidSignup) -> list[CharacterOut]:
+    """报名行勾选的角色（完整 CharacterOut，保持插入顺序）。"""
+    return [character_out(rsc.character) for rsc in rs.characters]
 
 
-def _signup_characters(rs: RaidSignup) -> list[SignupCharacterOut]:
-    """报名行勾选的角色（SignupCharacterOut 列表，保持插入顺序）。"""
-    return [_signup_char_out(rsc.character) for rsc in rs.characters]
+def _load_slack_rules(db: Session, raid: Raid) -> SlackRuleSet:
+    row = db.query(RaidSlackRule).filter(RaidSlackRule.raid_id == raid.id).first()
+    return SlackRuleSet.model_validate(row.rules) if row else SlackRuleSet()
 
 
 def _signup_out(rs: RaidSignup) -> RaidSignupOut:
@@ -118,8 +117,11 @@ def _detail(db: Session, raid: Raid) -> RaidDetail:
     for w in raid.waves:
         waves.append(WaveOut(id=w.id, index=w.index,
                              slots=[_slot_out(s) for s in w.slots]))
-    signups = [RaidSignupOut(user=UserOut.model_validate(db.get(User, raid.created_by)),
-                             created_at=None)]
+    leader = db.get(User, raid.created_by)
+    leader_chars = db.scalars(select(Character).where(Character.user_id == raid.created_by)
+                              .order_by(Character.id)).all()
+    signups = [RaidSignupOut(user=UserOut.model_validate(leader), created_at=None,
+                             characters=[character_out(c) for c in leader_chars])]
     for rs in db.query(RaidSignup).options(selectinload(RaidSignup.user),
                                            selectinload(RaidSignup.characters)) \
             .filter(RaidSignup.raid_id == raid.id,
@@ -129,7 +131,7 @@ def _detail(db: Session, raid: Raid) -> RaidDetail:
     return RaidDetail(id=raid.id, name=raid.name, dungeon_id=raid.dungeon_id,
                       dungeon_name=raid.dungeon.name, size=raid.size,
                       locked=raid.locked, starts_at=raid.starts_at, waves=waves,
-                      signups=signups)
+                      signups=signups, slack_rules=_load_slack_rules(db, raid))
 
 def _squad_occupied(db: Session, wave: Wave, squad_index: int) -> list[tuple[str, str]]:
     return [(s.duty, s.character.class_type) for s in wave.slots

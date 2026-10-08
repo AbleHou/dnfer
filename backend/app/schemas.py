@@ -88,16 +88,36 @@ class RaidUpdate(BaseModel):
     name: str | None = None
     starts_at: datetime | None = None
 
-class SignupCharacterOut(BaseModel):
-    id: int
-    name: str
-    job_title: str
-    class_type: str
+SlackMetric = Literal["fame", "simulated_damage", "sustained_dps", "buff_amount", "sun_buff"]
+
+class SlackRuleCriterion(BaseModel):
+    class_type: Literal["输出", "辅助"]
+    metric: SlackMetric
+    value: int = Field(ge=0)
+
+class SlackRuleExchange(BaseModel):
+    class_type: Literal["输出", "辅助"]
+    metric: SlackMetric
+    value: int = Field(ge=0)
+    count: int = Field(ge=1)
+
+class SlackRuleSet(BaseModel):
+    criteria: list[SlackRuleCriterion] = Field(default_factory=list, max_length=20)
+    exchange: list[SlackRuleExchange] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def _metric_compatible(self):
+        output = {"fame", "simulated_damage", "sustained_dps"}
+        for row in [*self.criteria, *self.exchange]:
+            if (row.class_type == "输出" and row.metric not in output) or \
+               (row.class_type == "辅助" and row.metric in output):
+                raise ValueError(f"数值类型与职业不匹配: {row.class_type}/{row.metric}")
+        return self
 
 class RaidSignupOut(BaseModel):
     user: UserOut
     created_at: datetime | None  # 团长固定行（无真实报名记录）为 None
-    characters: list[SignupCharacterOut] = []  # 团长固定行为空列表
+    characters: list[CharacterOut] = []  # 团长固定行为其全部角色
 
 class SignupUserIn(BaseModel):
     user_id: int
@@ -152,6 +172,7 @@ class RaidDetail(BaseModel):
     starts_at: datetime
     waves: list[WaveOut]
     signups: list[RaidSignupOut] = []
+    slack_rules: SlackRuleSet = SlackRuleSet()
 
 class FillIn(BaseModel):
     character_id: int
