@@ -108,4 +108,12 @@ describe('AdminUsersView', () => {
     const qcalls = apiMock.get.mock.calls.filter((c: any[]) => String(c[0]).includes('/query'))
     expect(String(qcalls[qcalls.length - 1][0])).toContain('sort=sun_buff')
   })
+  it('改密按钮打开重置密码弹窗', async () => {
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true, AdminResetPasswordModal: true } },
+    })
+    await flushPromises()
+    await wrapper.find('[data-act="reset-pw-2"]').trigger('click')
+    expect(wrapper.findComponent({ name: 'AdminResetPasswordModal' }).exists()).toBe(true)
+  })
 })

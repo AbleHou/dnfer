@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
 import AdminUserCharactersModal from '../components/AdminUserCharactersModal.vue'
+import AdminResetPasswordModal from '../components/AdminResetPasswordModal.vue'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
 import { jobGenderTitle } from '../lib/job'
 import type { AdminCharacterRow, AdminUser, CharacterQueryResult, JobCategory, User } from '../types'
@@ -69,6 +70,12 @@ const modalOpen = ref(false)
 const modalUser = ref<User | null>(null)
 
 function openManage(u: AdminUser) { modalUser.value = u; modalOpen.value = true }
+
+// 重置密码弹窗独立状态（避免与角色管理弹窗共用 open 标志导致同时渲染）
+const resetPwOpen = ref(false)
+const resetPwUser = ref<User | null>(null)
+function openResetPw(u: AdminUser) { resetPwUser.value = u; resetPwOpen.value = true }
+function onResetPwClose() { resetPwOpen.value = false; loadUsers() }
 
 // 弹窗关闭后刷新两侧数据，保证角色数/查询行与弹窗内增删改保持一致
 function onModalClose() {
@@ -187,6 +194,7 @@ onMounted(() => {
             <td style="white-space:nowrap">
               <div style="display:flex;gap:8px">
                 <button class="dnf-btn dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</button>
+                <button class="dnf-btn dnf-btn-sm" :data-act="'reset-pw-' + u.id" @click="openResetPw(u)">改密</button>
                 <template v-if="!u.is_admin">
                   <button v-if="!u.is_banned" class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'ban-' + u.id"
                           @click="toggleBan(u)">封禁</button>
@@ -201,5 +209,7 @@ onMounted(() => {
 
     <AdminUserCharactersModal v-if="modalOpen" :open="modalOpen" :user="modalUser"
                               @close="onModalClose" />
+    <AdminResetPasswordModal v-if="resetPwOpen" :open="resetPwOpen" :user="resetPwUser"
+                             @close="onResetPwClose" />
   </div>
 </template>
