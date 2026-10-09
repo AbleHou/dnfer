@@ -6,11 +6,13 @@ import { useAuthStore } from '../stores/auth'
 import { validateNickname } from '../utils/nickname'
 import { notifyError, notifySuccess } from '../lib/notify'
 import UserAvatar from './UserAvatar.vue'
+import ChangePasswordModal from './ChangePasswordModal.vue'
 import type { User } from '../types'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const auth = useAuthStore()
+const changePwOpen = ref(false)
 const nickname = ref(auth.user?.nickname ?? '')
 const nicknameError = ref('')
 const saving = ref(false)
@@ -71,6 +73,8 @@ async function onFileChange(e: Event) {
       </div>
       <button class="dnf-btn dnf-btn-primary save-nickname" style="width:100%"
               :disabled="saving" @click="saveNickname">保存</button>
+      <button class="dnf-btn" data-act="change-pw" style="width:100%" @click="changePwOpen = true">修改密码</button>
     </div>
   </n-modal>
+  <ChangePasswordModal v-if="changePwOpen" :open="changePwOpen" @close="() => changePwOpen = false" />
 </template>

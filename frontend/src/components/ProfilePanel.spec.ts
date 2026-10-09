@@ -82,4 +82,14 @@ describe('ProfilePanel', () => {
     expect(notifyMock.notifyError).toHaveBeenCalledWith('上传失败')
     expect(authMock.updateProfile).not.toHaveBeenCalled()
   })
+
+  it('修改密码按钮打开改密弹窗', async () => {
+    const w = mount(ProfilePanel, {
+      props: { open: true },
+      global: { stubs: { teleport: true, ChangePasswordModal: true } },
+    })
+    await flushPromises()
+    await w.find('[data-act="change-pw"]').trigger('click')
+    expect(w.findComponent({ name: 'ChangePasswordModal' }).exists()).toBe(true)
+  })
 })
