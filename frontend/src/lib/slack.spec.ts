@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { metricValue, isSlackingChar, charExchangeCount, computeSlack, slackCountByUser } from './slack'
-import type { Character, SlackRuleSet } from '../types'
+import type { Character, SlackRuleCriterion, SlackRuleSet } from '../types'
 
 const output: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: '鬼剑士', class_type: '输出', fame: 52000, simulated_damage: 5,
@@ -20,6 +20,23 @@ describe('slack 判定', () => {
     expect(isSlackingChar(output, [{ class_type: '输出', metric: 'fame', value: 52000 }])).toBe(false) // 不小于
     expect(isSlackingChar(output, [{ class_type: '辅助', metric: 'fame', value: 60000 }])).toBe(false) // 职业不匹配
     expect(isSlackingChar(output, [{ class_type: '输出', metric: 'buff_amount', value: 999 }])).toBe(false) // null 不满足
+  })
+  it('多规则同职业：满足任意一条即不算划水，全部低于阈值才算', () => {
+    const criteria: SlackRuleCriterion[] = [
+      { class_type: '辅助', metric: 'buff_amount', value: 41000 },
+      { class_type: '辅助', metric: 'sun_buff', value: 400000 },
+    ]
+    expect(isSlackingChar({ ...support, buff_amount: 3000, sun_buff: 450000 }, criteria)).toBe(false) // 太阳达标豁免
+    expect(isSlackingChar({ ...support, buff_amount: 42000, sun_buff: 300000 }, criteria)).toBe(false) // 增益达标豁免
+    expect(isSlackingChar({ ...support, buff_amount: 3000, sun_buff: 300000 }, criteria)).toBe(true)  // 全低于阈值
+  })
+  it('多规则同职业：适用指标为 null 不判划水（宽松）', () => {
+    const criteria: SlackRuleCriterion[] = [
+      { class_type: '辅助', metric: 'buff_amount', value: 41000 },
+      { class_type: '辅助', metric: 'sun_buff', value: 400000 },
+    ]
+    expect(isSlackingChar({ ...support, buff_amount: 3000, sun_buff: null }, criteria)).toBe(false)
+    expect(isSlackingChar({ ...support, buff_amount: null, sun_buff: 300000 }, criteria)).toBe(false)
   })
   it('charExchangeCount：取满足行最大 count，无则 0', () => {
     expect(charExchangeCount(output, [

@@ -5,8 +5,11 @@ export function metricValue(c: Character, m: SlackMetric): number | null {
 }
 
 export function isSlackingChar(c: Character, criteria: SlackRuleSet['criteria']): boolean {
-  return criteria.some(cr => c.class_type === cr.class_type && metricValue(c, cr.metric) != null
-    && (metricValue(c, cr.metric) as number) < cr.value)
+  // 满足任意一条适用规则（数值 ≥ 阈值）即不算划水；仅当全部适用规则都低于阈值才算。
+  // 适用规则指标为 null 时视为「不满足」，按宽松语义不判划水。
+  const applicable = criteria.filter(cr => c.class_type === cr.class_type)
+  return applicable.length > 0 && applicable.every(cr =>
+    metricValue(c, cr.metric) != null && (metricValue(c, cr.metric) as number) < cr.value)
 }
 
 export function charExchangeCount(c: Character, exchange: SlackRuleSet['exchange']): number {
