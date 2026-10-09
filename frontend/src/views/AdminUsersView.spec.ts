@@ -116,4 +116,21 @@ describe('AdminUsersView', () => {
     await wrapper.find('[data-act="reset-pw-2"]').trigger('click')
     expect(wrapper.findComponent({ name: 'AdminResetPasswordModal' }).exists()).toBe(true)
   })
+  it('管理员行也有改密按钮且不连带打开角色管理弹窗', async () => {
+    apiMock.get.mockImplementation((url: string) => {
+      if (url === '/api/admin/users') {
+        return Promise.resolve([{ ...users[0], id: 1, username: 'root', nickname: '群主', is_admin: true }])
+      }
+      if (url.startsWith('/api/admin/characters/query')) return Promise.resolve(query)
+      return Promise.resolve([])
+    })
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true, AdminResetPasswordModal: true } },
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-act="reset-pw-1"]').exists()).toBe(true)   // 管理员行也显示改密按钮
+    await wrapper.find('[data-act="reset-pw-1"]').trigger('click')
+    expect(wrapper.findComponent({ name: 'AdminResetPasswordModal' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'AdminUserCharactersModal' }).exists()).toBe(false)  // 独立弹窗不连带打开
+  })
 })
