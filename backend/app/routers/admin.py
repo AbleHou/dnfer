@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, contains_eager
 
-from ..auth import make_code, require_admin
+from ..auth import hash_password, make_code, require_admin
 from ..db import get_db
 from ..models import Character, RegistrationCode, User
 from ..schemas import (AdminCharacterRow, AdminUserOut, CharacterIn, CharacterOut,
-                       CharacterQueryResult, CodeCreate, CodeOut, PlayerCharacters,
-                       UserOut, VoteCreate, VoteDetail)
+                       CharacterQueryResult, CodeCreate, CodeOut, PasswordResetIn,
+                       PlayerCharacters, UserOut, VoteCreate, VoteDetail)
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
 from ..services.votes import _vote_or_404, close_vote, create_vote, vote_detail
@@ -173,6 +173,15 @@ def ban_user(uid: int, admin: User = Depends(require_admin), db: Session = Depen
 def unban_user(uid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     target = _user_or_404(db, uid)
     target.is_banned = False
+    db.commit()
+    db.refresh(target)
+    return _admin_user_out(db, target)
+
+@router.post("/users/{uid}/password", response_model=AdminUserOut)
+def reset_user_password(uid: int, body: PasswordResetIn,
+                        admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    target = _user_or_404(db, uid)
+    target.password_hash = hash_password(body.password)
     db.commit()
     db.refresh(target)
     return _admin_user_out(db, target)

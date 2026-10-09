@@ -36,6 +36,13 @@ class LoginIn(BaseModel):
     username: str
     password: str
 
+class PasswordResetIn(BaseModel):
+    password: str = Field(min_length=6, max_length=128)
+
+class ChangePasswordIn(BaseModel):
+    old_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=6, max_length=128)
+
 class ProfileUpdate(BaseModel):
     nickname: str = Field(min_length=1, max_length=64,
                           pattern="^[\u4e00-\u9fa5A-Za-z0-9]+$")

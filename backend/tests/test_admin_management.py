@@ -200,3 +200,32 @@ def test_admin_create_character_with_sun_buff(client, admin_headers):
                           "buff_amount": 9000, "sun_buff": 2500})
     assert r.status_code == 200
     assert r.json()["sun_buff"] == 2500
+
+def test_admin_reset_password(client, admin_headers):
+    h, u = register_user(client, "pwreset1", "改密甲")
+    # 旧密码可登录
+    assert client.post("/api/auth/login",
+                       json={"username": "pwreset1", "password": "secret1"}).status_code == 200
+    r = client.post(f"/api/admin/users/{u['id']}/password", headers=admin_headers,
+                    json={"password": "newpass99"})
+    assert r.status_code == 200 and r.json()["username"] == "pwreset1"
+    # 旧密码失效、新密码可登录
+    assert client.post("/api/auth/login",
+                       json={"username": "pwreset1", "password": "secret1"}).status_code == 401
+    assert client.post("/api/auth/login",
+                       json={"username": "pwreset1", "password": "newpass99"}).status_code == 200
+
+def test_admin_reset_password_errors(client, admin_headers):
+    h, u = register_user(client, "pwreset2", "改密乙")
+    # 用户不存在 → 404
+    assert client.post("/api/admin/users/99999/password", headers=admin_headers,
+                       json={"password": "newpass99"}).status_code == 404
+    # 非管理员 → 403
+    assert client.post(f"/api/admin/users/{u['id']}/password", headers=h,
+                       json={"password": "newpass99"}).status_code == 403
+    # 密码过短 → 422
+    assert client.post(f"/api/admin/users/{u['id']}/password", headers=admin_headers,
+                       json={"password": "123"}).status_code == 422
+    # 管理员可重置另一管理员密码（admin id=1；token 不失效所以 admin_headers 仍可用）
+    assert client.post("/api/admin/users/1/password", headers=admin_headers,
+                       json={"password": "adminNew99"}).status_code == 200
