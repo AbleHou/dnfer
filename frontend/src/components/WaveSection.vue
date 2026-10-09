@@ -22,6 +22,8 @@ const emit = defineEmits<{
   (e: 'deleteWave', index: number): void
   (e: 'manage', slot: any): void
   (e: 'moveTo', slot: any): void
+  (e: 'parallelize', wave: Wave): void
+  (e: 'unparallelize', wave: Wave): void
 }>()
 
 const squads = computed(() => {
@@ -31,13 +33,24 @@ const squads = computed(() => {
 const counts = computed(() =>
   squads.value.map(g => ({ filled: g.filter(s => s.character_id != null).length, total: g.length })))
 const totals = computed(() => squads.value.map(sumSquadDamage))
+const waveLabel = computed(() =>
+  props.wave.group_id == null
+    ? `第 ${props.wave.round_index} 波`
+    : `第 ${props.wave.round_index} 波 ${props.wave.group_index} 团`)
 </script>
 
 <template>
   <div class="dnf-panel" style="margin:20px 0;padding:14px">
     <div class="wave-head">
-      <b class="dnf-title">第 {{ wave.index }} 波</b>
-      <a v-if="canDelete" href="#" class="wave-delete" @click.prevent="emit('deleteWave', wave.index)">删除本波</a>
+      <b class="dnf-title">{{ waveLabel }}</b>
+      <span style="margin-left:auto;display:flex;gap:12px;align-items:center">
+        <a v-if="isAdmin && wave.group_id == null" href="#" class="wave-link"
+           data-act="parallelize" @click.prevent="emit('parallelize', wave)">并行到…</a>
+        <a v-if="isAdmin && wave.group_id != null" href="#" class="wave-link"
+           data-act="unparallelize" @click.prevent="emit('unparallelize', wave)">取消并行</a>
+        <a v-if="canDelete" href="#" class="wave-delete"
+           @click.prevent="emit('deleteWave', wave.index)">删除本波</a>
+      </span>
     </div>
     <div class="squad-grid">
       <div v-for="(g, i) in squads" :key="i" class="squad-col" :class="'squad-' + i">
