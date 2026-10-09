@@ -11,10 +11,10 @@ from ..db import get_db
 from ..models import (Character, Dungeon, Raid, RaidSignup, RaidSignupCharacter,
                       RaidSlackRule, Slot, User, Wave)
 from ..schemas import (CharacterOut, DutyIn, FillIn, FillResponse, MoveIn,
-                       PlayerCharacters, RaidCreate, RaidDetail, RaidListItem,
-                       RaidSignupOut, RaidUpdate, SignupIn, SignupUserIn,
-                       SlackRuleSet, SlotMutationResult, SlotOut, UserOut,
-                       WaveOut)
+                       ParallelIn, PlayerCharacters, RaidCreate, RaidDetail,
+                       RaidListItem, RaidSignupOut, RaidUpdate, SignupIn,
+                       SignupUserIn, SlackRuleSet, SlotMutationResult, SlotOut,
+                       UserOut, WaveOut)
 from ..services.characters import character_out
 from ..services.raid_builder import create_raid as _build_raid, create_wave
 from ..services.raid_validator import (check_composition, default_duty,
@@ -113,10 +113,18 @@ def _signup_user(db: Session, raid: Raid, user: User,
     return rs
 
 def _detail(db: Session, raid: Raid) -> RaidDetail:
-    waves = []
+    # 按并行分组分区为轮次（group_id=None 视为独立轮：每波自成一轮），
+    # 轮次按 min(index) 排序、轮内按 index 排序
+    buckets: dict[int, list[Wave]] = {}
     for w in raid.waves:
-        waves.append(WaveOut(id=w.id, index=w.index,
-                             slots=[_slot_out(s) for s in w.slots]))
+        buckets.setdefault(w.group_id if w.group_id is not None else w.id, []).append(w)
+    ordered_rounds = sorted(buckets.values(), key=lambda g: min(w.index for w in g))
+    waves = []
+    for round_index, round_waves in enumerate(ordered_rounds, start=1):
+        for group_index, w in enumerate(sorted(round_waves, key=lambda x: x.index), start=1):
+            waves.append(WaveOut(id=w.id, index=w.index, group_id=w.group_id,
+                                 round_index=round_index, group_index=group_index,
+                                 slots=[_slot_out(s) for s in w.slots]))
     leader = db.get(User, raid.created_by)
     leader_chars = db.scalars(select(Character).where(Character.user_id == raid.created_by)
                               .order_by(Character.id)).all()
@@ -277,10 +285,65 @@ async def delete_wave(rid: int, index: int, admin: User = Depends(require_admin)
         raise HTTPException(404, "波次不存在")
     if len(raid.waves) <= 1:
         raise HTTPException(400, "至少保留一个波次")
+    gid = wave.group_id
     db.delete(wave)
+    db.flush()
+    if gid is not None:
+        _prune_round(db, gid)
     db.commit()
     await manager.broadcast(rid, {"type": "wave:removed", "index": index})
     return {"ok": True}
+
+@router.post("/{rid}/waves/{index}/parallel")
+async def parallelize_wave(rid: int, index: int, body: ParallelIn,
+                           admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    wave = db.query(Wave).filter(Wave.raid_id == rid, Wave.index == index).first()
+    if wave is None:
+        raise HTTPException(404, "波次不存在")
+    target = db.query(Wave).filter(Wave.raid_id == rid,
+                                   Wave.index == body.target_index).first()
+    if target is None:
+        raise HTTPException(404, "波次不存在")
+    if target.id == wave.id:
+        raise HTTPException(400, "不能与自身并行")
+    # wave 若已在某轮 → 先退出，清理可能成单的旧轮
+    if wave.group_id is not None:
+        old = wave.group_id
+        wave.group_id = None
+        db.flush()
+        _prune_round(db, old)
+    # 加入目标轮（目标独立则以 target.id 为轮键）
+    if target.group_id is None:
+        target.group_id = target.id
+    wave.group_id = target.group_id
+    db.flush()
+    # 合并后校验同轮限一占位（失败回滚，保持原状）
+    try:
+        _validate_one_char_per_round(db, _round_wave_ids(db, wave))
+    except HTTPException:
+        db.rollback()
+        raise
+    db.commit()
+    await manager.broadcast(rid, {"type": "wave:parallelized", "index": wave.index})
+    return _detail(db, raid)
+
+@router.delete("/{rid}/waves/{index}/parallel")
+async def unparallelize_wave(rid: int, index: int, admin: User = Depends(require_admin),
+                             db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    wave = db.query(Wave).filter(Wave.raid_id == rid, Wave.index == index).first()
+    if wave is None:
+        raise HTTPException(404, "波次不存在")
+    if wave.group_id is None:
+        raise HTTPException(400, "该波未并行")
+    old = wave.group_id
+    wave.group_id = None
+    db.flush()
+    _prune_round(db, old)
+    db.commit()
+    await manager.broadcast(rid, {"type": "wave:parallel_removed", "index": wave.index})
+    return _detail(db, raid)
 
 @router.post("/{rid}/slots/{slot_id}/fill", response_model=FillResponse)
 async def fill_slot(rid: int, slot_id: int, body: FillIn,
@@ -425,6 +488,31 @@ def _validate_one_char_per_wave(db: Session, wave_ids: set[int]) -> None:
                 if uid in seen:
                     raise HTTPException(400, "同一波次中一个玩家只能上一个角色")
                 seen.add(uid)
+
+
+def _round_wave_ids(db: Session, wave: Wave) -> set[int]:
+    """返回与 wave 同轮的所有 wave.id（独立波 → {wave.id}）。"""
+    if wave.group_id is None:
+        return {wave.id}
+    return {w.id for w in db.query(Wave).filter(Wave.group_id == wave.group_id).all()}
+
+
+def _validate_one_char_per_round(db: Session, round_wave_ids: set[int]) -> None:
+    """跨轮内所有波聚合：同一玩家出现两次（含同团内与跨并行团）→ 400。"""
+    seen: set[int] = set()
+    for s in db.query(Slot).filter(Slot.wave_id.in_(round_wave_ids)):
+        if s.character_id is not None and s.character is not None:
+            uid = s.character.user_id
+            if uid in seen:
+                raise HTTPException(400, "同一轮次中一个玩家只能上一个角色")
+            seen.add(uid)
+
+
+def _prune_round(db: Session, group_id: int) -> None:
+    """若 group_id 轮内仅剩 1 波，则将其 group_id 置 NULL（单波轮恒 NULL 不变量）。"""
+    members = db.query(Wave).filter(Wave.group_id == group_id).all()
+    if len(members) == 1:
+        members[0].group_id = None
 
 
 @router.post("/{rid}/slots/{slot_id}/move", response_model=FillResponse)

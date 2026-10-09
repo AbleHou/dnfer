@@ -167,7 +167,13 @@ class SlotOut(BaseModel):
 class WaveOut(BaseModel):
     id: int
     index: int
+    group_id: int | None = None
+    round_index: int = 1      # 1 起始轮次显示号（带默认避免中间态 500）
+    group_index: int = 1      # 1 起始轮内团号
     slots: list[SlotOut]
+
+class ParallelIn(BaseModel):
+    target_index: int     # 目标波 index
 
 class RaidDetail(BaseModel):
     id: int
