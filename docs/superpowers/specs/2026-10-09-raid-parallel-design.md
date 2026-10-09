@@ -12,7 +12,7 @@
 - **操作**：指定目标波加入——选中某波「与哪一波并行」，即加入目标波所在轮次、成为下一个团号。支持任意波之间与连续链（w2‖w1 后再 w3‖w2 → 三者同轮）。
 - **占位约束**：同轮限一占位——把现有「同波同玩家仅一占位」扩展为「同轮次仅一占位」（并行团同时开，玩家无法分身）。
 - **规模**：并行团沿用攻坚规模（raid.size），不新增每波自定义人数。
-- **权限**：与加/删波一致（`_can_edit` = 未锁定任意成员，锁定后仅管理员）。
+- **权限（本轮一并收紧）**：加波/删波从「未锁定任意成员」收紧为**仅管理员**；并行/取消并行同为仅管理员。原因：并行会重组轮次、影响比加删波更大，权限收紧一致更合理（用户 2026-10-09 追加确认）。占位/职责等其余操作保持 `_can_edit`（未锁定任意成员，锁定后仅管理员）不变。
 - **范围**：仅 Web 前端；AstrBot skill（dnfer-raids）本轮不改。
 - **建模方案 A**：`Wave.group_id` 可空列 + 后端计算显示轮次/团号；`index` 保持稳定内部顺序键。
 
@@ -49,13 +49,18 @@ class ParallelIn(BaseModel):
 4. 轮内按 `index` 排序 → `group_index` 1..M。
 5. 显示标签（前端据此渲染）：轮内 1 波 → `第{round_index}波`；轮内 >1 波 → `第{round_index}波{group_index}团`。
 
-### 2.4 并行端点（routers/raids.py，均校验 `_can_edit`）
+### 2.4 并行端点（routers/raids.py，均 `Depends(require_admin)`）
+
+**加波/删波权限收紧**（本轮独立小改动，先于并行落地）：
+- `add_wave`：`Depends(get_current_user)` + `_can_edit` → `Depends(require_admin)`；删除失效的 `_can_edit` 校验与「攻坚已锁定」403。
+- `delete_wave`：改为 `Depends(require_admin)`；删除原有非管理员分支（锁定 403 + 本人角色校验），仅保留 404 / 至少保留一波 400 校验。`_can_edit` 仍被 `fill_slot`/`change_duty` 使用，保留不动。
+- `create_wave`/`delete_wave` 现有 WS 事件（`wave:added/removed`）不变。
 
 ```python
 @router.post("/{rid}/waves/{index}/parallel")
 async def parallelize_wave(rid: int, index: int, body: ParallelIn,
-                           user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # 校验 _can_edit（同 add_wave）→ 403「攻坚已锁定，仅管理员可编辑」
+                           admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    # 仅管理员（require_admin，与加/删波收紧一致）
     # wave、target 均为本 raid 的波，否则 404「波次不存在」
     # target == wave（自身）→ 400
     # wave 若已在某轮 → 先退出（group_id=NULL），且退出后原轮若仅剩 1 波 → 该波 group_id 也置 NULL（单波自动转独立）
@@ -67,9 +72,9 @@ async def parallelize_wave(rid: int, index: int, body: ParallelIn,
     # 返回 _detail(db, raid)
 
 @router.delete("/{rid}/waves/{index}/parallel")
-async def unparallelize_wave(rid: int, index: int, user: User = Depends(get_current_user),
+async def unparallelize_wave(rid: int, index: int, admin: User = Depends(require_admin),
                              db: Session = Depends(get_db)):
-    # 校验 _can_edit
+    # 仅管理员
     # wave 不存在 → 404；wave 未在轮（group_id is None）→ 400「该波未并行」
     # wave.group_id = NULL；若原轮内除 wave 外仅剩 1 波 → 该波 group_id 也置 NULL（单波自动转独立）
     # commit 后 broadcast wave:parallel_removed {index}
@@ -99,9 +104,10 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
 ### 3.2 WaveSection.vue
 
 - 头部标题改为 computed 标签：`wave.group_id == null` → `第{{ wave.round_index }}波`；否则 `第{{ wave.round_index }}波{{ wave.group_index }}团`。
-- 并行操作入口（头部，`editable` 时显示，与加/删波同权限）：
+- 并行操作入口（头部，**`isAdmin` 时显示**，与加/删波收紧一致）：
   - 独立波（`group_id == null`）→「并行到…」按钮，emit `parallelize(wave)`。
   - 轮内波（`group_id != null`）→「取消并行」链接，emit `unparallelize(wave)`。
+- **权限收紧连带**：删除本波入口原 `canDelete`（`auth.isAdmin || waves.length > 1`）→ 改为 `auth.isAdmin`（删波仅管理员）。
 
 ### 3.3 RaidDetailView.vue
 
@@ -110,6 +116,7 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
 - 「取消并行」→ `api.del('/api/raids/{rid}/waves/{index}/parallel')`，成功后 `load()`。
 - 失败均 `notifyError(e.message)`。
 - waves 渲染顺序由后端 (round_index, group_index) 排序保证，前端无需重排。
+- **权限收紧连带**：「＋ 添加一波」按钮 `v-if="editable"` → `v-if="auth.isAdmin"`（加波仅管理员）；WaveSection 的 `can-delete` 传参改为 `auth.isAdmin`。
 
 ### 3.4 store / ws
 
@@ -121,7 +128,7 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
 ### 4.1 后端
 
 - `tests/test_raid_parallel.py`（新建）：
-  - 并行：独立→独立（入同轮，round_index/group_index 正确）；加入已有轮（成为下一团号）；跨 raid target → 404；target=自身 → 400；锁定后非管理员 → 403。
+  - 并行：独立→独立（入同轮，round_index/group_index 正确）；加入已有轮（成为下一团号）；跨 raid target → 404；target=自身 → 400；**非管理员（无论锁定与否）→ 403**。
   - **合并冲突**：wave 原在轮 A 且与目标轮 B 合并后同一玩家跨两波占位 → 400「同一轮次中一个玩家只能上一个角色」，且两轮保持原状（事务回滚）。
   - **单波标签不变量**：w1‖w2 后 w1 再‖w3（w2 被留在旧轮只剩自身）→ w2 的 `group_id` 归 NULL、显示「第X波」（无 1团）；w1‖w3 显示「第X波1团/2团」。
   - 显示计算：w1‖w2 + w3 → `round_index=[1,1,2]`、`group_index=[1,2,1]`，返回顺序 w1,w2,w3。
@@ -131,6 +138,10 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
   - WS：broadcast 收到 `wave:parallelized` / `wave:parallel_removed`。
   - 占位：同一玩家占并行两团 → 400「同一轮次中一个玩家只能上一个角色」；`replace` 自动撤下并行团冲突格；`move_slot` 跨并行团移动造成同轮同玩家 → 400。
 - **文案改动无既有测试断言影响**：已 grep 确认 backend/tests 下无任何用例断言旧文案「同一波次中一个玩家只能上一个角色」，文案改动安全、无需同步改既有用例（避免规划者白费功夫）。
+- **权限收紧**（改既有用例 + 补 403 断言）：
+  - `test_raids.py::test_wave_add_and_delete_rules`（成员加波 200 / 删自己角色波 200）→ 改为管理员操作，并补非管理员加/删 → 403。
+  - `test_admin_adjust.py::test_owner_can_delete_wave_with_only_own_chars_admin_placed`（成员删波 200）→ 改管理员操作，非管理员删 → 403。
+  - 新增：非管理员 `POST /{rid}/waves` → 403、`DELETE /{rid}/waves/{index}` → 403；管理员加/删 → 200。
 - `tests/test_migrations.py`：`migrate_waves_group` 幂等（执行两次无异常），断言 `group_id` 列存在且 `ix_waves_group_id` 索引存在。
 
 ### 4.2 前端
