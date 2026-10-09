@@ -18,7 +18,8 @@ export function connectRaidWs(raidId: number, cb: RaidWsCallbacks): () => void {
     ws = new WebSocket(`${proto}://${location.host}/ws/raids/${raidId}?token=${getToken()}`)
     ws.onmessage = (m) => {
       const ev = JSON.parse(m.data)
-      if (ev.type === 'wave:added' || ev.type === 'wave:removed') cb.onRefresh()
+      if (ev.type === 'wave:added' || ev.type === 'wave:removed' ||
+          ev.type === 'wave:parallelized' || ev.type === 'wave:parallel_removed') cb.onRefresh()
       else cb.onEvent(ev)
     }
     ws.onopen = () => { if (reconnected) cb.onReconnect() }

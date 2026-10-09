@@ -8,6 +8,8 @@ export type WsEvent =
   | { type: 'slot:duty_changed'; slot: Slot }
   | { type: 'wave:added'; index: number }
   | { type: 'wave:removed'; index: number }
+  | { type: 'wave:parallelized'; index: number }
+  | { type: 'wave:parallel_removed'; index: number }
   | { type: 'raid:locked' }
   | { type: 'raid:unlocked' }
   | { type: 'raid:signup'; user: User; created_at: string | null; characters: Character[] }
