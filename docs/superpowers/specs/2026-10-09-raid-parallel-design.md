@@ -22,7 +22,7 @@
 
 - `Wave` 加列 `group_id: Mapped[int | None] = mapped_column(Integer, index=True)`——同轮并行波共享同一非空值，NULL=独立波。
 - `index` **不重排**：保持稳定内部顺序键，public `/raids/{rid}/waves/{index}` 与 bot 按 index 寻址不受影响。
-- 迁移：`migrations.py` 新增幂等 `migrate_waves_group`（仿 `migrate_users_ban`）——`ALTER TABLE waves ADD COLUMN group_id INTEGER`，且 `CREATE INDEX ix_waves_group_id`（若不存在）。
+- 迁移：`migrations.py` 新增幂等 `migrate_waves_group`（仿 `migrate_users_ban`）——`ALTER TABLE waves ADD COLUMN group_id INTEGER`，且 `CREATE INDEX ix_waves_group_id`（若不存在）。**须在 `init_db()`（db.py）注册执行**；`create_all` 不会对已存在的 `waves` 表 ALTER 加列，这正是需要迁移的原因。
 
 ### 2.2 Schemas（schemas.py）
 
@@ -125,11 +125,12 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
   - **合并冲突**：wave 原在轮 A 且与目标轮 B 合并后同一玩家跨两波占位 → 400「同一轮次中一个玩家只能上一个角色」，且两轮保持原状（事务回滚）。
   - **单波标签不变量**：w1‖w2 后 w1 再‖w3（w2 被留在旧轮只剩自身）→ w2 的 `group_id` 归 NULL、显示「第X波」（无 1团）；w1‖w3 显示「第X波1团/2团」。
   - 显示计算：w1‖w2 + w3 → `round_index=[1,1,2]`、`group_index=[1,2,1]`，返回顺序 w1,w2,w3。
+  - **非连续轮次**：w1‖w2、w3 独立、w4‖w1 → 轮 {w1,w2,w4} 且 w3 夹在中间；round_index 仍为 [1,1,2,1]、group_index=[1,2,1,3]，返回顺序 w1,w2,w4,w3（强制「分区后排序」而非朴素顺序分组）。
   - 取消并行：退出后 `group_id=NULL`；轮内仅剩 1 波时其 `group_id` 置 NULL；重编号正确。
   - 删除轮中波：剩余单波 `group_id` 归 NULL。
   - WS：broadcast 收到 `wave:parallelized` / `wave:parallel_removed`。
   - 占位：同一玩家占并行两团 → 400「同一轮次中一个玩家只能上一个角色」；`replace` 自动撤下并行团冲突格；`move_slot` 跨并行团移动造成同轮同玩家 → 400。
-- 既有断言旧文案「同一波次中一个玩家只能上一个角色」的用例（test_admin_adjust.py、test_raid_signup_characters.py、test_raids.py 等）改「同一轮次…」。
+- **文案改动无既有测试断言影响**：已 grep 确认 backend/tests 下无任何用例断言旧文案「同一波次中一个玩家只能上一个角色」，文案改动安全、无需同步改既有用例（避免规划者白费功夫）。
 - `tests/test_migrations.py`：`migrate_waves_group` 幂等（执行两次无异常），断言 `group_id` 列存在且 `ix_waves_group_id` 索引存在。
 
 ### 4.2 前端
