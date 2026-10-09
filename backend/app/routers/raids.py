@@ -379,7 +379,7 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
         char_dup = db.query(Slot).filter(Slot.character_id == char.id,
                                          Slot.id != slot.id).all()
         same_owner = db.query(Slot).filter(
-            Slot.wave_id == slot.wave_id,
+            Slot.wave_id.in_(_round_wave_ids(db, slot.wave)),
             Slot.id != slot.id,
             Slot.character.has(user_id=char.user_id),
         ).all()
@@ -393,14 +393,14 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
                                     Slot.id != slot.id).first()
         if dup:
             raise HTTPException(400, "该角色已在其他格子中")
-        # 同一波次内，一个玩家只能上一个角色（不同波次可以再上）
+        # 同一轮次内，一个玩家只能上一个角色（不同轮次可以再上）
         same_owner = db.query(Slot).filter(
-            Slot.wave_id == slot.wave_id,
+            Slot.wave_id.in_(_round_wave_ids(db, slot.wave)),
             Slot.id != slot.id,
             Slot.character.has(user_id=char.user_id),
         ).first()
         if same_owner:
-            raise HTTPException(400, "同一波次中一个玩家只能上一个角色")
+            raise HTTPException(400, "同一轮次中一个玩家只能上一个角色")
     duty = body.duty or default_duty(char.class_type)
     if not duty_valid_for_class(duty, char.class_type):
         raise HTTPException(400, "职责与职业不匹配")
@@ -478,18 +478,6 @@ async def change_duty(rid: int, slot_id: int, body: DutyIn,
                                   "slot": _slot_out(slot).model_dump()})
     return SlotMutationResult(slot=_slot_out(slot), warnings=warnings)
 
-def _validate_one_char_per_wave(db: Session, wave_ids: set[int]) -> None:
-    """跨波 move/swap 后：受影响波内同一玩家不得出现两个角色（双向校验）。"""
-    for wid in wave_ids:
-        seen: set[int] = set()
-        for s in db.query(Slot).filter(Slot.wave_id == wid):
-            if s.character_id is not None and s.character is not None:
-                uid = s.character.user_id
-                if uid in seen:
-                    raise HTTPException(400, "同一波次中一个玩家只能上一个角色")
-                seen.add(uid)
-
-
 def _round_wave_ids(db: Session, wave: Wave) -> set[int]:
     """返回与 wave 同轮的所有 wave.id（独立波 → {wave.id}）。"""
     if wave.group_id is None:
@@ -546,7 +534,7 @@ async def move_slot(rid: int, slot_id: int, body: MoveIn,
         target.character = src_char
         target.character_id = src_char.id
         target.duty = src_duty
-    # 校验：受影响小队组成规则（空小队跳过）+ 同波同玩家
+    # 校验：受影响小队组成规则（空小队跳过）+ 同轮限一（跨并行团）
     squads = {(source.wave_id, source.squad_index), (target.wave_id, target.squad_index)}
     warnings: list[str] = []
     try:
@@ -554,7 +542,8 @@ async def move_slot(rid: int, slot_id: int, body: MoveIn,
             wave = db.get(Wave, wid)
             if _squad_occupied(db, wave, sq):
                 warnings += _raise_if_hard(db, wave, sq)
-        _validate_one_char_per_wave(db, {source.wave_id, target.wave_id})
+        _validate_one_char_per_round(db, _round_wave_ids(db, source.wave))
+        _validate_one_char_per_round(db, _round_wave_ids(db, target.wave))
     except HTTPException:
         db.rollback()
         raise

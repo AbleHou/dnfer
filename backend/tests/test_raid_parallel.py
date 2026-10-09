@@ -128,3 +128,66 @@ def test_ws_broadcast_parallel_events(client):
         assert ws.receive_json()["type"] == "wave:parallelized"
         client.delete(f"/api/raids/{rid}/waves/2/parallel", headers=ah)
         assert ws.receive_json()["type"] == "wave:parallel_removed"
+
+def test_fill_same_player_across_parallel_waves_blocked(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "parf", "丁")
+    c1 = _mkchar(client, h, "C1")
+    c2 = _mkchar(client, h, "C2")
+    rid = make_raid(client, ah)["id"]
+    signup(client, rid, h)
+    _add_wave(client, ah, rid, 1)
+    client.post(f"/api/raids/{rid}/waves/2/parallel", headers=ah, json={"target_index": 1})
+    w1 = next(w for w in _waves(client, ah, rid) if w["index"] == 1)
+    w2 = next(w for w in _waves(client, ah, rid) if w["index"] == 2)
+    s1 = next(s for s in w1["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    s2 = next(s for s in w2["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    assert client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h,
+                       json={"character_id": c1}).status_code == 200
+    r = client.post(f"/api/raids/{rid}/slots/{s2['id']}/fill", headers=h,
+                    json={"character_id": c2})
+    assert r.status_code == 400
+    assert "同一轮次" in r.json()["detail"]
+
+def test_fill_replace_across_parallel_waves(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "parg", "戊")
+    c1 = _mkchar(client, h, "C1")
+    c2 = _mkchar(client, h, "C2")
+    rid = make_raid(client, ah)["id"]
+    signup(client, rid, h)
+    _add_wave(client, ah, rid, 1)
+    client.post(f"/api/raids/{rid}/waves/2/parallel", headers=ah, json={"target_index": 1})
+    w1 = next(w for w in _waves(client, ah, rid) if w["index"] == 1)
+    w2 = next(w for w in _waves(client, ah, rid) if w["index"] == 2)
+    s1 = next(s for s in w1["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    s2 = next(s for s in w2["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h, json={"character_id": c1})
+    r = client.post(f"/api/raids/{rid}/slots/{s2['id']}/fill", headers=h,
+                    json={"character_id": c2, "replace": True})
+    assert r.status_code == 200
+    assert [s["id"] for s in r.json()["removed_slots"]] == [s1["id"]]
+
+def test_move_cross_parallel_round_duplicate_blocked(client):
+    ah = _admin(client)
+    h, _ = register_user(client, "parh", "己")
+    c1 = _mkchar(client, h, "C1")
+    c2 = _mkchar(client, h, "C2")
+    rid = make_raid(client, ah)["id"]
+    signup(client, rid, h)
+    _add_wave(client, ah, rid, 2)   # w2, w3
+    client.post(f"/api/raids/{rid}/waves/2/parallel", headers=ah, json={"target_index": 1})  # 轮{1,2}
+    ws = _waves(client, ah, rid)
+    w1 = next(w for w in ws if w["index"] == 1)
+    w2 = next(w for w in ws if w["index"] == 2)
+    w3 = next(w for w in ws if w["index"] == 3)
+    s1 = next(s for s in w1["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    s2 = next(s for s in w2["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    s3 = next(s for s in w3["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
+    client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h, json={"character_id": c1})
+    client.post(f"/api/raids/{rid}/slots/{s3['id']}/fill", headers=h, json={"character_id": c2})
+    # 把 w3 的 C2（己）移到 w2（与 w1 同轮）→ 己 在轮{1,2}占两格 → 400
+    r = client.post(f"/api/raids/{rid}/slots/{s3['id']}/move", headers=ah,
+                    json={"target_slot_id": s2["id"]})
+    assert r.status_code == 400
+    assert "同一轮次" in r.json()["detail"]
