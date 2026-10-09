@@ -374,7 +374,7 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
         raise HTTPException(403, "请先勾选该角色再占位")
     removed: list[Slot] = []
     if body.replace:
-        # 冲突即替换：同一角色已在其他格（任意波）或同玩家同波已有角色时，
+        # 冲突即替换：同一角色已在其他格（任意波）或同玩家同轮已有角色时，
         # 自动撤下冲突格子再放入新角色（不报错）
         char_dup = db.query(Slot).filter(Slot.character_id == char.id,
                                          Slot.id != slot.id).all()
