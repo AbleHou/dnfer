@@ -226,6 +226,6 @@ def test_admin_reset_password_errors(client, admin_headers):
     # 密码过短 → 422
     assert client.post(f"/api/admin/users/{u['id']}/password", headers=admin_headers,
                        json={"password": "123"}).status_code == 422
-    # 管理员可重置另一管理员密码（admin id=1；token 不失效所以 admin_headers 仍可用）
+    # 管理员可重置管理员密码（含自己，admin id=1；token 不失效所以 admin_headers 仍可用）
     assert client.post("/api/admin/users/1/password", headers=admin_headers,
                        json={"password": "adminNew99"}).status_code == 200
