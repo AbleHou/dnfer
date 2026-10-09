@@ -329,15 +329,15 @@ def test_parallelize_exit_prunes_single_round(client):
     ah = _admin(client)
     rid = make_raid(client, ah)["id"]
     _add_wave(client, ah, rid, 2)   # w2, w3
-    client.post(f"/api/raids/{rid}/waves/2/parallel", headers=ah, json={"target_index": 1})  # 轮A {1,2}
-    client.post(f"/api/raids/{rid}/waves/3/parallel", headers=ah, json={"target_index": 1})  # 轮A {1,2,3}
-    # w1 改投 w3 的轮？—— 构造「w1 退出后旧轮只剩 w2」：
-    client.post(f"/api/raids/{rid}/waves/3/parallel", headers=ah, json={"target_index": 2})  # w3 加入轮{1,2} → {1,2,3}
-    # 现在把 w1 并行到 w3 → w1 退出旧轮{2,3}? 直接验证「w1 退出后 w2 单波归 NULL」：
-    client.delete(f"/api/raids/{rid}/waves/1/parallel", headers=ah)   # w1 退出轮{1,2,3} → 剩 w2,w3
-    client.delete(f"/api/raids/{rid}/waves/2/parallel", headers=ah)   # w2 退出 → 剩 w3 单波
+    # 轮{1,2}：w2‖w1
+    client.post(f"/api/raids/{rid}/waves/2/parallel", headers=ah, json={"target_index": 1})
+    # w1 改投 w3（独立）→ w1 先退出旧轮{1,2}，旧轮只剩 w2 → w2.group_id 归 NULL（单波轮不变量）
+    client.post(f"/api/raids/{rid}/waves/1/parallel", headers=ah, json={"target_index": 3})
     ws = _waves(client, ah, rid)
-    assert all(w["group_id"] is None for w in ws)
+    assert [w["index"] for w in ws] == [1, 3, 2]                     # 轮序 w1,w3 先于独立 w2
+    assert [(w["round_index"], w["group_index"]) for w in ws] == [(1, 1), (1, 2), (2, 1)]
+    assert ws[0]["group_id"] == ws[1]["group_id"] and ws[0]["group_id"] is not None  # w1,w3 同轮
+    assert ws[2]["group_id"] is None                                 # w2 被留下 → 独立
 
 def test_delete_wave_in_round_prunes(client):
     ah = _admin(client)
@@ -360,7 +360,7 @@ def test_parallelize_merge_conflict_400(client):
     w1 = next(w for w in _waves(client, ah, rid) if w["index"] == 1)
     s1 = next(s for s in w1["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
     assert client.post(f"/api/raids/{rid}/slots/{s1['id']}/fill", headers=h,
-                       json={"character_id": c1}).status_code == 200
+                       json={"character_id": c1}).status_code == 200   # 丙 在轮{1,2} 占 C1
     _add_wave(client, ah, rid, 1)   # w3 独立
     w3 = next(w for w in _waves(client, ah, rid) if w["index"] == 3)
     s3 = next(s for s in w3["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
@@ -595,6 +595,8 @@ Expected: FAIL（fill 跨并行团返回 200（旧同波校验不拦跨波）；
 - [ ] **Step 3: 实现**
 
 `fill_slot` 的 `same_owner` 查询（`:326-330` replace 分支 与 `:342-346` 非 replace 分支）——两处 `Slot.wave_id == slot.wave_id` 改为 `Slot.wave_id.in_(_round_wave_ids(db, slot.wave))`：
+
+**非 replace 分支的报错文案同步改为「同一轮次中一个玩家只能上一个角色」**（`:348` 的 `raise HTTPException(400, "同一波次中一个玩家只能上一个角色")` → 新文案；否则 `test_fill_same_player_across_parallel_waves_blocked` 断言 `"同一轮次" in detail` 会失败）。replace 分支无报错文案，无需改。
 ```python
         same_owner = db.query(Slot).filter(
             Slot.wave_id.in_(_round_wave_ids(db, slot.wave)),
