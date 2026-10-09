@@ -68,6 +68,7 @@ async def parallelize_wave(rid: int, index: int, body: ParallelIn,
     # target 已在轮 → wave.group_id = target.group_id（加入目标轮）
     # 加入后（目标轮 ∪ {W}）用 _validate_one_char_per_round 校验：
     #   若同一玩家在新轮内两个不同波占位 → 400「同一轮次中一个玩家只能上一个角色」（拒绝加入，保持不变量）
+    #   校验抛 HTTPException → db.rollback() 后 re-raise（仿 fill_slot 的 try/except 模式）
     # commit 后 broadcast wave:parallelized {index}
     # 返回 _detail(db, raid)
 
@@ -139,7 +140,7 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
   - 占位：同一玩家占并行两团 → 400「同一轮次中一个玩家只能上一个角色」；`replace` 自动撤下并行团冲突格；`move_slot` 跨并行团移动造成同轮同玩家 → 400。
 - **文案改动无既有测试断言影响**：已 grep 确认 backend/tests 下无任何用例断言旧文案「同一波次中一个玩家只能上一个角色」，文案改动安全、无需同步改既有用例（避免规划者白费功夫）。
 - **权限收紧**（改既有用例 + 补 403 断言）：
-  - `test_raids.py::test_wave_add_and_delete_rules`（成员加波 200 / 删自己角色波 200）→ 改为管理员操作，并补非管理员加/删 → 403。
+  - `test_raids.py::test_wave_add_and_delete_rules`（成员加波 200 / 删自己角色波 200）→ 改为管理员操作，并补非管理员加/删 → 403；**保留「删最后一波 → 400（至少保留一波）」断言**（改由管理员触发）。
   - `test_admin_adjust.py::test_owner_can_delete_wave_with_only_own_chars_admin_placed`（成员删波 200）→ 改管理员操作，非管理员删 → 403。
   - 新增：非管理员 `POST /{rid}/waves` → 403、`DELETE /{rid}/waves/{index}` → 403；管理员加/删 → 200。
 - `tests/test_migrations.py`：`migrate_waves_group` 幂等（执行两次无异常），断言 `group_id` 列存在且 `ix_waves_group_id` 索引存在。
