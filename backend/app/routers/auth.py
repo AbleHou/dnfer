@@ -9,7 +9,7 @@ from ..auth import (consume_code, create_access_token, get_current_user,
 from ..config import settings
 from ..db import get_db
 from ..models import User
-from ..schemas import LoginIn, ProfileUpdate, RegisterIn, UserOut
+from ..schemas import ChangePasswordIn, LoginIn, ProfileUpdate, RegisterIn, UserOut
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -52,6 +52,16 @@ def update_profile(body: ProfileUpdate, user: User = Depends(get_current_user),
     if dup:
         raise HTTPException(400, "昵称已存在")
     user.nickname = body.nickname
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
+
+@router.put("/me/password", response_model=UserOut)
+def change_password(body: ChangePasswordIn, user: User = Depends(get_current_user),
+                    db: Session = Depends(get_db)):
+    if not verify_password(body.old_password, user.password_hash):
+        raise HTTPException(400, "原密码错误")
+    user.password_hash = hash_password(body.new_password)
     db.commit()
     db.refresh(user)
     return UserOut.model_validate(user)

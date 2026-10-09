@@ -113,3 +113,27 @@ def test_delete_avatar_prefix_guard(monkeypatch):
     def boom(**kw): raise RuntimeError("boom")
     monkeypatch.setattr("app.s3._get_client", lambda: SimpleNamespace(delete_object=boom))
     s3mod.delete_avatar("https://cdn.example.com/avatars/2/y.png")
+
+def test_change_password_success(client):
+    h, u = register_user(client, "pwchg1", "改密甲")
+    r = client.put("/api/me/password", headers=h,
+                   json={"old_password": "secret1", "new_password": "newpass99"})
+    assert r.status_code == 200 and r.json()["username"] == "pwchg1"
+    # 旧密码失效、新密码可登录
+    assert client.post("/api/auth/login",
+                       json={"username": "pwchg1", "password": "secret1"}).status_code == 401
+    assert client.post("/api/auth/login",
+                       json={"username": "pwchg1", "password": "newpass99"}).status_code == 200
+
+def test_change_password_errors(client):
+    h, _ = register_user(client, "pwchg2", "改密乙")
+    # 原密码错误 → 400
+    r = client.put("/api/me/password", headers=h,
+                   json={"old_password": "wrongpw", "new_password": "newpass99"})
+    assert r.status_code == 400 and r.json()["detail"] == "原密码错误"
+    # 新密码过短 → 422
+    assert client.put("/api/me/password", headers=h,
+                      json={"old_password": "secret1", "new_password": "123"}).status_code == 422
+    # 未登录 → 401
+    assert client.put("/api/me/password",
+                      json={"old_password": "secret1", "new_password": "newpass99"}).status_code == 401
