@@ -147,6 +147,7 @@ a { color: var(--dnf-gold-hi); }
   margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--dnf-gold-deep);
 }
 .wave-delete { color: var(--dnf-danger); font-size: 12px; text-decoration: none; }
+.wave-link { color: var(--dnf-accent,#ffd54a); font-size: 12px; text-decoration: none; }
 
 /* 攻坚列表 */
 .raid-card { display: flex; align-items: center; gap: 16px; padding: 12px 16px; margin-bottom: 10px; flex-wrap: wrap; }

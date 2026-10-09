@@ -36,6 +36,12 @@ vi.mock('../lib/notify', () => ({
   notifySuccess: notifyMock.success,
 }))
 
+const WaveSectionForward = {
+  name: 'WaveSection', props: ['wave'], emits: ['parallelize', 'unparallelize'],
+  template: `<div><button data-act="par" @click="$emit('parallelize', wave)">并行到…</button>
+    <button data-act="unpar" @click="$emit('unparallelize', wave)">取消并行</button></div>`,
+}
+
 const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false }
 const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
 const memberChars: Character[] = [
@@ -55,6 +61,15 @@ function makeRaid(signups: Raid['signups']): Raid {
     size: 12, locked: false, signups, slack_rules: { criteria: [], exchange: [] },
     waves: [{ id: 1, index: 1, group_id: null, round_index: 1, group_index: 1, slots: [] }],
   }
+}
+
+function twoWaveRaid(signups: Raid['signups']): Raid {
+  const r = makeRaid(signups)
+  r.waves = [
+    { id: 1, index: 1, group_id: null, round_index: 1, group_index: 1, slots: [] },
+    { id: 2, index: 2, group_id: 1, round_index: 1, group_index: 2, slots: [] },
+  ]
+  return r
 }
 
 // 放了 id=10 占位格的 raid（供「占位/报名」计数断言）
@@ -97,6 +112,24 @@ async function mountView(signups: Raid['signups'], user: User = admin,
       },
     },
   }), auth, store }
+}
+
+async function mountParallelView(signups: Raid['signups'], user: User = admin) {
+  const pinia = createPinia(); setActivePinia(pinia)
+  const auth = useAuthStore(); auth.user = user
+  const store = useRaidStore()
+  const snapshot = twoWaveRaid(signups)
+  store.raid = twoWaveRaid(signups)
+  apiMock.get.mockImplementation(async (url: string) => url === '/api/raids/1' ? snapshot : [])
+  const router = createRouter({ history: createMemoryHistory(),
+    routes: [{ path: '/raids/:id', component: RaidDetailView }] })
+  await router.push('/raids/1'); await router.isReady()
+  return { wrapper: mount(RaidDetailView, { global: {
+    plugins: [pinia, router],
+    stubs: { 'router-link': true, 'router-view': true, WaveSection: WaveSectionForward,
+      CharacterPickerModal: true, SlotActionModal: true, UserAvatar: true,
+      MemberCharactersModal: true, SignupMemberPicker: true, SignupModal: true,
+      SlackRulesModal: true, teleport: true } } }), auth, store }
 }
 
 beforeEach(() => {
@@ -374,5 +407,32 @@ describe('RaidDetailView slack count & picker gray', () => {
     await flushPromises()
     const modal = wrapper.findComponent(MemberCharactersModal)
     expect(modal.props('slackCount')).toBe(1)
+  })
+})
+
+describe('并行攻坚', () => {
+  it('管理员点击并行到… 弹窗列出其他波，选择触发 api.post', async () => {
+    apiMock.post.mockResolvedValueOnce({})
+    const { wrapper } = await mountParallelView([])
+    await wrapper.find('[data-act="par"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('并行到哪一波')
+    expect(wrapper.text()).toContain('第 1 波 2 团')   // 弹窗列出目标波标签
+    await wrapper.find('[data-test="parallel-target-2"]').trigger('click')
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/waves/1/parallel', { target_index: 2 })
+    expect(apiMock.get).toHaveBeenCalled()   // 成功后 load 刷新
+  })
+  it('管理员取消并行触发 api.del', async () => {
+    apiMock.del.mockResolvedValueOnce({})
+    const { wrapper } = await mountParallelView([])
+    await wrapper.find('[data-act="unpar"]').trigger('click')
+    expect(apiMock.del).toHaveBeenCalledWith('/api/raids/1/waves/1/parallel')
+    expect(apiMock.get).toHaveBeenCalled()
+  })
+  it('成员不显示「＋ 添加一波」，管理员显示', async () => {
+    const m = await mountParallelView([], member)
+    expect(m.wrapper.find('[data-test="add-wave"]').exists()).toBe(false)
+    const a = await mountParallelView([])
+    expect(a.wrapper.find('[data-test="add-wave"]').exists()).toBe(true)
   })
 })

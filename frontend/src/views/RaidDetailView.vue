@@ -19,7 +19,7 @@ import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
 import { NDatePicker, NInput, NModal } from 'naive-ui'
 import { computeSlack, slackCountByUser } from '../lib/slack'
-import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User } from '../types'
+import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User, Wave } from '../types'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -194,6 +194,28 @@ async function onDeleteWave(index: number) {
   try { await api.del(`/api/raids/${rid}/waves/${index}`) } catch (e: any) { notifyError(e.message) }
   await load()
 }
+const parallelizeWave = ref<Wave | null>(null)
+const showParallelModal = computed(() => parallelizeWave.value != null)
+const otherWaves = computed(() =>
+  store.raid?.waves.filter(w => w.id !== parallelizeWave.value?.id) ?? [])
+function waveLabel(w: Wave): string {
+  return w.group_id == null ? `第 ${w.round_index} 波` : `第 ${w.round_index} 波 ${w.group_index} 团`
+}
+async function onParallelize(w: Wave) { parallelizeWave.value = w }
+async function onParallelTo(target: Wave) {
+  if (!store.raid || !parallelizeWave.value) return
+  try {
+    await api.post(`/api/raids/${store.raid.id}/waves/${parallelizeWave.value.index}/parallel`,
+                   { target_index: target.index })
+    parallelizeWave.value = null
+    await load()
+  } catch (e: any) { notifyError(e.message) }
+}
+async function onUnparallelize(w: Wave) {
+  if (!store.raid) return
+  try { await api.del(`/api/raids/${store.raid.id}/waves/${w.index}/parallel`); await load() }
+  catch (e: any) { notifyError(e.message) }
+}
 function openEditRaid() {
   if (!store.raid) return
   editName.value = store.raid.name
@@ -235,7 +257,7 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
                 @click="showSlackRules = true">划水规则设置</button>
         <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</button>
         <button v-if="auth.isAdmin" class="dnf-btn" @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
-        <button v-if="editable" class="dnf-btn dnf-btn-primary" @click="onAddWave">＋ 添加一波</button>
+        <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-primary" data-test="add-wave" @click="onAddWave">＋ 添加一波</button>
       </span>
     </div>
 
@@ -285,12 +307,13 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
 
     <WaveSection v-for="w in store.raid.waves" :key="w.id"
                  :wave="w" :editable="editable" :is-admin="auth.isAdmin"
-                 :can-delete="auth.isAdmin || (store.raid.waves.length > 1)"
+                 :can-delete="auth.isAdmin"
                  :current-user-id="auth.user?.id ?? null"
                  :move-mode="movingSlot != null" :moving-slot-id="movingSlot?.id ?? null"
                  :slack-char-ids="grayCharIds"
                  @pick="onPick" @duty="onDuty" @remove="onRemove"
-                 @delete-wave="onDeleteWave" @manage="onManage" @moveTo="onMoveTo" />
+                 @delete-wave="onDeleteWave" @manage="onManage" @moveTo="onMoveTo"
+                 @parallelize="onParallelize" @unparallelize="onUnparallelize" />
 
     <SlotActionModal :open="manageSlot != null" :slot="manageSlot"
                      @close="manageSlot = null" @replace="onReplace"
@@ -336,6 +359,16 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
 
     <SlackRulesModal :open="showSlackRules" :rules="store.raid.slack_rules"
                      @close="showSlackRules = false" @submit="onSlackRulesSubmit" />
+
+    <n-modal :show="showParallelModal" preset="card" title="并行到哪一波？" style="width:min(360px,92vw)"
+             @update:show="(s: boolean) => { if (!s) parallelizeWave = null }">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button v-for="t in otherWaves" :key="t.id" class="dnf-btn"
+                :data-test="`parallel-target-${t.id}`" @click="onParallelTo(t)">
+          {{ waveLabel(t) }}
+        </button>
+      </div>
+    </n-modal>
   </div>
 </template>
 
