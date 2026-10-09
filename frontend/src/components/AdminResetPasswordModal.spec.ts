@@ -49,4 +49,16 @@ describe('AdminResetPasswordModal', () => {
     expect(notifyMock.notifySuccess).toHaveBeenCalledWith('密码已重置')
     expect(w.emitted('close')).toBeTruthy()
   })
+
+  it('提交失败提示 notifyError', async () => {
+    apiMock.post.mockRejectedValue(new Error('原密码错误'))
+    const w = mount(AdminResetPasswordModal, { props: { open: true, user }, global: { stubs: { teleport: true } } })
+    await flushPromises()
+    await w.find('[data-field="new-pw"]').setValue('abcdef')
+    await w.find('[data-field="confirm-pw"]').setValue('abcdef')
+    await w.find('[data-act="submit"]').trigger('click')
+    await flushPromises()
+    expect(notifyMock.notifyError).toHaveBeenCalledWith('原密码错误')
+    expect(w.emitted('close')).toBeFalsy()
+  })
 })

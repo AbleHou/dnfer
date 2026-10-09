@@ -14,7 +14,7 @@ const confirmPw = ref('')
 const error = ref('')
 const saving = ref(false)
 
-watch(() => props.open, (o) => { if (o) { newPw.value = ''; confirmPw.value = ''; error.value = '' } })
+watch(() => props.open, (o) => { if (o) { newPw.value = ''; confirmPw.value = ''; error.value = ''; saving.value = false } })
 
 async function submit() {
   if (saving.value) return
