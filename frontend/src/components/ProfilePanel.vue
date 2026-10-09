@@ -19,7 +19,10 @@ const saving = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
 
-watch(() => props.open, (o) => { if (o) nickname.value = auth.user?.nickname ?? '' })
+watch(() => props.open, (o) => {
+  if (o) nickname.value = auth.user?.nickname ?? ''
+  else changePwOpen.value = false  // 关闭个人信息时连带关闭改密弹窗，避免重开时残留
+})
 
 async function saveNickname() {
   if (saving.value) return
