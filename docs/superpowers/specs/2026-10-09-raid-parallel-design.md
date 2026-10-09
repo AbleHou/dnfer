@@ -58,9 +58,11 @@ async def parallelize_wave(rid: int, index: int, body: ParallelIn,
     # 校验 _can_edit（同 add_wave）→ 403「攻坚已锁定，仅管理员可编辑」
     # wave、target 均为本 raid 的波，否则 404「波次不存在」
     # target == wave（自身）→ 400
-    # wave 若已在某轮 → 先退出（group_id=NULL）
+    # wave 若已在某轮 → 先退出（group_id=NULL），且退出后原轮若仅剩 1 波 → 该波 group_id 也置 NULL（单波自动转独立）
     # target.group_id 为 None（目标独立）→ 以 target.id 为轮键，双方 group_id = target.id
     # target 已在轮 → wave.group_id = target.group_id（加入目标轮）
+    # 加入后（目标轮 ∪ {W}）用 _validate_one_char_per_round 校验：
+    #   若同一玩家在新轮内两个不同波占位 → 400「同一轮次中一个玩家只能上一个角色」（拒绝加入，保持不变量）
     # commit 后 broadcast wave:parallelized {index}
     # 返回 _detail(db, raid)
 
@@ -76,12 +78,14 @@ async def unparallelize_wave(rid: int, index: int, user: User = Depends(get_curr
 
 - WS 事件：`wave:parallelized`（`{index}`）/ `wave:parallel_removed`（`{index}`）。
 - 删除波（`delete_wave`）补充：被删波若在轮内，删除后原轮若仅剩 1 波 → 其 `group_id` 置 NULL。
+- **全局不变量（三处变更点都要保持）**：单波轮恒为 `group_id == null`。即并行退出路径、取消并行、删除轮中波，任一操作后若某轮仅剩 1 波，其 `group_id` 一律置 NULL。前端 §3.2 的标签规则（`group_id == null` ↔ 第X波）依赖此不变量，否则会出现「单人轮却显示 1团」的矛盾。
 
 ### 2.5 占位约束扩展（同轮限一占位）
 
 - 新增 helper：`_round_wave_ids(db, wave) -> set[int]`——按 `wave.group_id` 返回同轮所有 wave.id（独立波 → `{wave.id}`）。
+- 新增 helper：`_validate_one_char_per_round(db, round_wave_ids: set[int])`——**跨轮内所有波聚合**：把 `round_wave_ids` 全部 slot 的 owner 收进一个集合，同一 owner 出现两次即 400「同一轮次中一个玩家只能上一个角色」（同时覆盖「同团内两角色」与「跨并行团两角色」）。
 - `fill_slot`：`same_owner` 冲突查询 `Slot.wave_id == slot.wave_id` 改为 `Slot.wave_id.in_(_round_wave_ids(db, slot.wave))`（replace 撤下冲突格同理按同轮判定）。
-- `move_slot`：`_validate_one_char_per_wave(db, {source.wave_id, target.wave_id})` 改为传入 `_round_wave_ids(source.wave) ∪ _round_wave_ids(target.wave)`（双向校验覆盖整轮）。
+- `move_slot`：`_validate_one_char_per_wave(db, {source.wave_id, target.wave_id})` 改为对受影响轮分别调用 `_validate_one_char_per_round(db, _round_wave_ids(db, source.wave))` 与 `_validate_one_char_per_round(db, _round_wave_ids(db, target.wave))`（双向校验覆盖整轮）。旧的 `_validate_one_char_per_wave` 仅 move_slot 一处调用，替换后删除。
 - 报错文案「同一波次中一个玩家只能上一个角色」→「**同一轮次**中一个玩家只能上一个角色」。
 
 ## 3. 前端
@@ -109,8 +113,8 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
 
 ### 3.4 store / ws
 
-- `stores/raid.ts`：`applyEvent` 增 `wave:parallelized` / `wave:parallel_removed` 分支 → `onRefresh()`（与 `wave:added/removed` 同路径）。
-- `api/ws.ts`：事件联合类型增上述两种。
+- **`api/ws.ts`**：`onmessage` 的全量刷新条件（现为 `ev.type === 'wave:added' || ev.type === 'wave:removed'` → `cb.onRefresh()`）增补 `'wave:parallelized'` / `'wave:parallel_removed'`——**全量刷新在此层路由，不经过 `applyEvent`**（`applyEvent` 的 `wave:added/removed` 分支仅置 `needRefresh`，无消费者）。
+- **`stores/raid.ts`**：仅把 `WsEvent` 联合类型增补 `| { type: 'wave:parallelized'; index: number } | { type: 'wave:parallel_removed'; index: number }` 供 `ws.ts` 判别；`applyEvent` **不加**新分支（新事件被 `ws.ts` 截走触发刷新）。
 
 ## 4. 测试
 
@@ -118,19 +122,22 @@ export interface Wave { id: number; index: number; group_id: number | null; roun
 
 - `tests/test_raid_parallel.py`（新建）：
   - 并行：独立→独立（入同轮，round_index/group_index 正确）；加入已有轮（成为下一团号）；跨 raid target → 404；target=自身 → 400；锁定后非管理员 → 403。
+  - **合并冲突**：wave 原在轮 A 且与目标轮 B 合并后同一玩家跨两波占位 → 400「同一轮次中一个玩家只能上一个角色」，且两轮保持原状（事务回滚）。
+  - **单波标签不变量**：w1‖w2 后 w1 再‖w3（w2 被留在旧轮只剩自身）→ w2 的 `group_id` 归 NULL、显示「第X波」（无 1团）；w1‖w3 显示「第X波1团/2团」。
   - 显示计算：w1‖w2 + w3 → `round_index=[1,1,2]`、`group_index=[1,2,1]`，返回顺序 w1,w2,w3。
   - 取消并行：退出后 `group_id=NULL`；轮内仅剩 1 波时其 `group_id` 置 NULL；重编号正确。
   - 删除轮中波：剩余单波 `group_id` 归 NULL。
   - WS：broadcast 收到 `wave:parallelized` / `wave:parallel_removed`。
-  - 占位：同一玩家占并行两团 → 400「同一轮次中一个玩家只能上一个角色」；`replace` 自动撤下并行团冲突格。
+  - 占位：同一玩家占并行两团 → 400「同一轮次中一个玩家只能上一个角色」；`replace` 自动撤下并行团冲突格；`move_slot` 跨并行团移动造成同轮同玩家 → 400。
 - 既有断言旧文案「同一波次中一个玩家只能上一个角色」的用例（test_admin_adjust.py、test_raid_signup_characters.py、test_raids.py 等）改「同一轮次…」。
-- `tests/test_migrations.py`：`migrate_waves_group` 幂等（执行两次无异常、列存在）。
+- `tests/test_migrations.py`：`migrate_waves_group` 幂等（执行两次无异常），断言 `group_id` 列存在且 `ix_waves_group_id` 索引存在。
 
 ### 4.2 前端
 
-- `WaveSection.spec.ts`：单波/团标签渲染；独立波显示「并行到…」、轮内波显示「取消并行」。
+- `WaveSection.spec.ts`（**新建**，当前无此 spec）：单波/团标签渲染；独立波显示「并行到…」、轮内波显示「取消并行」。
 - `RaidDetailView.spec.ts`：并行到弹窗打开、选择目标触发 `api.post` 对应 payload 并刷新；取消并行触发 `api.del` 并刷新。
-- `stores/raid.spec.ts`：`applyEvent` 处理 `wave:parallelized` / `wave:parallel_removed` → `onRefresh`。
+- `stores/raid.spec.ts`：`WsEvent` 类型增补后编译通过（新事件被 `ws.ts` 截走，`applyEvent` 无新分支，可加类型层用例）。
+- **Fixture 涟漪**：`Wave` 类型新增 `group_id`/`round_index`/`group_index` 必填字段，需同步补现有 Wave 字面量 fixture——`RaidDetailView.spec.ts:56`、`lib/placement.spec.ts:22-23`、`stores/raid.spec.ts:10`。
 
 ## 5. 不做的事（YAGNI）
 
