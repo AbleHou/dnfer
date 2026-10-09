@@ -79,21 +79,22 @@ def test_non_owner_cannot_manage_others_slot(client):
     # 丙无法操作乙的格子（即便该格不是乙放置的也无所谓）
     assert client.delete(f"/api/raids/{rid}/slots/{slot['id']}", headers=h2).status_code == 403
 
-def test_owner_can_delete_wave_with_only_own_chars_admin_placed(client):
+def test_delete_wave_admin_only(client):
     ah = _admin(client)
     h1, _ = register_user(client, "own4", "丁")
     c1 = _mkchar(client, h1, "C1")
     rid = make_raid(client, ah)["id"]
     signup(client, rid, h1)
-    # 加波 2，管理员在波 2 放丁的 C1
     client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
     w2 = next(w for w in client.get(f"/api/raids/{rid}", headers=ah).json()["waves"]
               if w["index"] == 2)
     s = w2["slots"][0]
     assert client.post(f"/api/raids/{rid}/slots/{s['id']}/fill", headers=ah,
                        json={"character_id": c1}).status_code == 200
-    # 丁可删除仅含自己角色的波 2
-    assert client.delete(f"/api/raids/{rid}/waves/2", headers=h1).status_code == 200
+    # 成员（即使仅含自己角色）删波 → 403
+    assert client.delete(f"/api/raids/{rid}/waves/2", headers=h1).status_code == 403
+    # 管理员删波 → 200
+    assert client.delete(f"/api/raids/{rid}/waves/2", headers=ah).status_code == 200
 
 def test_move_to_empty_slot(client):
     ah = _admin(client)

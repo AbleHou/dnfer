@@ -261,17 +261,15 @@ def _can_edit(user: User, raid: Raid) -> bool:
     return user.is_admin or not raid.locked
 
 @router.post("/{rid}/waves")
-async def add_wave(rid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def add_wave(rid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
-    if not _can_edit(user, raid):
-        raise HTTPException(403, "攻坚已锁定，仅管理员可编辑")
     wave = create_wave(db, raid)
     db.commit()
     await manager.broadcast(rid, {"type": "wave:added", "index": wave.index})
     return _detail(db, raid)
 
 @router.delete("/{rid}/waves/{index}")
-async def delete_wave(rid: int, index: int, user: User = Depends(get_current_user),
+async def delete_wave(rid: int, index: int, admin: User = Depends(require_admin),
                       db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
     wave = db.query(Wave).filter(Wave.raid_id == rid, Wave.index == index).first()
@@ -279,12 +277,6 @@ async def delete_wave(rid: int, index: int, user: User = Depends(get_current_use
         raise HTTPException(404, "波次不存在")
     if len(raid.waves) <= 1:
         raise HTTPException(400, "至少保留一个波次")
-    if not user.is_admin:
-        if raid.locked:
-            raise HTTPException(403, "攻坚已锁定，仅管理员可编辑")
-        filled = [s for s in wave.slots if s.character_id is not None]
-        if any(s.character.user_id != user.id for s in filled):
-            raise HTTPException(403, "该波次包含他人角色，无权删除")
     db.delete(wave)
     db.commit()
     await manager.broadcast(rid, {"type": "wave:removed", "index": index})

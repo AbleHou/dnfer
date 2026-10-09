@@ -74,7 +74,7 @@ def test_character_unique_across_waves(client):
         "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     signup(client, rid, h)
-    client.post(f"/api/raids/{rid}/waves", headers=h, json={})  # add wave 2
+    client.post(f"/api/raids/{rid}/waves", headers=ah, json={})  # add wave 2
     w1, w2 = [w for w in client.get(f"/api/raids/{rid}", headers=h).json()["waves"]
               if w["index"] in (1, 2)]
     s1 = w1["slots"][0]
@@ -104,7 +104,7 @@ def test_one_character_per_player_per_wave(client):
     assert client.post(f"/api/raids/{rid}/slots/{s_b['id']}/fill", headers=h,
                        json={"character_id": c2}).status_code == 400
     # 不同波次可以再上另一个角色
-    client.post(f"/api/raids/{rid}/waves", headers=h, json={})
+    client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
     w2 = next(w for w in client.get(f"/api/raids/{rid}", headers=h).json()["waves"]
               if w["index"] == 2)
     s2 = next(s for s in w2["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
@@ -144,7 +144,7 @@ def test_fill_replace_moves_same_character(client):
     signup(client, rid, h)
     w1 = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]
     s1 = w1["slots"][0]
-    client.post(f"/api/raids/{rid}/waves", headers=h, json={})
+    client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
     w2 = next(w for w in client.get(f"/api/raids/{rid}", headers=h).json()["waves"]
               if w["index"] == 2)
     s2 = next(s for s in w2["slots"] if s["squad_index"] == 0 and s["row_index"] == 0)
@@ -223,19 +223,20 @@ def test_wave_add_and_delete_rules(client):
         "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
     rid = make_raid(client, ah)["id"]
     signup(client, rid, h)
-    # add wave 2
-    r = client.post(f"/api/raids/{rid}/waves", headers=h, json={})
+    # 非管理员加波 → 403（无论锁定与否）
+    assert client.post(f"/api/raids/{rid}/waves", headers=h, json={}).status_code == 403
+    # 管理员加波 2 → 200
+    r = client.post(f"/api/raids/{rid}/waves", headers=ah, json={})
     assert r.status_code == 200
-    detail = client.get(f"/api/raids/{rid}", headers=h).json()
+    detail = client.get(f"/api/raids/{rid}", headers=ah).json()
     w2 = next(w for w in detail["waves"] if w["index"] == 2)
     assert len(w2["slots"]) == 12
-    # member cannot delete wave 2 if it has someone else's character
-    # (only own chars) -> fill own char then can delete
-    s = w2["slots"][0]
-    client.post(f"/api/raids/{rid}/slots/{s['id']}/fill", headers=h, json={"character_id": cid})
-    assert client.delete(f"/api/raids/{rid}/waves/2", headers=h).status_code == 200
-    # cannot delete last wave
-    assert client.delete(f"/api/raids/{rid}/waves/1", headers=h).status_code == 400
+    # 非管理员删波 → 403
+    assert client.delete(f"/api/raids/{rid}/waves/2", headers=h).status_code == 403
+    # 管理员删波 → 200
+    assert client.delete(f"/api/raids/{rid}/waves/2", headers=ah).status_code == 200
+    # 不能删最后一波 → 400
+    assert client.delete(f"/api/raids/{rid}/waves/1", headers=ah).status_code == 400
 
 def test_delete_character_in_use_blocked(client):
     h, _ = register_user(client, "p9", "壬")
