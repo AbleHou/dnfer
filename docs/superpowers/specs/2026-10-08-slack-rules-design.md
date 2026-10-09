@@ -11,9 +11,10 @@
 - **存储（已确认）**：规则按攻坚存储在后端，全团查看一致的灰色效果。
 - **权限（已确认）**：仅管理员可设置/修改规则（团长必为管理员，故涵盖团长）；普通成员只读灰色效果。
 - **判定规则「划水名望」**：每行 `职业(输出/辅助) + 数值类型 + 数值`；角色 `class_type` 匹配且对应数值**小于**输入值 → 划水角色。
+- **多行判定（2026-10-09 优化）**：同一职业存在多条判定行时，**满足任意一条**（数值 ≥ 阈值）即**不算划水**；仅当**全部**适用行数值都小于阈值才判划水。例如「辅助增益量 < 41000」与「辅助太阳增益 < 400000」两条同时配置时，太阳增益达标即可豁免增益量不达标。
 - **兑换规则「兑换标准」**：每行 `职业 + 数值类型 + 数值 + 划水数`；角色匹配且数值**大于**输入值 → 可兑换该行 `划水数` 个划水位置。
 - **兑换叠加（已确认）**：同一角色满足多条兑换标准时**只取最高一条**（不叠加），各角色贡献求和为该人总额度。
-- **空值（已确认）**：数值为 `null`（如秒伤/增益未填）时**不满足**——不判划水，也不计入兑换。
+- **空值（已确认）**：数值为 `null`（如秒伤/增益未填）时**不满足**——不判划水，也不计入兑换；多行判定下适用行指标为 `null` 视为「不满足」，按宽松语义不判划水（与单行 null 行为一致）。
 - **灰色判定**：某人划水角色数 > 兑换额度时，把列表**靠后**的（划水数 − 额度）个划水角色灰显；否则不灰显。
 - 灰色仅视觉参考，不影响编队/占位/换人逻辑。
 - 数值类型映射：`fame`(名望)/`simulated_damage`(模拟伤害)/`sustained_dps`(秒伤)/`buff_amount`(增益量)/`sun_buff`(太阳增益量)。输出职业可选前三者，辅助职业可选后两者。
@@ -25,9 +26,10 @@
 ```
 metric_value(c, m) = c[m]，null 直接视为不满足（不参与比较）
 
-slacking[u] = [c for c in chars[u] if ∃规则行 cr：
-    c.class_type == cr.class_type 且 metric_value(c, cr.metric) != null
-    且 metric_value(c, cr.metric) < cr.value]
+slacking[u] = [c for c in chars[u] if 存在适用规则行（c.class_type 匹配）
+    且 对每条适用规则行 cr：
+       metric_value(c, cr.metric) != null 且 metric_value(c, cr.metric) < cr.value]
+    # 2026-10-09 优化：满足任意一条适用规则即豁免；适用指标为 null 不判（宽松）
 
 allowance[u] = Σ_{c in chars[u]} max(
     [ex.count for ex in exchange 行 if c.class_type == ex.class_type
@@ -127,7 +129,7 @@ export interface SlackRuleSet { criteria: SlackRuleCriterion[]; exchange: SlackR
 ### 4.2 计算库（`frontend/src/lib/slack.ts` + `slack.spec.ts`）
 
 - `metricValue(c: Character, m: SlackMetric): number | null`
-- `isSlackingChar(c, criteria): boolean`（null → false）
+- `isSlackingChar(c, criteria): boolean`（null → false；多规则同职业时满足任意一条即 false，全部低于阈值才 true）
 - `charExchangeCount(c, exchange): number`（取满足行最大 count，无则 0）
 - `computeSlack(rules: SlackRuleSet, charsByUser: Record<number, Character[]>): Record<number, number[]>`
   （返回每人灰色角色 id 数组，顺序=输入顺序靠后）
