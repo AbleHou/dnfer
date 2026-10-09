@@ -96,13 +96,13 @@ export function validatePassword(pw: string): string | null {
 ### 3.3 自助改密弹窗 — `components/ChangePasswordModal.vue`（新建）
 
 - props：`{ open: boolean }`；emits：`close`。
-- 字段：原密码 `data-act="old-pw"`、新密码 `data-act="new-pw"`、确认新密码 `data-act="confirm-pw"`。
+- 字段：原密码 `data-act="old-pw"`、新密码 `data-act="new-pw"`、确认新密码 `data-act="confirm-pw"`；提交按钮 `data-act="submit"`。
 - 提交：`api.put('/api/me/password', { old_password, new_password })` → 成功 `notifySuccess('密码已修改')` + `emit('close')`。
-- 校验同 3.1 + 确认一致。原密码错误时后端 400，`notifyError` 显示「原密码错误」。
+- 校验：`validatePassword(newPw)` + 两次一致 + **原密码必填**（本地校验「原密码必填」，避免空串走到后端 422 显示泛化错误文案）。原密码错误时后端 400，`notifyError` 显示「原密码错误」。
 
 ### 3.4 入口接线
 
-- **AdminUsersView.vue**：用户列表操作列加「改密」按钮（`data-act="reset-pw-{id}"`，**所有行含管理员均显示**；ban/unban 的 `v-if="!u.is_admin"` 限制不套用到改密）。点击 `openResetPw(u)` 置 `modalUser` + 打开弹窗；关闭后 `loadUsers()` 刷新（密码改动不影响列表字段，可仅关闭）。
+- **AdminUsersView.vue**：用户列表操作列加「改密」按钮（`data-act="reset-pw-{id}"`，**所有行含管理员均显示**；ban/unban 的 `v-if="!u.is_admin"` 限制不套用到改密）。点击 `openResetPw(u)` 打开弹窗。**须用独立 `resetPwOpen`/`resetPwUser` ref**，不要与驱动 AdminUserCharactersModal 的 `modalOpen`/`modalUser` 共用同一个 open 标志，避免两个弹窗同时渲染；关闭后 `loadUsers()` 刷新（密码改动不影响列表字段，可仅关闭）。
 - **ProfilePanel.vue**：昵称/头像区下方加「修改密码」按钮（`data-act="change-pw"`）→ 打开 ChangePasswordModal。
 
 ## 4. 测试
