@@ -73,6 +73,22 @@ def test_unparallelize_and_single_round_invariant(client):
     h, _ = register_user(client, "parq", "乙")
     assert client.delete(f"/api/raids/{rid}/waves/1/parallel", headers=h).status_code == 403
 
+def test_unparallelize_root_wave_keeps_round_display(client):
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    _add_wave(client, ah, rid, 2)   # w2, w3
+    client.post(f"/api/raids/{rid}/waves/2/parallel", headers=ah, json={"target_index": 1})  # 轮{1,2} 键=1
+    client.post(f"/api/raids/{rid}/waves/3/parallel", headers=ah, json={"target_index": 2})  # w3 加入 → {1,2,3} 键=1
+    # 根波 w1 退出（id=1 与轮键 group_id=1 冲突的复现场景），轮 {2,3} 保留
+    assert client.delete(f"/api/raids/{rid}/waves/1/parallel", headers=ah).status_code == 200
+    ws = _waves(client, ah, rid)
+    w1 = next(w for w in ws if w["index"] == 1)
+    w2 = next(w for w in ws if w["index"] == 2)
+    w3 = next(w for w in ws if w["index"] == 3)
+    assert w1["group_id"] is None
+    assert w2["group_id"] == w3["group_id"] and w2["group_id"] is not None
+    assert [(w["round_index"], w["group_index"]) for w in ws] == [(1, 1), (2, 1), (2, 2)]
+
 def test_parallelize_exit_prunes_single_round(client):
     ah = _admin(client)
     rid = make_raid(client, ah)["id"]

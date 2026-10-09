@@ -115,9 +115,11 @@ def _signup_user(db: Session, raid: Raid, user: User,
 def _detail(db: Session, raid: Raid) -> RaidDetail:
     # 按并行分组分区为轮次（group_id=None 视为独立轮：每波自成一轮），
     # 轮次按 min(index) 排序、轮内按 index 排序
-    buckets: dict[int, list[Wave]] = {}
+    # 键用元组区分独立波/并行轮，避免根波退出后其 w.id 与剩余轮 group_id 冲突
+    buckets: dict[tuple, list[Wave]] = {}
     for w in raid.waves:
-        buckets.setdefault(w.group_id if w.group_id is not None else w.id, []).append(w)
+        key = ("round", w.group_id) if w.group_id is not None else ("standalone", w.id)
+        buckets.setdefault(key, []).append(w)
     ordered_rounds = sorted(buckets.values(), key=lambda g: min(w.index for w in g))
     waves = []
     for round_index, round_waves in enumerate(ordered_rounds, start=1):
