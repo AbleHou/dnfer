@@ -98,3 +98,19 @@ def test_migrate_characters_sun_buff_adds_column():
         cols = {r[1] for r in conn.execute(text("PRAGMA table_info(characters)")).all()}
         assert "sun_buff" in cols
     migrate_characters_sun_buff(engine)  # 幂等：再次运行不报错
+
+def test_migrate_waves_group_adds_column():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        # index 是 SQLite 保留字，须加引号（模型 DDL 由 SQLAlchemy 自动加引号）
+        conn.execute(text("""CREATE TABLE waves (
+            id INTEGER PRIMARY KEY, raid_id INTEGER, "index" INTEGER)"""))
+        conn.execute(text("""INSERT INTO waves (raid_id, "index") VALUES (1, 1), (1, 2)"""))
+    from app.migrations import migrate_waves_group
+    migrate_waves_group(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(waves)")).all()}
+        assert "group_id" in cols
+        idxs = {r[1] for r in conn.execute(text("PRAGMA index_list(waves)")).all()}
+        assert "ix_waves_group_id" in idxs
+    migrate_waves_group(engine)  # 幂等：再次运行不报错

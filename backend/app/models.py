@@ -76,6 +76,7 @@ class Wave(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     raid_id: Mapped[int] = mapped_column(ForeignKey("raids.id"), index=True)
     index: Mapped[int] = mapped_column(Integer)
+    group_id: Mapped[int | None] = mapped_column(Integer, index=True)  # 并行团号：同轮并行波共享，NULL=独立波
     raid: Mapped[Raid] = relationship(back_populates="waves")
     slots: Mapped[list["Slot"]] = relationship(back_populates="wave",
                                                cascade="all, delete-orphan")

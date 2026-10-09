@@ -100,6 +100,21 @@ def migrate_characters_sun_buff(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE characters ADD COLUMN sun_buff INTEGER"))
 
 
+def migrate_waves_group(engine: Engine) -> None:
+    """为存量库补建 waves.group_id 列 + 索引（幂等）。"""
+    from . import models  # noqa: F401  确保模型注册
+    from .db import Base
+
+    Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(waves)")).all()}
+        if "group_id" not in cols:
+            conn.execute(text("ALTER TABLE waves ADD COLUMN group_id INTEGER"))
+        idxs = {row[1] for row in conn.execute(text("PRAGMA index_list(waves)")).all()}
+        if "ix_waves_group_id" not in idxs:
+            conn.execute(text("CREATE INDEX ix_waves_group_id ON waves (group_id)"))
+
+
 if __name__ == "__main__":
     from .db import engine
     migrate_dungeons(engine)
