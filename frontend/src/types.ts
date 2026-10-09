@@ -26,7 +26,7 @@ export interface Slot { id: number; squad_index: number; row_index: number;
 export interface CharacterPlacement { wave_index: number; squad_index: number; duty: Duty }
 export interface JobChild { id: number; name: string; title: string; class_type: ClassType }
 export interface JobCategory { id: number; name: string; title: string; children: JobChild[] }
-export interface Wave { id: number; index: number; slots: Slot[] }
+export interface Wave { id: number; index: number; group_id: number | null; round_index: number; group_index: number; slots: Slot[] }
 export interface Dungeon { id: number; name: string; size: number; description: string; created_at: string }
 export interface Raid { id: number; name: string; dungeon_id: number; dungeon_name: string;
   size: number; locked: boolean; starts_at: string; waves: Wave[]; signups: RaidSignup[]; slack_rules: SlackRuleSet }

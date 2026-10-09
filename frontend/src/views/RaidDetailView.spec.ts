@@ -53,7 +53,7 @@ function makeRaid(signups: Raid['signups']): Raid {
   return {
     id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: '2026-09-20T14:00:00',
     size: 12, locked: false, signups, slack_rules: { criteria: [], exchange: [] },
-    waves: [{ id: 1, index: 1, slots: [] }],
+    waves: [{ id: 1, index: 1, group_id: null, round_index: 1, group_index: 1, slots: [] }],
   }
 }
 
@@ -61,7 +61,7 @@ function makeRaid(signups: Raid['signups']): Raid {
 function makeRaidWithPlacement(signups: Raid['signups']): Raid {
   const raid = makeRaid(signups)
   raid.waves = [{
-    id: 1, index: 1,
+    id: 1, index: 1, group_id: null, round_index: 1, group_index: 1,
     slots: [{
       id: 1, squad_index: 0, row_index: 0, character_id: 10, character_name: '剑魂',
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂',

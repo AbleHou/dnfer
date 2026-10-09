@@ -19,8 +19,8 @@ function makeRaid(waves: Raid['waves']): Raid {
 describe('buildPlacementMap', () => {
   it('maps placed characters across waves/squads', () => {
     const raid = makeRaid([
-      { id: 1, index: 1, slots: [slot(1, 11, 0, '主C'), slot(2, 12, 1, '主奶'), slot(3, null, 0, null)] },
-      { id: 2, index: 2, slots: [slot(4, 13, 2, '划水')] },
+      { id: 1, index: 1, group_id: null, round_index: 1, group_index: 1, slots: [slot(1, 11, 0, '主C'), slot(2, 12, 1, '主奶'), slot(3, null, 0, null)] },
+      { id: 2, index: 2, group_id: null, round_index: 2, group_index: 1, slots: [slot(4, 13, 2, '划水')] },
     ])
     const map = buildPlacementMap(raid)
     expect(map[11]).toEqual({ wave_index: 1, squad_index: 0, duty: '主C' })
