@@ -115,7 +115,7 @@ def test_delete_avatar_prefix_guard(monkeypatch):
     s3mod.delete_avatar("https://cdn.example.com/avatars/2/y.png")
 
 def test_change_password_success(client):
-    h, u = register_user(client, "pwchg1", "改密甲")
+    h, _ = register_user(client, "pwchg1", "改密甲")
     r = client.put("/api/me/password", headers=h,
                    json={"old_password": "secret1", "new_password": "newpass99"})
     assert r.status_code == 200 and r.json()["username"] == "pwchg1"
