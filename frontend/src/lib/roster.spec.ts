@@ -176,6 +176,13 @@ describe('rankCandidates 推荐排序', () => {
     expect(r[0].targetWaveId).toBe(10)
     expect(r[0].score).toBeGreaterThan(0)
   })
+  it('输出数已够但总伤不足下限 → 输出候选仍可匹配该队（缺总伤场景）', () => {
+    const t = { 0: { outputs: { count: 2, simMin: 20000 } } }
+    const g = [wave(10, [os(5000, '主C'), os(5000, '辅C')])]  // 已有 2 输出 + 主C，但总伤 10000 < 20000
+    const r = rankCandidates({ candidates: [c1], groups: g, targets: t, recommendOn: true })
+    expect(r[0].targetSquadIndex).toBe(0)
+    expect(r[0].score).toBeGreaterThan(0)
+  })
 })
 
 describe('squadSlotsOf', () => {

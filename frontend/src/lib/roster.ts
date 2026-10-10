@@ -114,7 +114,8 @@ function candidateFitsSquad(c: Character, slots: Slot[], target: SquadTarget | u
   if (c.class_type === '输出') {
     const needCount = (target.outputs?.count ?? 0) > st.outputCount
     const needMainC = !slots.some(s => s.duty === '主C')
-    return needCount || needMainC
+    const needDmg = target.outputs?.simMin != null && st.outputTotal < target.outputs.simMin
+    return needCount || needMainC || needDmg
   }
   const needHeal = target.mainHeal?.buffMin != null || target.mainHeal?.buffMax != null
   const needSun = (target.sunHeal?.count ?? 0) > st.sunHealCount
