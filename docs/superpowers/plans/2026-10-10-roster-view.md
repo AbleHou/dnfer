@@ -1386,17 +1386,12 @@ const charsByUser = computed<Record<number, Character[]>>(() => {
 const allChars = computed<Character[]>(() =>
   Object.values(charsByUser.value).flat())
 
-// 当前轮已占位的 owner
-const roundUsedOwnerIds = computed(() => {
-  const set = new Set<number>()
-  for (const w of currentGroups.value) for (const s of w.slots) if (s.owner_id != null) set.add(s.owner_id)
-  return set
-})
-// 不可拿起：已占任何格 或 owner 当前轮已用
+// 不可拿起：仅「已占任意格」置灰（owner 本轮已用不置灰——支持换带同玩家另一角色，
+// 同轮限一由后端 fill replace:true 自动撤冲突格兜底，与详情页 picker 一致。
+// 实现修正：plan 原「owner 当前轮已用 → 全部置灰」与替换测试/换角色操作冲突，已废弃）
 const blockedCharIds = computed(() => {
   const set = new Set<number>()
   for (const c of allChars.value) if (placed.value[c.id]) set.add(c.id)
-  for (const uid of roundUsedOwnerIds.value) for (const c of charsByUser.value[uid] ?? []) set.add(c.id)
   return set
 })
 const slackCharIds = computed(() =>
@@ -1410,8 +1405,8 @@ const ranked = computed(() => rankCandidates({
   targets: targets.value, recommendOn: recommendOn.value,
 }))
 // 推荐 top3：开关开启时取前 3（无模板时 score 全 0，仍标「推荐」但无目标色，对齐 spec）
-const recommendTop3 = computed(() =>
-  recommendOn.value ? new Set(ranked.value.slice(0, 3).map(r => r.character.id)) : new Set())
+const recommendTop3 = computed<Set<number>>(() =>
+  recommendOn.value ? new Set(ranked.value.slice(0, 3).map(r => r.character.id)) : new Set<number>())
 const recommendTarget = computed<Record<number, number | null>>(() => {
   const m: Record<number, number | null> = {}
   for (const r of ranked.value) if (r.score > 0) m[r.character.id] = r.targetSquadIndex
