@@ -9,6 +9,7 @@ const router = createRouter({
     { path: '/register', component: () => import('../views/RegisterView.vue') },
     { path: '/', component: () => import('../views/RaidListView.vue') },
     { path: '/raids/:id', component: () => import('../views/RaidDetailView.vue') },
+    { path: '/raids/:id/roster', component: () => import('../views/RosterView.vue') },
     { path: '/characters', component: () => import('../views/MyCharactersView.vue') },
     { path: '/votes', component: () => import('../views/VotesView.vue') },
     { path: '/admin', redirect: '/admin/codes' },

@@ -436,3 +436,14 @@ describe('并行攻坚', () => {
     expect(a.wrapper.find('[data-test="add-wave"]').exists()).toBe(true)
   })
 })
+
+describe('RosterView 入口', () => {
+  it('管理员看到「编队」按钮', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], admin)
+    expect(wrapper.find('[data-test="roster-link"]').exists()).toBe(true)
+  })
+  it('非管理员看不到「编队」按钮', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], member)
+    expect(wrapper.find('[data-test="roster-link"]').exists()).toBe(false)
+  })
+})

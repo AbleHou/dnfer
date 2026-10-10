@@ -253,6 +253,8 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
         {{ store.raid.locked ? '已锁定' : '未锁定' }}
       </span>
       <span style="margin-left:auto;display:flex;gap:8px">
+        <router-link v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="roster-link"
+                     :to="`/raids/${store.raid.id}/roster`">编队</router-link>
         <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="slack-rules"
                 @click="showSlackRules = true">划水规则设置</button>
         <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</button>
