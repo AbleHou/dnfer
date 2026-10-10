@@ -11,6 +11,7 @@ const c1: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', job_t
 const c2: Character = { id: 11, name: '奶', job_name: 'crusader_female', job_title: '神启·圣骑士', parent_name: '圣职者',
   class_type: '辅助', fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0 }
 const c3: Character = { ...c1, id: 12, name: '划水剑', simulated_damage: 100 }
+const c4: Character = { ...c1, id: 13, name: '弱剑', simulated_damage: 100 }
 const signups: RaidSignup[] = [
   { user: u1, created_at: null, characters: [c1, c2] },
   { user: u2, created_at: 'x', characters: [c3] },
@@ -48,11 +49,28 @@ describe('RosterPool', () => {
   it('划水角色标灰 + 划水角标', () => {
     const w = mountPool({ slackCharIds: new Set([12]) })
     expect(w.find('[data-act="pool-char-12"]').text()).toContain('划水')
+    expect(w.find('[data-act="pool-char-12"]').classes()).toContain('slack')
   })
   it('推荐 top3 显示 推荐 角标 + 目标队色', () => {
     const w = mountPool({ recommendTop3: new Set([10]), recommendTarget: { 10: 0 } })
     expect(w.find('[data-act="pool-char-10"]').text()).toContain('推荐')
     expect(w.find('[data-act="pool-char-10"]').text()).toContain('红队')
+  })
+  it('推荐但无目标队：只显示 推荐 角标、不显示目标队名', () => {
+    const w = mountPool({ recommendTop3: new Set([11]), recommendTarget: {} })
+    expect(w.find('[data-act="pool-char-11"]').text()).toContain('推荐')
+    expect(w.find('[data-act="pool-char-11"]').text()).not.toContain('→')
+  })
+  it('组内按战力降序：高战力角色排前', () => {
+    const w = mountPool({ signups: [{ user: u1, created_at: null, characters: [c4, c1] }] })
+    const charEls = w.find('.pool-user').findAll('.pool-char')
+    expect(charEls[0].attributes('data-act')).toBe('pool-char-10')
+    expect(charEls[1].attributes('data-act')).toBe('pool-char-13')
+  })
+  it('无角色报名被过滤：不渲染用户分组头', () => {
+    const w = mountPool({ signups: [{ user: u1, created_at: null, characters: [] }] })
+    expect(w.findAll('.pool-user').length).toBe(0)
+    expect(w.text()).not.toContain('甲')
   })
   it('拿起角色高亮', () => {
     const w = mountPool({ holdingId: 10 })

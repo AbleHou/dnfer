@@ -62,7 +62,8 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
 .pool-user-head { font-weight: bold; margin-bottom: 4px; color: var(--dnf-text-muted,#9aa3b2); }
 .pool-char { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--dnf-border,#3a3f4b);
   border-radius: 6px; margin-bottom: 4px; cursor: pointer; }
-.pool-char.blocked, .pool-char.slack { opacity: .45; filter: grayscale(1); cursor: default; }
+.pool-char.blocked { opacity: .45; filter: grayscale(1); cursor: default; }
+.pool-char.slack { opacity: .45; filter: grayscale(1); }
 .pool-char.holding { border-color: var(--dnf-accent,#ffd54a); background: rgba(255,213,74,.08); }
 .pool-tag { flex-shrink: 0; font-size: 11px; border-radius: 4px; padding: 2px 6px; }
 .pool-tag.slack { background: var(--dnf-danger,#e5484d); color: #fff; }
