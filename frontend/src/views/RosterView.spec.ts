@@ -70,7 +70,7 @@ async function mountView(signups: Raid['signups'], user: User = admin,
   await router.push('/raids/1/roster'); await router.isReady()
   return { wrapper: mount(RosterView, { global: { plugins: [pinia, router],
     stubs: { 'router-link': true, 'router-view': true, DutySelect: true, UserAvatar: true,
-      RosterTargetModal: true, teleport: true } } }), auth, store }
+      RosterTargetModal: { name: 'RosterTargetModal', template: '<div />' }, teleport: true } } }), auth, store }
 }
 
 beforeEach(() => { vi.clearAllMocks(); localStorage.clear() })
@@ -156,5 +156,37 @@ describe('RosterView', () => {
     await wrapper.find('[data-test="wave-tab-2"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('.roster-group-label').text()).toContain('第 2 波')
+  })
+
+  it('编辑目标保存后写入 localStorage 且网格显示缺口', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    await wrapper.find('[data-act="edit-target-0"]').trigger('click')   // RosterGrid 真实组件 → openTarget
+    wrapper.findComponent({ name: 'RosterTargetModal' }).vm.$emit('save', { outputs: { count: 2 } })
+    await flushPromises()
+    expect(localStorage.getItem('dnfer-roster-targets-1')).toContain('"count":2')
+    expect(wrapper.find('.roster-squad-status').text()).toContain('输出')   // 缺口徽章出现
+  })
+
+  it('拿起已占格角色后点空格：fill replace:true 移动', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], admin,
+      makeRaid([adminRow, memberRow], occupiedSlot()))
+    await flushPromises()
+    await wrapper.find('[data-act="roster-pickup"]').trigger('click')   // 拿起 slot1 的剑魂
+    expect(wrapper.find('.move-hint').text()).toContain('剑魂')
+    await wrapper.find('.roster-slot .pick-btn').trigger('click')       // 放入空位
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/slots/2/fill',
+      { character_id: 10, duty: '辅C', replace: true })                 // 拿起时 slot1 主C 仍在队 → 辅C
+    expect(wrapper.find('.move-hint').exists()).toBe(false)
+  })
+
+  it('Esc 取消拿起态', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    await wrapper.find('[data-act="pool-char-11"]').trigger('click')
+    expect(wrapper.find('.move-hint').exists()).toBe(true)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+    expect(wrapper.find('.move-hint').exists()).toBe(false)
   })
 })

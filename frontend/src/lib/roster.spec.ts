@@ -187,6 +187,13 @@ describe('rankCandidates 推荐排序', () => {
     expect(r[0].targetSquadIndex).toBe(0)
     expect(r[0].score).toBeGreaterThan(0)
   })
+  it('队内有划水成员 → 不再推荐到该队（与达标豁免一致）', () => {
+    const t = { 0: { outputs: { count: 2 } } }
+    const g = [wave(10, [os(100, '划水')])]  // 已有划水成员 → 豁免
+    const r = rankCandidates({ candidates: [c1], groups: g, targets: t, recommendOn: true })
+    expect(r[0].score).toBe(0)
+    expect(r[0].targetSquadIndex).toBeNull()
+  })
 })
 
 describe('squadSlotsOf', () => {

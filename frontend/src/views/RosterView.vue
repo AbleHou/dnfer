@@ -16,6 +16,7 @@ import type { SquadTarget, SquadTargets } from '../lib/roster'
 import RosterPool from '../components/RosterPool.vue'
 import RosterGrid from '../components/RosterGrid.vue'
 import RosterTargetModal from '../components/RosterTargetModal.vue'
+import { SQUAD_NAMES } from '../lib/colors'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { Character, Slot, Wave } from '../types'
 
@@ -233,7 +234,7 @@ onBeforeUnmount(() => {
     </div>
 
     <RosterTargetModal :open="targetModal.open"
-                       :squad-label="`${targetModal.squadIndex + 1} 队`"
+                       :squad-label="SQUAD_NAMES[targetModal.squadIndex] ?? `队${targetModal.squadIndex + 1}`"
                        :target="targets[targetModal.squadIndex] ?? null"
                        @close="targetModal.open = false"
                        @save="onSaveTarget" />

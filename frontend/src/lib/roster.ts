@@ -99,6 +99,7 @@ export function squadSlotsOf(wave: Wave): Slot[][] {
 function squadGap(slots: Slot[], target: SquadTarget | undefined): number {
   if (!target || target.slack) return 0
   const st = computeSquadStatus(slots, target)
+  if (st.slack) return 0   // 有划水成员也豁免（与达标徽章一致）
   let gap = 0
   if (target.outputs?.count != null) gap += Math.max(0, target.outputs.count - st.outputCount)
   if (target.outputs?.simMin != null && st.outputTotal < target.outputs.simMin) gap += 1

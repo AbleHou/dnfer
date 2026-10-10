@@ -50,7 +50,7 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
         </div>
         <span v-if="slackCharIds.has(c.id)" class="pool-tag slack">划水</span>
         <span v-if="recommendTop3.has(c.id)" class="pool-tag rec">
-          推荐<template v-if="recommendTarget[c.id] != null">→{{ SQUAD_NAMES[recommendTarget[c.id]!] }}</template>
+          推荐<template v-if="recommendTarget[c.id] != null">→{{ SQUAD_NAMES[recommendTarget[c.id]!] ?? `队${recommendTarget[c.id]! + 1}` }}</template>
         </span>
       </div>
     </div>
