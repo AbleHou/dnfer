@@ -402,14 +402,17 @@ function squadGap(slots: Slot[], target: SquadTarget | undefined): number {
   return gap
 }
 
-/** 候选角色是否适配某队（按模板所需角色类型 + 队伍状态）。无模板 → 不认为适配。 */
+/** 候选角色是否适配某队（按模板所需角色类型 + 队伍状态）。无模板 → 不认为适配。
+ *  输出分支含 simMin 缺口（与 squadGap 一致）：输出数已够+有主C 但总伤低于下限的「缺总伤」场景也要能匹配，
+ *  否则所有输出候选被判不匹配、推荐静默退化（审阅修复，提交 fdb33fb）。 */
 function candidateFitsSquad(c: Character, slots: Slot[], target: SquadTarget | undefined): boolean {
   if (!target) return false
   const st = computeSquadStatus(slots, target)
   if (c.class_type === '输出') {
     const needCount = (target.outputs?.count ?? 0) > st.outputCount
     const needMainC = !slots.some(s => s.duty === '主C')
-    return needCount || needMainC
+    const needDmg = target.outputs?.simMin != null && st.outputTotal < target.outputs.simMin
+    return needCount || needMainC || needDmg
   }
   const needHeal = target.mainHeal?.buffMin != null || target.mainHeal?.buffMax != null
   const needSun = (target.sunHeal?.count ?? 0) > st.sunHealCount
