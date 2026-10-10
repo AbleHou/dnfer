@@ -100,4 +100,26 @@ describe('computeSquadStatus 达标计算', () => {
     expect(st.outputCount).toBe(2); expect(st.outputTotal).toBe(22000)
     expect(st.mainHealBuff).toBe(46000); expect(st.sunHealCount).toBe(1)
   })
+  it('主奶缺失（空 buff）→ mainHealOK=false', () => {
+    const st = computeSquadStatus([os(12000), os(10000), aux('太阳奶', 0)], target)
+    expect(st.mainHealOK).toBe(false)
+    expect(st.issues.join()).toContain('主奶增益')
+  })
+  it('总伤高于上限 → outputOK=false', () => {
+    const st = computeSquadStatus([os(15000), os(15000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+    expect(st.outputOK).toBe(false)
+    expect(st.issues.join()).toContain('总伤')
+  })
+  it('缺太阳奶 → sunHealOK=false', () => {
+    const st = computeSquadStatus([os(12000), os(10000), aux('主奶', 46000)], target)
+    expect(st.sunHealOK).toBe(false)
+    expect(st.issues.join()).toContain('缺太阳奶')
+  })
+  it('target.slack=true → 豁免，即使无划水成员且不满足输出', () => {
+    const st = computeSquadStatus([os(5000), os(5000), aux('主奶', 40000)], { ...target, slack: true })
+    expect(st.issues).toEqual([])
+    expect(st.outputOK).toBe(true)
+    expect(st.mainHealOK).toBe(true)
+    expect(st.sunHealOK).toBe(true)
+  })
 })
