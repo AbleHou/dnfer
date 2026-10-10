@@ -76,3 +76,73 @@ export function computeSquadStatus(slots: Slot[], target: SquadTarget | undefine
   return { filled: filled.length, total: slots.length, outputCount, outputTotal, outputOK,
            mainHealBuff, mainHealOK, sunHealCount, sunHealOK, slack, issues }
 }
+
+export interface RankedCandidate {
+  character: Character
+  score: number
+  targetSquadIndex: number | null
+  targetWaveId: number | null
+}
+
+export function powerValue(c: Character): number {
+  return c.class_type === '输出' ? (c.simulated_damage ?? -Infinity) : (c.buff_amount ?? -Infinity)
+}
+export function sortByPower(list: Character[]): Character[] {
+  return [...list].sort((a, b) => powerValue(b) - powerValue(a))
+}
+
+export function squadSlotsOf(wave: Wave): Slot[][] {
+  const n = wave.slots.length ? Math.max(...wave.slots.map(s => s.squad_index)) + 1 : 0
+  return Array.from({ length: n }, (_, sq) => wave.slots.filter(s => s.squad_index === sq))
+}
+
+function squadGap(slots: Slot[], target: SquadTarget | undefined): number {
+  if (!target || target.slack) return 0
+  const st = computeSquadStatus(slots, target)
+  let gap = 0
+  if (target.outputs?.count != null) gap += Math.max(0, target.outputs.count - st.outputCount)
+  if (target.outputs?.simMin != null && st.outputTotal < target.outputs.simMin) gap += 1
+  if (target.mainHeal?.buffMin != null && (st.mainHealBuff == null || st.mainHealBuff < target.mainHeal.buffMin)) gap += 1
+  if (target.sunHeal?.count != null) gap += Math.max(0, target.sunHeal.count - st.sunHealCount)
+  return gap
+}
+
+/** 候选角色是否适配某队（按模板所需角色类型 + 队伍状态）。无模板 → 不认为适配。 */
+function candidateFitsSquad(c: Character, slots: Slot[], target: SquadTarget | undefined): boolean {
+  if (!target) return false
+  const st = computeSquadStatus(slots, target)
+  if (c.class_type === '输出') {
+    const needCount = (target.outputs?.count ?? 0) > st.outputCount
+    const needMainC = !slots.some(s => s.duty === '主C')
+    return needCount || needMainC
+  }
+  const needHeal = target.mainHeal?.buffMin != null || target.mainHeal?.buffMax != null
+  const needSun = (target.sunHeal?.count ?? 0) > st.sunHealCount
+  return needHeal || needSun
+}
+
+export function rankCandidates(opts: {
+  candidates: Character[]
+  groups: Wave[]
+  targets: SquadTargets
+  recommendOn: boolean
+}): RankedCandidate[] {
+  if (!opts.recommendOn) {
+    return sortByPower(opts.candidates).map(c => ({
+      character: c, score: 0, targetSquadIndex: null, targetWaveId: null,
+    }))
+  }
+  const ranked = opts.candidates.map(c => {
+    let best: RankedCandidate = { character: c, score: 0, targetSquadIndex: null, targetWaveId: null }
+    for (const w of opts.groups) {
+      squadSlotsOf(w).forEach((slots, si) => {
+        const target = opts.targets[si]
+        if (!candidateFitsSquad(c, slots, target)) return
+        const g = squadGap(slots, target)
+        if (g > best.score) best = { character: c, score: g, targetSquadIndex: si, targetWaveId: w.id }
+      })
+    }
+    return best
+  })
+  return ranked.sort((a, b) => b.score - a.score || powerValue(b.character) - powerValue(a.character))
+}

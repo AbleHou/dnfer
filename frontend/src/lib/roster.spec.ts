@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { loadTargets, saveTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus } from './roster'
-import type { ClassType, Slot } from '../types'
+import { loadTargets, saveTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower } from './roster'
+import type { ClassType, Slot, Character, Wave } from '../types'
 
 function slot(duty: string | null, classType: ClassType | null = '输出'): Slot {
   return {
@@ -121,5 +121,70 @@ describe('computeSquadStatus 达标计算', () => {
     expect(st.outputOK).toBe(true)
     expect(st.mainHealOK).toBe(true)
     expect(st.sunHealOK).toBe(true)
+  })
+})
+
+const c1: Character = { id: 1, name: '高伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
+  fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null }
+const c2: Character = { id: 2, name: '低伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
+  fame: 1, simulated_damage: 5000, sustained_dps: 0, buff_amount: null, sun_buff: null }
+const healer: Character = { id: 3, name: '奶', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '辅助',
+  fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0 }
+
+function wave(id: number, slots: Slot[]): Wave {
+  return { id, index: id, group_id: null, round_index: 1, group_index: 1, slots }
+}
+
+describe('sortByPower', () => {
+  it('输出按模拟伤害降序（null 排最后）', () => {
+    const n: Character = { ...c1, id: 3, simulated_damage: null, sustained_dps: null }
+    expect(sortByPower([c2, n, c1]).map(x => x.id)).toEqual([1, 2, 3])
+  })
+})
+
+describe('rankCandidates 推荐排序', () => {
+  const targets = { 0: { outputs: { count: 2, simMin: 20000 } } }
+  const group = [wave(10, [os(5000)])]  // 红队(0)已有 1 输出 5000，缺 1 输出
+  it('推荐开关开 + 有模板：同队缺口相同 → 按战力 tie-break，高伤排前，目标队红队(0)', () => {
+    const r = rankCandidates({ candidates: [c2, c1], groups: group, targets, recommendOn: true })
+    expect(r[0].character.id).toBe(1)
+    expect(r[1].character.id).toBe(2)
+    expect(r[0].score).toBe(r[1].score)  // 缺口分是队伍缺口（候选无关），同队同分
+    expect(r[0].score).toBeGreaterThan(0)
+    expect(r[0].targetSquadIndex).toBe(0)
+  })
+  it('推荐开关关：按战力排序、score 为 0、无目标队', () => {
+    const r = rankCandidates({ candidates: [c2, c1], groups: group, targets, recommendOn: false })
+    expect(r.map(x => x.character.id)).toEqual([1, 2])
+    expect(r.every(x => x.score === 0 && x.targetSquadIndex === null)).toBe(true)
+  })
+  it('无模板：全 score 0、按战力排序、无目标队', () => {
+    const r = rankCandidates({ candidates: [c2, c1], groups: group, targets: {}, recommendOn: true })
+    expect(r.map(x => x.character.id)).toEqual([1, 2])
+    expect(r.every(x => x.score === 0 && x.targetSquadIndex === null)).toBe(true)
+  })
+  it('辅助角色 → 推荐到缺主奶的队', () => {
+    const t = { 0: { mainHeal: { buffMin: 45000 } } }
+    const g = [wave(10, [os(5000)])]  // 红队无主奶
+    const r = rankCandidates({ candidates: [healer], groups: g, targets: t, recommendOn: true })
+    expect(r[0].targetSquadIndex).toBe(0)
+    expect(r[0].score).toBeGreaterThan(0)
+  })
+  it('并行团：取缺口更大的团（跨 wave 比较）', () => {
+    const g2 = [wave(10, [os(5000)]), wave(20, [os(30000)])]  // 团1(wave 10)红队缺1输出，团2(wave 20)已满
+    const r = rankCandidates({ candidates: [c1], groups: g2, targets, recommendOn: true })
+    expect(r[0].targetWaveId).toBe(10)
+    expect(r[0].score).toBeGreaterThan(0)
+  })
+})
+
+describe('squadSlotsOf', () => {
+  it('按 squad_index 分组', () => {
+    const s0 = { ...slot('主C'), id: 1, squad_index: 0 }
+    const s1a = { ...slot('主C'), id: 2, squad_index: 1 }
+    const s1b = { ...slot('主C'), id: 3, squad_index: 1 }
+    const groups = squadSlotsOf(wave(10, [s0, s1a, s1b]))
+    expect(groups.length).toBe(2)
+    expect(groups[1].map(s => s.id)).toEqual([2, 3])
   })
 })
