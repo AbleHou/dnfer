@@ -20,11 +20,12 @@ const emit = defineEmits<{
 const occupied = computed(() => props.slot.character_id != null)
 const attrs = computed(() => {
   const s = props.slot
-  if (s.character_class === '输出') return `模拟 ${fmt(s.simulated_damage)} · 秒伤 ${fmt(s.sustained_dps)}`
-  if (s.character_class === '辅助') return `增益 ${fmt(s.buff_amount)} · 太阳 ${fmt(s.sun_buff)}`
+  if (s.character_class === '输出') return `模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
+  if (s.character_class === '辅助') return `增益 ${fmtBuff(s.buff_amount)} · 太阳 ${fmtBuff(s.sun_buff)}`
   return ''
 })
-function fmt(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
+function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
+function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
 function onCellClick() {
   if (occupied.value) { if (props.canEdit) emit('manage', props.slot); return }
   if (props.dropTarget) emit('place', props.slot)
