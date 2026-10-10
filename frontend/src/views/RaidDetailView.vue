@@ -254,6 +254,7 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
       </span>
       <span style="margin-left:auto;display:flex;gap:8px">
         <router-link v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="roster-link"
+                     style="text-decoration:none"
                      :to="`/raids/${store.raid.id}/roster`">编队</router-link>
         <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="slack-rules"
                 @click="showSlackRules = true">划水规则设置</button>
