@@ -18,7 +18,7 @@ const TARGETS_KEY = (raidId: number) => `dnfer-roster-targets-${raidId}`
 export function loadTargets(raidId: number): SquadTargets {
   try {
     const raw = localStorage.getItem(TARGETS_KEY(raidId))
-    return raw ? (JSON.parse(raw) as SquadTargets) : {}
+    return raw ? ((JSON.parse(raw) as SquadTargets) ?? {}) : {}
   } catch { return {} }
 }
 export function saveTargets(raidId: number, targets: SquadTargets): void {

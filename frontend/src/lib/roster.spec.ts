@@ -26,6 +26,10 @@ describe('模板 localStorage 读写', () => {
   it('RECOMMEND_KEY 常量存在', () => {
     expect(RECOMMEND_KEY).toBe('dnfer-roster-recommend')
   })
+  it('localStorage 存 "null" 时返回空对象（防御）', () => {
+    localStorage.setItem('dnfer-roster-targets-7', 'null')
+    expect(loadTargets(7)).toEqual({})
+  })
 })
 
 describe('inferFillDuty 职责决策表（与模板无关，只看队伍状态）', () => {

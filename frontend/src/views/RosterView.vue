@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { NSwitch } from 'naive-ui'
 import { api } from '../api/client'
@@ -34,6 +34,9 @@ let disconnect: (() => void) | null = null
 
 const currentWave = computed<Wave | null>(() =>
   store.raid?.waves.find(w => w.index === currentIndex.value) ?? null)
+watch(currentWave, (w) => {
+  if (!w && store.raid?.waves.length) currentIndex.value = store.raid.waves[0].index
+})
 const currentGroups = computed<Wave[]>(() => {
   const cw = currentWave.value
   if (!store.raid || !cw) return []
@@ -108,6 +111,7 @@ function onPickUp(slot: Slot) {
   const c = allChars.value.find(x => x.id === slot.character_id)
   if (c) holding.value = c
 }
+function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape' && holding.value) holding.value = null }
 function squadOf(slot: Slot): Slot[] {
   const w = store.raid?.waves.find(x => x.slots.some(s => s.id === slot.id))
   if (!w) return []
@@ -157,6 +161,7 @@ function onSaveTarget(t: SquadTarget) {
 
 async function load() { await store.load(rid) }
 onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
   disconnect = connectRaidWs(rid, {
     onEvent: (ev) => applyEvent(store, ev),
     onRefresh: async () => { await load() },
@@ -164,7 +169,10 @@ onMounted(() => {
   })
   void load()
 })
-onBeforeUnmount(() => { disconnect?.() })
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+  disconnect?.()
+})
 </script>
 
 <template>
