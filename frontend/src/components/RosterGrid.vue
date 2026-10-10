@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { Character, Slot, Wave } from '../types'
 import RosterSlot from './RosterSlot.vue'
 import { SQUAD_NAMES } from '../lib/colors'
@@ -27,7 +26,6 @@ function groupLabel(w: Wave): string {
 function squadsOf(w: Wave): { index: number; slots: Slot[] }[] {
   return squadSlotsOf(w).map((slots, i) => ({ index: i, slots }))
 }
-const squadNames = computed(() => SQUAD_NAMES)
 </script>
 
 <template>
@@ -36,7 +34,7 @@ const squadNames = computed(() => SQUAD_NAMES)
       <div class="roster-group-label">{{ groupLabel(g) }}</div>
       <div v-for="sq in squadsOf(g)" :key="sq.index" class="roster-squad">
         <div class="roster-squad-head">
-          <b>{{ squadNames[sq.index] ?? `队${sq.index + 1}` }}</b>
+          <b>{{ SQUAD_NAMES[sq.index] ?? `队${sq.index + 1}` }}</b>
           <span style="color:var(--dnf-text-faint)">
             {{ sq.slots.filter(s => s.character_id != null).length }}/{{ sq.slots.length }}
           </span>
@@ -67,6 +65,6 @@ const squadNames = computed(() => SQUAD_NAMES)
 .roster-squad { margin-bottom: 14px; }
 .roster-squad-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .roster-squad-status { font-size: 12px; padding: 2px 6px; border-radius: 4px; margin-bottom: 6px; }
-.roster-squad-status.warn { color: var(--dnf-danger,#e5484d); }
-.roster-squad-status.ok { color: var(--dnf-ok,#4ade80); }
+.roster-squad-status.warn { color: var(--dnf-danger); }
+.roster-squad-status.ok { color: var(--dnf-ok); }
 </style>

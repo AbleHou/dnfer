@@ -18,7 +18,7 @@ function mountGrid(overrides: Record<string, unknown> = {}) {
       groups: [wave(1, [out(1, 0), empty(2, 0)])],
       targets: {}, canEdit: true, holding: null, ...overrides,
     },
-    global: { stubs: { RosterSlot: { template: '<div class="roster-slot-stub" />' }, teleport: true } },
+    global: { stubs: { RosterSlot: { name: 'RosterSlot', template: '<div class="roster-slot-stub" />' }, teleport: true } },
   })
 }
 
@@ -44,5 +44,12 @@ describe('RosterGrid', () => {
   it('编辑目标按钮非编辑态隐藏', () => {
     const w = mountGrid({ canEdit: false })
     expect(w.find('[data-act="edit-target-0"]').exists()).toBe(false)
+  })
+  it('RosterSlot 的 place 事件转发为 RosterGrid 的 place', async () => {
+    const w = mountGrid()
+    const stub = w.findComponent({ name: 'RosterSlot' })
+    const slot = w.props('groups')[0].slots[0]
+    stub.vm.$emit('place', slot)
+    expect(w.emitted('place')?.[0]?.[0]).toBe(slot)
   })
 })
