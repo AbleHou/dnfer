@@ -81,4 +81,25 @@ describe('RosterPool', () => {
     await w.find('[data-act="pool-char-11"]').trigger('click')
     expect(w.emitted('pick')).toBeFalsy()
   })
+  it('点用户名头收起：该组角色不渲染，再点恢复', async () => {
+    const w = mountPool()
+    await w.find('[data-user-id="1"]').trigger('click')
+    expect(w.find('[data-act="pool-char-10"]').exists()).toBe(false)
+    expect(w.find('[data-act="pool-char-11"]').exists()).toBe(false)  // 甲 组两角色都收起
+    await w.find('[data-user-id="1"]').trigger('click')
+    expect(w.find('[data-act="pool-char-10"]').exists()).toBe(true)
+  })
+  it('收起/展开指示符：收起 ▸、展开 ▾', async () => {
+    const w = mountPool()
+    expect(w.find('[data-user-id="1"]').text()).toContain('▾')
+    await w.find('[data-user-id="1"]').trigger('click')
+    expect(w.find('[data-user-id="1"]').text()).toContain('▸')
+  })
+  it('全部收起后所有组角色不渲染，全部展开后恢复', async () => {
+    const w = mountPool()
+    await w.find('[data-act="pool-collapse-all"]').trigger('click')
+    expect(w.findAll('.pool-char').length).toBe(0)
+    await w.find('[data-act="pool-expand-all"]').trigger('click')
+    expect(w.findAll('.pool-char').length).toBe(3)  // c1,c2,c3
+  })
 })

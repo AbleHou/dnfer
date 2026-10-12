@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import { sortByPower } from '../lib/roster'
@@ -21,6 +21,25 @@ const groups = computed(() => props.signups
   .filter(s => s.characters.length > 0)
   .map(s => ({ user: s.user, chars: sortByPower(s.characters) })))
 
+// 折叠态（内存态，离开页面重置）：收起 user.id 集合，默认全展开
+const collapsed = ref<Set<number>>(new Set())
+function toggleGroup(uid: number) {
+  const next = new Set(collapsed.value)
+  if (next.has(uid)) next.delete(uid)
+  else next.add(uid)
+  collapsed.value = next
+}
+function collapseAll() { collapsed.value = new Set(groups.value.map(g => g.user.id)) }
+function expandAll() { collapsed.value = new Set() }
+
+// 用户名搜索（角色名不参与、不改折叠态）：空词显示全部
+const query = ref('')
+const visibleGroups = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return groups.value
+  return groups.value.filter(g => g.user.nickname.toLowerCase().includes(q))
+})
+
 function fmt(n: number | null, unit: string): string { return n == null ? '暂无' : `${n}${unit}` }
 function powerText(c: Character): string {
   return c.class_type === '输出'
@@ -32,26 +51,38 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
 
 <template>
   <div class="roster-pool">
-    <div v-for="g in groups" :key="g.user.id" class="pool-user">
-      <div class="pool-user-head">{{ g.user.nickname }}</div>
-      <div v-for="c in g.chars" :key="c.id" class="pool-char"
-           :class="{ blocked: blockedCharIds.has(c.id), holding: holdingId === c.id,
-                     slack: slackCharIds.has(c.id) }"
-           :data-act="`pool-char-${c.id}`" @click="onPick(c)">
-        <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:26px;height:26px">
-        <div style="flex:1;min-width:0">
-          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-            <b>{{ c.name }}</b>
-            <span style="color:var(--dnf-text-muted);font-size:12px">
-              {{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }}
-            </span>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+      <input v-model="query" data-act="pool-search" placeholder="按用户名搜索"
+             style="flex:1;min-width:0" />
+      <button class="dnf-btn dnf-btn-sm" data-act="pool-expand-all" @click="expandAll">全部展开</button>
+      <button class="dnf-btn dnf-btn-sm" data-act="pool-collapse-all" @click="collapseAll">全部收起</button>
+    </div>
+    <div v-for="g in visibleGroups" :key="g.user.id" class="pool-user" data-test="pool-user">
+      <div class="pool-user-head" :data-user-id="g.user.id" @click="toggleGroup(g.user.id)">
+        <span style="color:var(--dnf-text-muted,#9aa3b2);width:12px;display:inline-block">
+          {{ collapsed.has(g.user.id) ? '▸' : '▾' }}
+        </span>{{ g.user.nickname }}
+      </div>
+      <div v-if="!collapsed.has(g.user.id)">
+        <div v-for="c in g.chars" :key="c.id" class="pool-char"
+             :class="{ blocked: blockedCharIds.has(c.id), holding: holdingId === c.id,
+                       slack: slackCharIds.has(c.id) }"
+             :data-act="`pool-char-${c.id}`" @click="onPick(c)">
+          <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:26px;height:26px">
+          <div style="flex:1;min-width:0">
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              <b>{{ c.name }}</b>
+              <span style="color:var(--dnf-text-muted);font-size:12px">
+                {{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }}
+              </span>
+            </div>
+            <div style="color:var(--dnf-text-faint);font-size:12px">{{ powerText(c) }}</div>
           </div>
-          <div style="color:var(--dnf-text-faint);font-size:12px">{{ powerText(c) }}</div>
+          <span v-if="slackCharIds.has(c.id)" class="pool-tag slack">划水</span>
+          <span v-if="recommendTop3.has(c.id)" class="pool-tag rec">
+            推荐<template v-if="recommendTarget[c.id] != null">→{{ SQUAD_NAMES[recommendTarget[c.id]!] ?? `队${recommendTarget[c.id]! + 1}` }}</template>
+          </span>
         </div>
-        <span v-if="slackCharIds.has(c.id)" class="pool-tag slack">划水</span>
-        <span v-if="recommendTop3.has(c.id)" class="pool-tag rec">
-          推荐<template v-if="recommendTarget[c.id] != null">→{{ SQUAD_NAMES[recommendTarget[c.id]!] ?? `队${recommendTarget[c.id]! + 1}` }}</template>
-        </span>
       </div>
     </div>
   </div>
@@ -59,7 +90,7 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
 
 <style scoped>
 .pool-user { margin-bottom: 10px; }
-.pool-user-head { font-weight: bold; margin-bottom: 4px; color: var(--dnf-text-muted,#9aa3b2); }
+.pool-user-head { font-weight: bold; margin-bottom: 4px; color: var(--dnf-text-muted,#9aa3b2); cursor: pointer; }
 .pool-char { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--dnf-border,#3a3f4b);
   border-radius: 6px; margin-bottom: 4px; cursor: pointer; }
 .pool-char.blocked { opacity: .45; filter: grayscale(1); cursor: default; }
