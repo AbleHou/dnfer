@@ -83,6 +83,13 @@ describe('RosterView', () => {
     expect(wrapper.find('[data-test="roster-grid"]').exists()).toBe(true)
   })
 
+  it('左侧角色池 sticky 固定跟随（下滚后仍可见，防止回退普通流）', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    const pool = wrapper.find('[data-test="roster-pool"]')
+    expect((pool.element as HTMLElement).style.position).toBe('sticky')
+  })
+
   it('非管理员只读：无推荐开关，点角色不进入拿起态', async () => {
     const { wrapper } = await mountView([adminRow, memberRow], member)
     await flushPromises()
