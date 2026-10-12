@@ -23,15 +23,15 @@
 
 ### 2.2 用户组折叠
 
-- 点 `.pool-user-head`（用户名头）切换该组的展开/收起（toggle `collapsed` 中对应 user.id）。
+- 点 `.pool-user-head`（用户名头）切换该组的展开/收起（toggle `collapsed` 中对应 user.id）。头部加 `:data-user-id="g.user.id"` 便于测试定位单个用户头。
 - **默认全部展开**（与现状一致，保证现有测试与体验不变）。
 - 收起时该组角色**不渲染**（`v-if`），仅渲染用户名头；头部加折叠指示符 `▸`（收起）/`▾`（展开）+ 昵称，示意可点。
 - 头部点击不触发角色 pick（本身头与角色卡是不同元素）。
 
 ### 2.3 全部展开 / 全部收起
 
-- 池顶部工具栏两个按钮：「全部展开」「全部收起」。
-- 全部展开 → `collapsed` 清空；全部收起 → `collapsed` 置为所有用户组 user.id。
+- 池顶部工具栏两个按钮：「全部展开」「全部收起」，分别 `data-act="pool-expand-all"` / `data-act="pool-collapse-all"`。
+- **作用于全部用户组（`groups`，含被搜索过滤隐藏的）**，不是仅当前可见组：全部展开 → `collapsed` 清空；全部收起 → `collapsed` 置为 `groups` 所有 user.id。清空搜索后可见状态与按钮结果一致。
 
 ### 2.4 用户名搜索框
 
@@ -47,18 +47,18 @@
 ## 3. 实现要点
 
 - `RosterPool.vue` 现有 `groups` computed（按用户分组、组内战力排序、过滤 0 角色）保留；新增 `visibleGroups` computed（叠加昵称过滤）。
-- 渲染：`v-for="g in visibleGroups"`；`.pool-user-head` 加 `@click` toggle + 指示符；组内角色 `v-if="!collapsed.has(g.user.id)"`。
-- 工具栏置于 `.roster-pool` 顶部：搜索框 + 「全部展开」「全部收起」按钮。
+- 渲染：`v-for="g in visibleGroups"`（用户组根 `data-test="pool-user"`）；`.pool-user-head` 加 `@click` toggle + 指示符 + `:data-user-id="g.user.id"`；组内角色 `v-if="!collapsed.has(g.user.id)"`。
+- 工具栏置于 `.roster-pool` 顶部：搜索框（`data-act="pool-search"`）+ 「全部展开」（`data-act="pool-expand-all"`）+「全部收起」（`data-act="pool-collapse-all"`）。
 - 样式沿用现有 inline/scoped 风格（`--dnf-border`/`--dnf-accent` 等带 fallback）。
 
 ## 4. 测试（RosterPool.spec.ts 新增）
 
-新增用例（现有 10 例保持通过）：
+新增用例（现有 10 例保持通过；定位用户头用 `[data-user-id="N"]`，角色仍用 `[data-act="pool-char-{id}"]`，用户组根元素加 `data-test="pool-user"`）：
 
-- 点用户名头收起：该组角色不再渲染（`findAll('.pool-char')` 减少 / 对应角色 `exists()` false），再点恢复。
+- 点用户名头收起：该组角色不再渲染（对应角色 `exists()` false），再点恢复。
 - 收起指示符：收起后头部含 `▸`，展开含 `▾`。
-- 「全部收起」后所有组角色不渲染；「全部展开」后全部渲染。
-- 搜索按昵称：含关键词的组保留、不含的整组隐藏（`data-act` 命中）。
+- 「全部收起」(`data-act="pool-collapse-all"`) 后所有组角色不渲染；「全部展开」(`data-act="pool-expand-all"`) 后全部渲染。
+- 搜索按昵称：含关键词的组保留、不含的整组隐藏（`data-test="pool-user"` 计数 / 指定组 `exists()`）。
 - 搜索不改变折叠态：搜索中某组原本收起仍收起、展开仍展开。
 - 空搜索/清空后显示全部。
 
