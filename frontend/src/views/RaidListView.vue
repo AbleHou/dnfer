@@ -114,3 +114,11 @@ async function onSignup(r: RaidListItem) {
     <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
   </div>
 </template>
+
+<style scoped>
+/* 悬浮「选中」：默认 .dnf-panel 边框已是金色，hover 提亮 + 外发光以区分 */
+.raid-card:hover {
+  border-color: var(--dnf-gold-hi);
+  box-shadow: inset 0 0 0 1px var(--dnf-gold-deep), 0 0 14px rgba(255,213,74,.55), 0 4px 12px rgba(0,0,0,.5);
+}
+</style>
