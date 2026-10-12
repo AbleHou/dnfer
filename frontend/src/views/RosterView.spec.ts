@@ -88,6 +88,7 @@ describe('RosterView', () => {
     await flushPromises()
     const pool = wrapper.find('[data-test="roster-pool"]')
     expect((pool.element as HTMLElement).style.position).toBe('sticky')
+    expect((pool.element as HTMLElement).style.top).toBe('60px')
   })
 
   it('非管理员只读：无推荐开关，点角色不进入拿起态', async () => {
