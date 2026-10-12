@@ -6,7 +6,7 @@ export function buildPlacementMap(raid: Raid): Record<number, CharacterPlacement
     for (const s of w.slots) {
       if (s.character_id == null) continue
       map[s.character_id] = {
-        wave_index: w.index,
+        wave_index: w.round_index, // 展示用连续轮数（index 删波后留空洞，与网格「第 N 波」标签错位）
         squad_index: s.squad_index,
         duty: s.duty ?? '主C', // 已占位格 duty 必有值；类型为 Duty | null，兜底避免 vue-tsc 报错
       }

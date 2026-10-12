@@ -32,4 +32,18 @@ describe('buildPlacementMap', () => {
   it('returns empty map for empty raid', () => {
     expect(buildPlacementMap(makeRaid([]))).toEqual({})
   })
+
+  it('uses sequential round_index, not persistent index (wave deletion leaves index gaps)', () => {
+    // 删除中间波后 Wave.index 保留空洞（1,3,4），但 round_index 由后端重算为连续轮数（1,2,3），
+    // 与波网格标题「第 N 波」一致；占位徽章必须跟随 round_index。
+    const raid = makeRaid([
+      { id: 1, index: 1, group_id: null, round_index: 1, group_index: 1, slots: [slot(1, 11, 0, '主C')] },
+      { id: 3, index: 3, group_id: null, round_index: 2, group_index: 1, slots: [slot(4, 12, 0, '主C')] },
+      { id: 4, index: 4, group_id: null, round_index: 3, group_index: 1, slots: [slot(5, 13, 0, '主C')] },
+    ])
+    const map = buildPlacementMap(raid)
+    expect(map[11]).toEqual({ wave_index: 1, squad_index: 0, duty: '主C' })
+    expect(map[12]).toEqual({ wave_index: 2, squad_index: 0, duty: '主C' })
+    expect(map[13]).toEqual({ wave_index: 3, squad_index: 0, duty: '主C' })
+  })
 })
