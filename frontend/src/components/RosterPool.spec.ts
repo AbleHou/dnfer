@@ -102,4 +102,23 @@ describe('RosterPool', () => {
     await w.find('[data-act="pool-expand-all"]').trigger('click')
     expect(w.findAll('.pool-char').length).toBe(3)  // c1,c2,c3
   })
+  it('搜索按昵称过滤：匹配组保留、不匹配整组隐藏', async () => {
+    const w = mountPool()
+    await w.find('[data-act="pool-search"]').setValue('甲')
+    expect(w.findAll('[data-test="pool-user"]').length).toBe(1)
+    expect(w.text()).toContain('剑魂')     // 甲 组角色在
+    expect(w.text()).not.toContain('划水剑') // 乙(c3) 整组隐藏
+    await w.find('[data-act="pool-search"]').setValue('不存在')
+    expect(w.findAll('[data-test="pool-user"]').length).toBe(0)
+  })
+  it('搜索不改变折叠态：折叠组在搜索中仍收起', async () => {
+    const w = mountPool()
+    await w.find('[data-user-id="2"]').trigger('click')      // 收起 乙 组
+    await w.find('[data-act="pool-search"]').setValue('乙')  // 搜索命中 乙 组
+    expect(w.find('[data-act="pool-char-12"]').exists()).toBe(false)  // 仍收起
+    expect(w.find('[data-user-id="2"]').text()).toContain('▸')
+    await w.find('[data-act="pool-search"]').setValue('')    // 清空
+    expect(w.find('[data-act="pool-char-12"]').exists()).toBe(false)  // 折叠态保留
+    expect(w.findAll('[data-test="pool-user"]').length).toBe(2)
+  })
 })
