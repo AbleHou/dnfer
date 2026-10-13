@@ -229,3 +229,40 @@ def test_admin_reset_password_errors(client, admin_headers):
     # 管理员可重置管理员密码（含自己，admin id=1；token 不失效所以 admin_headers 仍可用）
     assert client.post("/api/admin/users/1/password", headers=admin_headers,
                        json={"password": "adminNew99"}).status_code == 200
+
+def test_admin_lists_user_parties_and_creates_char_with_party(client, admin_headers):
+    r = client.post("/api/auth/register", json={
+        "username": "victim", "password": "secret1", "nickname": "受害人",
+        "code": client.post("/api/admin/codes", json={"single_use": True},
+                            headers=admin_headers).json()["code"]})
+    assert r.status_code == 200
+    uid = r.json()["user"]["id"]
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    pid = client.get("/api/me/adventure-parties", headers=h).json()[0]["id"]
+    # admin 读用户团
+    parties = client.get(f"/api/admin/users/{uid}/adventure-parties", headers=admin_headers)
+    assert parties.status_code == 200 and parties.json()[0]["id"] == pid
+    # admin 建角色指定团
+    r = client.post(f"/api/admin/users/{uid}/characters", headers=admin_headers, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1,
+        "adventure_party_id": pid})
+    assert r.status_code == 200 and r.json()["adventure_party_id"] == pid
+    # 建角色缺省团 → 第一个团
+    r = client.post(f"/api/admin/users/{uid}/characters", headers=admin_headers, json={
+        "name": "奶", "job_name": "crusader_male", "fame": 1})
+    assert r.json()["adventure_party_id"] == pid
+
+def test_admin_character_query_has_party(client, admin_headers):
+    r = client.post("/api/auth/register", json={
+        "username": "victim2", "password": "secret1", "nickname": "受害人二",
+        "code": client.post("/api/admin/codes", json={"single_use": True},
+                            headers=admin_headers).json()["code"]})
+    uid = r.json()["user"]["id"]
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    client.post("/api/me/characters", headers=h, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1})
+    q = client.get("/api/admin/characters/query?keyword=剑魂", headers=admin_headers).json()
+    assert q["total"] >= 1
+    row = q["items"][0]
+    assert row["adventure_party_name"] == "受害人二的冒险团"
+    assert row["adventure_party_id"] is not None

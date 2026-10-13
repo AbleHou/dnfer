@@ -5,11 +5,12 @@ from sqlalchemy.orm import Session, contains_eager
 from ..auth import hash_password, make_code, require_admin
 from ..db import get_db
 from ..models import Character, RegistrationCode, User
-from ..schemas import (AdminCharacterRow, AdminUserOut, CharacterIn, CharacterOut,
-                       CharacterQueryResult, CodeCreate, CodeOut, PasswordResetIn,
-                       PlayerCharacters, UserOut, VoteCreate, VoteDetail)
+from ..schemas import (AdminCharacterRow, AdminUserOut, AdventurePartyOut, CharacterIn,
+                       CharacterOut, CharacterQueryResult, CodeCreate, CodeOut,
+                       PasswordResetIn, PlayerCharacters, UserOut, VoteCreate, VoteDetail)
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
+from ..services.parties import parties_out, resolve_party
 from ..services.votes import _vote_or_404, close_vote, create_vote, vote_detail
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -114,6 +115,12 @@ def _user_character_or_404(db: Session, uid: int, cid: int) -> Character:
         raise HTTPException(404, "角色不存在")
     return c
 
+@router.get("/users/{uid}/adventure-parties", response_model=list[AdventurePartyOut])
+def list_user_adventure_parties(uid: int, admin: User = Depends(require_admin),
+                                db: Session = Depends(get_db)):
+    target = _user_or_404(db, uid)
+    return parties_out(db, target)
+
 @router.get("/users/{uid}/characters", response_model=list[CharacterOut])
 def list_user_characters(uid: int, admin: User = Depends(require_admin),
                          db: Session = Depends(get_db)):
@@ -124,10 +131,11 @@ def list_user_characters(uid: int, admin: User = Depends(require_admin),
 @router.post("/users/{uid}/characters", response_model=CharacterOut)
 def create_user_character(uid: int, body: CharacterIn, admin: User = Depends(require_admin),
                           db: Session = Depends(get_db)):
-    _user_or_404(db, uid)
+    target = _user_or_404(db, uid)
     validate_job(body.job_name)
     c = Character(user_id=uid)
     apply_character_payload(c, body)
+    c.adventure_party_id = resolve_party(db, target, body.adventure_party_id).id
     db.add(c)
     db.commit()
     db.refresh(c)
@@ -137,8 +145,10 @@ def create_user_character(uid: int, body: CharacterIn, admin: User = Depends(req
 def update_user_character(uid: int, cid: int, body: CharacterIn,
                           admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     c = _user_character_or_404(db, uid, cid)
+    target = _user_or_404(db, uid)
     validate_job(body.job_name)
     apply_character_payload(c, body)
+    c.adventure_party_id = resolve_party(db, target, body.adventure_party_id).id
     db.commit()
     db.refresh(c)
     return character_out(c)
