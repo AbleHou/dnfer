@@ -108,3 +108,43 @@ def test_character_sun_buff_round_trip(client):
         "buff_amount": 9500, "sun_buff": 3500})
     assert r.status_code == 200
     assert r.json()["sun_buff"] == 3500
+
+def test_character_create_defaults_to_first_party(client):
+    h, _ = register_user(client, "p20", "阿伟")
+    parties = client.get("/api/me/adventure-parties", headers=h).json()
+    pid = parties[0]["id"]
+    r = client.post("/api/me/characters", headers=h, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1})
+    assert r.json()["adventure_party_id"] == pid
+    assert r.json()["adventure_party_name"] == "阿伟的冒险团"
+
+def test_character_create_with_explicit_party(client):
+    h, _ = register_user(client, "p21", "阿伟")
+    pid2 = client.post("/api/me/adventure-parties", headers=h,
+                       json={"name": "二号团"}).json()["id"]
+    r = client.post("/api/me/characters", headers=h, json={
+        "name": "奶", "job_name": "crusader_male", "fame": 1,
+        "adventure_party_id": pid2})
+    assert r.status_code == 200
+    assert r.json()["adventure_party_id"] == pid2
+    assert r.json()["adventure_party_name"] == "二号团"
+
+def test_character_rejects_others_party(client):
+    h1, _ = register_user(client, "p22", "甲")
+    h2, _ = register_user(client, "p23", "乙")
+    pid1 = client.get("/api/me/adventure-parties", headers=h1).json()[0]["id"]
+    assert client.post("/api/me/characters", headers=h2, json={
+        "name": "x", "job_name": "weapon_master", "fame": 1,
+        "adventure_party_id": pid1}).status_code == 400
+
+def test_character_edit_changes_party(client):
+    h, _ = register_user(client, "p24", "阿伟")
+    pid1 = client.get("/api/me/adventure-parties", headers=h).json()[0]["id"]
+    pid2 = client.post("/api/me/adventure-parties", headers=h,
+                       json={"name": "二号团"}).json()["id"]
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1}).json()["id"]
+    r = client.put(f"/api/me/characters/{cid}", headers=h, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 1,
+        "adventure_party_id": pid2})
+    assert r.status_code == 200 and r.json()["adventure_party_id"] == pid2

@@ -8,6 +8,7 @@ from ..models import Character, User
 from ..schemas import CharacterIn, CharacterOut
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
+from ..services.parties import resolve_party
 
 router = APIRouter(prefix="/api/me/characters", tags=["members"])
 
@@ -24,6 +25,7 @@ def create_character(body: CharacterIn, user: User = Depends(get_current_user),
     validate_job(body.job_name)
     c = Character(user_id=user.id)
     apply_character_payload(c, body)
+    c.adventure_party_id = resolve_party(db, user, body.adventure_party_id).id
     db.add(c)
     db.commit()
     db.refresh(c)
@@ -41,6 +43,7 @@ def update_character(cid: int, body: CharacterIn, user: User = Depends(get_curre
     c = _own_character(db, cid, user)
     validate_job(body.job_name)
     apply_character_payload(c, body)
+    c.adventure_party_id = resolve_party(db, user, body.adventure_party_id).id
     db.commit()
     db.refresh(c)
     return character_out(c)
