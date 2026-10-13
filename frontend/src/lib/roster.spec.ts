@@ -129,11 +129,14 @@ describe('computeSquadStatus 达标计算', () => {
 })
 
 const c1: Character = { id: 1, name: '高伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
-  fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null }
+  fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null,
+  adventure_party_id: null, adventure_party_name: null }
 const c2: Character = { id: 2, name: '低伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
-  fame: 1, simulated_damage: 5000, sustained_dps: 0, buff_amount: null, sun_buff: null }
+  fame: 1, simulated_damage: 5000, sustained_dps: 0, buff_amount: null, sun_buff: null,
+  adventure_party_id: null, adventure_party_name: null }
 const healer: Character = { id: 3, name: '奶', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '辅助',
-  fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0 }
+  fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0,
+  adventure_party_id: null, adventure_party_name: null }
 
 function wave(id: number, slots: Slot[]): Wave {
   return { id, index: id, group_id: null, round_index: 1, group_index: 1, slots }

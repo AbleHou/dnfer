@@ -15,7 +15,8 @@ export interface RaidSignup { user: User; created_at: string | null; characters:
 export interface Character { id: number; name: string; job_name: string; job_title: string;
   parent_name: string; class_type: ClassType; fame: number;
   simulated_damage: number | null; sustained_dps: number | null; buff_amount: number | null;
-  sun_buff: number | null }
+  sun_buff: number | null; adventure_party_id: number | null; adventure_party_name: string | null }
+export interface AdventureParty { id: number; name: string; created_at: string; character_count: number }
 export interface PlayerCharacters { user: User; characters: Character[] }
 export interface Slot { id: number; squad_index: number; row_index: number;
   character_id: number | null; character_name: string | null;

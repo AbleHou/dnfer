@@ -103,7 +103,8 @@ describe('raid store', () => {
     applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00', characters: [] })
     const chars = [{ id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: '鬼剑士', class_type: '输出' as const, fame: 1, simulated_damage: 2,
-      sustained_dps: 3, buff_amount: null, sun_buff: null }]
+      sustained_dps: 3, buff_amount: null, sun_buff: null,
+      adventure_party_id: 1, adventure_party_name: '乙的冒险团' }]
     applyEvent(store, { type: 'raid:signup_chars_changed', user_id: 9, characters: chars })
     expect(store.raid!.signups[0].characters).toEqual(chars)
   })

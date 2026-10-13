@@ -47,10 +47,10 @@ const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avat
 const memberChars: Character[] = [
   { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂', parent_name: '鬼剑士',
     class_type: '输出', fame: 52000, simulated_damage: 5, sustained_dps: 2,
-    buff_amount: null, sun_buff: null },
+    buff_amount: null, sun_buff: null, adventure_party_id: 1, adventure_party_name: '队员的冒险团' },
   { id: 11, name: '奶', job_name: 'crusader_female', job_title: '神启·圣骑士', parent_name: '圣职者',
     class_type: '辅助', fame: 40000, simulated_damage: null, sustained_dps: null,
-    buff_amount: 3000, sun_buff: 500 },
+    buff_amount: 3000, sun_buff: 500, adventure_party_id: null, adventure_party_name: null },
 ]
 const adminRow = { user: admin, created_at: null, characters: [] as typeof memberChars }
 const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters: memberChars }
@@ -397,7 +397,8 @@ describe('RaidDetailView slack count & picker gray', () => {
       created_at: null,
       characters: [{ id: 99, name: '团长输出', job_name: 'weapon_master', job_title: '极诣·剑魂',
         parent_name: '鬼剑士', class_type: '输出' as const, fame: 50000, simulated_damage: 5,
-        sustained_dps: 2, buff_amount: null, sun_buff: null }],
+        sustained_dps: 2, buff_amount: null, sun_buff: null,
+        adventure_party_id: 1, adventure_party_name: '团长的冒险团' }],
     }
     const raid = makeRaid([leaderWithChars, memberRow])
     raid.slack_rules = { criteria: [{ class_type: '输出', metric: 'fame', value: 200000 }], exchange: [] }

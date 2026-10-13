@@ -42,7 +42,8 @@ describe('CharacterForm', () => {
     apiMock.put.mockResolvedValue({})
     const editing = { id: 5, name: '旧', job_name: 'weapon_master', job_title: 'x',
       parent_name: 'swordman_male', class_type: '输出' as const, fame: 1,
-      simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null }
+      simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+      adventure_party_id: null, adventure_party_name: null }
     const wrapper = mount(CharacterForm,
       { props: { categories, editing, baseUrl: '/api/admin/users/7/characters' } })
     await fillAndSave(wrapper)
