@@ -2,7 +2,8 @@ import pytest
 from fastapi import HTTPException
 from app.models import Character, User
 from app.services.parties import (create_party, delete_party, ensure_default_party,
-                                  list_parties, rename_party, resolve_party)
+                                  list_parties, party_out_with_count, rename_party,
+                                  resolve_party)
 
 from .helpers import register_user
 
@@ -82,6 +83,17 @@ def test_parties_api_crud(client):
     # 删除：空团且非最后 → 成功；删到只剩一个 → 400
     assert client.delete(f"/api/me/adventure-parties/{pid2}", headers=h).status_code == 200
     assert client.delete(f"/api/me/adventure-parties/{pid}", headers=h).status_code == 400
+
+
+def test_party_out_with_count(db):
+    u = _user(db)
+    p = create_party(db, u, "奶爸团")
+    db.commit()
+    db.add(Character(user_id=u.id, name="剑魂", job_name="weapon_master",
+                     class_type="输出", adventure_party_id=p.id))
+    db.commit()
+    out = party_out_with_count(db, p)
+    assert out.character_count == 1
 
 
 def test_parties_api_ownership(client):

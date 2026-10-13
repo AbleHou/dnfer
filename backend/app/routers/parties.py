@@ -6,7 +6,7 @@ from ..db import get_db
 from ..models import User
 from ..schemas import AdventurePartyIn, AdventurePartyOut
 from ..services.parties import (create_party, delete_party, parties_out,
-                                party_out, rename_party)
+                                party_out, party_out_with_count, rename_party)
 
 router = APIRouter(prefix="/api/me/adventure-parties", tags=["members"])
 
@@ -34,7 +34,7 @@ def rename_my_party(pid: int, body: AdventurePartyIn,
     p = rename_party(db, user, pid, body.name)
     db.commit()
     db.refresh(p)
-    return party_out(p)
+    return party_out_with_count(db, p)
 
 
 @router.delete("/{pid}")

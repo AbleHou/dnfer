@@ -82,6 +82,12 @@ def party_out(p: AdventureParty, character_count: int = 0) -> AdventurePartyOut:
                              character_count=character_count)
 
 
+def party_out_with_count(db: Session, p: AdventureParty) -> AdventurePartyOut:
+    count = (db.query(func.count(Character.id))
+             .filter(Character.adventure_party_id == p.id).scalar())
+    return party_out(p, count or 0)
+
+
 def parties_out(db: Session, user) -> list[AdventurePartyOut]:
     parties = list_parties(db, user)
     ids = [p.id for p in parties]
