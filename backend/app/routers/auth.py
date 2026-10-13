@@ -8,7 +8,7 @@ from ..auth import (consume_code, create_access_token, get_current_user,
                     hash_password, verify_password)
 from ..config import settings
 from ..db import get_db
-from ..models import User
+from ..models import AdventureParty, User
 from ..schemas import ChangePasswordIn, LoginIn, ProfileUpdate, RegisterIn, UserOut
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -24,6 +24,7 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
                 nickname=body.nickname, is_admin=False)
     db.add(user)
     db.flush()
+    db.add(AdventureParty(user_id=user.id, name=f"{body.nickname}的冒险团"))
     if rc.single_use:
         rc.used_by = user.id
         rc.used_at = datetime.now(timezone.utc).replace(tzinfo=None)

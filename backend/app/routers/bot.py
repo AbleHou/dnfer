@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .. import jobs as job_data
 from ..auth import hash_password, require_api_token
 from ..db import get_db
-from ..models import Character, RaidSignup, User
+from ..models import AdventureParty, Character, RaidSignup, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
                        BotCharactersOut, BotRegisterIn, BotSignupIn, PublicVoteBallotIn,
                        UserOut, VoteDetail, VoteListItem)
@@ -114,6 +114,8 @@ def register(body: BotRegisterIn, db: Session = Depends(get_db)):
                 nickname=identifier, is_admin=False)
     db.add(user)
     try:
+        db.flush()
+        db.add(AdventureParty(user_id=user.id, name=f"{identifier}的冒险团"))
         db.commit()
     except IntegrityError:
         db.rollback()

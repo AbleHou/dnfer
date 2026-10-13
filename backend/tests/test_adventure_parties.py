@@ -4,6 +4,8 @@ from app.models import Character, User
 from app.services.parties import (create_party, delete_party, ensure_default_party,
                                   list_parties, rename_party, resolve_party)
 
+from .helpers import register_user
+
 
 def _user(db):
     u = User(username="p1", password_hash="x", nickname="阿伟", is_admin=False)
@@ -57,3 +59,35 @@ def test_resolve_party_checks_ownership(db):
         resolve_party(db, u2, p1.id)  # 非本人团
     assert resolve_party(db, u1, p1.id).id == p1.id
     assert resolve_party(db, u1, None).id == p1.id  # None → 默认团
+
+
+def test_parties_api_crud(client):
+    h, _ = register_user(client, "party2", "阿伟")
+    # 初始团
+    r = client.get("/api/me/adventure-parties", headers=h)
+    assert r.status_code == 200 and len(r.json()) == 1
+    assert r.json()[0]["name"] == "阿伟的冒险团"
+    pid = r.json()[0]["id"]
+    # 创建第二个团
+    r = client.post("/api/me/adventure-parties", headers=h, json={"name": "奶爸团"})
+    assert r.status_code == 200 and r.json()["name"] == "奶爸团"
+    assert r.json()["character_count"] == 0
+    pid2 = r.json()["id"]
+    # 重名 400
+    assert client.post("/api/me/adventure-parties", headers=h,
+                       json={"name": "奶爸团"}).status_code == 400
+    # 改名
+    r = client.put(f"/api/me/adventure-parties/{pid2}", headers=h, json={"name": "奶妈团"})
+    assert r.status_code == 200 and r.json()["name"] == "奶妈团"
+    # 删除：空团且非最后 → 成功；删到只剩一个 → 400
+    assert client.delete(f"/api/me/adventure-parties/{pid2}", headers=h).status_code == 200
+    assert client.delete(f"/api/me/adventure-parties/{pid}", headers=h).status_code == 400
+
+
+def test_parties_api_ownership(client):
+    h1, _ = register_user(client, "p3", "甲")
+    h2, _ = register_user(client, "p4", "乙")
+    pid = client.get("/api/me/adventure-parties", headers=h1).json()[0]["id"]
+    assert client.put(f"/api/me/adventure-parties/{pid}", headers=h2,
+                      json={"name": "x"}).status_code == 404
+    assert client.delete(f"/api/me/adventure-parties/{pid}", headers=h2).status_code == 404

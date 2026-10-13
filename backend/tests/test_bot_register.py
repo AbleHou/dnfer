@@ -65,3 +65,14 @@ def test_register_round_trip_empty_characters(client):
                    headers=TOKEN)
     assert r.status_code == 200
     assert r.json()["characters"] == []
+
+
+def test_bot_register_creates_initial_party(client):
+    r = client.post("/api/public/register", json={"identifier": "12345678"},
+                    headers={"Authorization": "Bearer change-me-bot-token"})
+    assert r.status_code == 200
+    h = client.post("/api/auth/login", json={"username": "12345678", "password": "12345678"})
+    token = h.json()["token"]
+    parties = client.get("/api/me/adventure-parties",
+                         headers={"Authorization": f"Bearer {token}"}).json()
+    assert len(parties) == 1 and parties[0]["name"] == "12345678的冒险团"

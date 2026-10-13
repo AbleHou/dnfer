@@ -75,3 +75,15 @@ def test_register_rejects_invalid_nickname(client, admin_headers):
         r = client.post("/api/auth/register", json={
             "username": "p_inv", "password": "secret1", "nickname": bad, "code": code})
         assert r.status_code == 422, bad
+
+
+def test_register_creates_initial_party(client):
+    admin = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    ah = {"Authorization": f"Bearer {admin.json()['token']}"}
+    code = client.post("/api/admin/codes", json={"single_use": True}, headers=ah).json()["code"]
+    r = client.post("/api/auth/register", json={
+        "username": "newbie", "password": "secret1", "nickname": "萌新", "code": code})
+    assert r.status_code == 200
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    parties = client.get("/api/me/adventure-parties", headers=h).json()
+    assert len(parties) == 1 and parties[0]["name"] == "萌新的冒险团"
