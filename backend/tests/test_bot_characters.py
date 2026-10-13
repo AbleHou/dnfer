@@ -211,3 +211,18 @@ def test_upsert_sun_buff(client):
     assert res["character"]["sun_buff"] == 3500
     assert res["character"]["buff_amount"] == 9000   # 未提供 → 保留
     assert client.get("/api/me/characters", headers=h).json()[0]["sun_buff"] == 3500
+
+def test_bot_created_character_defaults_to_first_party(client):
+    r = client.post("/api/public/register", json={"identifier": "87654321"},
+                    headers=TOKEN)
+    assert r.status_code == 200
+    r = client.post("/api/public/characters", json={
+        "nickname": "87654321",
+        "characters": [{"name": "剑魂", "job_name": "weapon_master"}]},
+        headers=TOKEN)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["results"][0]["ok"] is True
+    c = body["results"][0]["character"]
+    assert c["adventure_party_id"] is not None
+    assert c["adventure_party_name"] == "87654321的冒险团"

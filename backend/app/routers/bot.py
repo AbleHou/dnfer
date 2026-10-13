@@ -14,6 +14,7 @@ from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
                        UserOut, VoteDetail, VoteListItem)
 from ..routers.raids import _raid_or_404, _remove_signup, _signup_characters, _signup_user
 from ..services.characters import character_out
+from ..services.parties import ensure_default_party
 from ..services.votes import _vote_or_404, cast_vote, list_votes, vote_detail
 from ..ws import manager
 
@@ -74,7 +75,8 @@ def upsert_characters(body: BotCharactersIn, db: Session = Depends(get_db)):
                           fame=item.fame if item.fame is not None else DEFAULT_FAME,
                           simulated_damage=item.simulated_damage,
                           sustained_dps=item.sustained_dps, buff_amount=item.buff_amount,
-                          sun_buff=item.sun_buff)
+                          sun_buff=item.sun_buff,
+                          adventure_party_id=ensure_default_party(db, user).id)
             db.add(c)
             db.flush()
             seen[item.name] = c
