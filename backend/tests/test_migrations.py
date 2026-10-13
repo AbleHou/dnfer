@@ -114,3 +114,39 @@ def test_migrate_waves_group_adds_column():
         idxs = {r[1] for r in conn.execute(text("PRAGMA index_list(waves)")).all()}
         assert "ix_waves_group_id" in idxs
     migrate_waves_group(engine)  # 幂等：再次运行不报错
+
+def test_migrate_adventure_parties_backfills():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE users (
+            id INTEGER PRIMARY KEY, username VARCHAR(64) UNIQUE,
+            password_hash VARCHAR(128), nickname VARCHAR(64),
+            is_admin BOOLEAN, created_at DATETIME)"""))
+        conn.execute(text("""INSERT INTO users (username, password_hash, nickname, is_admin, created_at)
+            VALUES ('u1', 'x', '张三', 0, '2026-09-01 10:00:00'),
+                   ('u2', 'x', '李四', 0, '2026-09-01 10:00:00')"""))
+        conn.execute(text("""CREATE TABLE characters (
+            id INTEGER PRIMARY KEY, user_id INTEGER, name VARCHAR(64),
+            job_name VARCHAR(64), class_type VARCHAR(8), fame INTEGER,
+            simulated_damage INTEGER, sustained_dps INTEGER, buff_amount INTEGER,
+            sun_buff INTEGER)"""))
+        conn.execute(text("""INSERT INTO characters (user_id, name, job_name, class_type, fame)
+            VALUES (1, '剑魂', 'weapon_master', '输出', 1), (1, '奶', 'crusader_male', '辅助', 1)"""))
+    from app.migrations import migrate_adventure_parties
+    migrate_adventure_parties(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(characters)")).all()}
+        assert "adventure_party_id" in cols
+        idxs = {r[1] for r in conn.execute(text("PRAGMA index_list(characters)")).all()}
+        assert "ix_characters_adventure_party_id" in idxs
+        rows = conn.execute(text(
+            "SELECT ap.name, c.name, c.adventure_party_id FROM adventure_parties ap"
+            " JOIN characters c ON c.adventure_party_id = ap.id ORDER BY c.id")).all()
+        assert [r[0] for r in rows] == ["张三的冒险团", "张三的冒险团"]
+        assert [r[1] for r in rows] == ["剑魂", "奶"]
+        # u2 无角色也建团
+        names = {r[0] for r in conn.execute(text("SELECT name FROM adventure_parties")).all()}
+        assert "李四的冒险团" in names
+    migrate_adventure_parties(engine)  # 幂等：不报错、不重复建团
+    with engine.begin() as conn:
+        assert conn.execute(text("SELECT COUNT(*) FROM adventure_parties")).scalar() == 2

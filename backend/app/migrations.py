@@ -115,6 +115,39 @@ def migrate_waves_group(engine: Engine) -> None:
             conn.execute(text("CREATE INDEX ix_waves_group_id ON waves (group_id)"))
 
 
+def migrate_adventure_parties(engine: Engine) -> None:
+    """为存量库补建冒险团：characters.adventure_party_id 列 + 每用户初始团回填（幂等）。"""
+    from . import models  # noqa: F401  确保模型注册
+    from .db import Base
+
+    Base.metadata.create_all(bind=engine)  # 建 adventure_parties 表（若缺）
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(characters)")).all()}
+        if "adventure_party_id" not in cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN"
+                              " adventure_party_id INTEGER REFERENCES adventure_parties(id)"))
+        idxs = {row[1] for row in conn.execute(text("PRAGMA index_list(characters)")).all()}
+        if "ix_characters_adventure_party_id" not in idxs:
+            conn.execute(text("CREATE INDEX ix_characters_adventure_party_id"
+                              " ON characters (adventure_party_id)"))
+        for uid, nickname in conn.execute(text("SELECT id, nickname FROM users")).all():
+            row = conn.execute(
+                text("SELECT id FROM adventure_parties WHERE user_id = :uid ORDER BY id LIMIT 1"),
+                {"uid": uid}).first()
+            if row is None:
+                party_id = conn.execute(
+                    text("INSERT INTO adventure_parties (user_id, name, created_at)"
+                         " VALUES (:uid, :name, :t)"),
+                    {"uid": uid, "name": f"{nickname}的冒险团",
+                     "t": datetime.now()}).lastrowid
+            else:
+                party_id = row[0]
+            conn.execute(
+                text("UPDATE characters SET adventure_party_id = :pid"
+                     " WHERE user_id = :uid AND adventure_party_id IS NULL"),
+                {"pid": party_id, "uid": uid})
+
+
 if __name__ == "__main__":
     from .db import engine
     migrate_dungeons(engine)
