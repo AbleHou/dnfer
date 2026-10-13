@@ -40,7 +40,7 @@
 ### 2.3 迁移 `migrate_adventure_parties`（幂等，挂到 `init_db()`）
 
 1. `Base.metadata.create_all(bind=engine)` 建新表（若缺）；
-2. `characters` 缺 `adventure_party_id` 列 → `ALTER TABLE characters ADD COLUMN adventure_party_id INTEGER REFERENCES adventure_parties(id)`；
+2. `characters` 缺 `adventure_party_id` 列 → `ALTER TABLE characters ADD COLUMN adventure_party_id INTEGER REFERENCES adventure_parties(id)`，并按 `migrate_waves_group` 惯例补建 `ix_characters_adventure_party_id` 索引（模型 `index=True` 只作用于新库建表，存量库需显式 `CREATE INDEX`）；
 3. **回填**：遍历所有用户，凡「没有任何冒险团」的用户都创建 `{nickname}的冒险团`，并把该用户全部角色挂到该团下。
    - 幂等：第二次运行时所有用户都有团，回填空转；
    - **0 角色的用户也建团**（满足「所有用户有一个初始冒险团」）；
@@ -60,7 +60,7 @@
 - `CharacterIn` 加 `adventure_party_id: int | None = None`（None → 缺省第一个团）。
 - `CharacterOut` 加 `adventure_party_id: int | None`、`adventure_party_name: str | None`。
 
-**序列化传播**：所有角色序列化都走 `character_out(c)`（raid 详情/报名、bot、admin 查询复用），`character_out` 补上两个新字段后各路径自动携带团信息，编队池与用户管理无需额外接口。`adventure_party_name` 取自 `c.adventure_party.name`（lazy，本工具规模下可接受，同现有 N+1 风格）。
+**序列化传播**：所有角色序列化都走 `character_out(c)`（raid 详情/报名、bot、admin 查询复用），`character_out` 补上两个新字段后各路径自动携带团信息，编队池与用户管理无需额外接口。`adventure_party_name` 取自 `c.adventure_party.name`（lazy，本工具规模下可接受，同现有 N+1 风格）；列可空，**取值需对 None 防护**（`c.adventure_party` 或 `.name` 为 None 时输出 null，避免裸属性访问抛错）。
 
 ### 3.2 service `services/parties.py`
 
@@ -123,9 +123,10 @@
 ### 4.4 RosterPool（编队角色池）
 
 - 结构改为：**用户组（保留现有折叠/搜索，按昵称过滤）→ 冒险团小节 → 角色**。
-- 小节头：团名 + 角色数；**小节本身也可折叠**（内存态，同现有 collapsed 模式），多账号玩家可收起次要团。
+- 小节头：团名 + 该团**在本池内**的角色数（池数据源自报名勾选角色，取池内计数即可，勿调团列表接口）；**小节本身也可折叠**（内存态，多账号玩家可收起次要团）。
+- **折叠态命名空间分离**：用户组折叠与团小节折叠分属两个独立 `Set`（团 id 与用户 id 各自独立自增序列，值可能撞号；共用一个 Set 会导致 toggle 互相污染）。
 - 团按 id 升序；团内角色按现有 `sortByPower` 排序；`adventure_party_id` 为 null 的角色（理论不会出现）归「未分组」小节。
-- 现有 RosterPool.spec（10 例依赖用户组直接渲染角色）需同步更新为两层结构。
+- 现有 RosterPool.spec（15 例，多数依赖用户组直接渲染角色）需同步更新为两层结构并补团小节 fixtures。
 
 ### 4.5 AdminUsersView（用户管理）
 
@@ -146,6 +147,7 @@
 - **bot**：`upsert_characters` 新角色归用户第一个团；已存在角色编辑不动团。
 - **序列化**：`character_out` 带 `adventure_party_id/adventure_party_name`；raid 详情报名角色带团字段。
 - 注册（web/QQ）后该用户已有初始团。
+- **ensure_default_party 兜底分支**：构造一个「无任何冒险团」的用户（绕过注册直接造数据），`ensure_default_party` 仍能现建 `{nickname}的冒险团` 并返回——该分支在正常流程下不可达（注册/迁移已保证 ≥1 团），靠此用例防静默腐化。
 
 ### 5.2 前端（Vitest）
 
