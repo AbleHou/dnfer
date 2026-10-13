@@ -1,4 +1,20 @@
+from app.models import Character, User
+
 from .helpers import register_user
+
+def test_character_out_includes_adventure_party(db):
+    from app.models import AdventureParty
+    from app.services.characters import character_out
+    u = User(username="s1", password_hash="x", nickname="阿伟", is_admin=False)
+    db.add(u); db.flush()
+    p = AdventureParty(user_id=u.id, name="阿伟的冒险团")
+    db.add(p); db.flush()
+    c = Character(user_id=u.id, name="剑魂", job_name="weapon_master",
+                  class_type="输出", adventure_party_id=p.id)
+    db.add(c); db.flush()
+    out = character_out(c)
+    assert out.adventure_party_id == p.id
+    assert out.adventure_party_name == "阿伟的冒险团"
 
 def test_character_crud(client):
     h, _ = register_user(client, "player1", "阿伟")

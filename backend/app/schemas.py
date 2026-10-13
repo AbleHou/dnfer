@@ -3,6 +3,15 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+class AdventurePartyIn(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+
+class AdventurePartyOut(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    character_count: int = 0
+
 class CharacterIn(BaseModel):
     name: str = Field(min_length=1, max_length=64)
     job_name: str = Field(min_length=1, max_length=64)
@@ -11,6 +20,7 @@ class CharacterIn(BaseModel):
     sustained_dps: int | None = None
     buff_amount: int | None = None
     sun_buff: int | None = None
+    adventure_party_id: int | None = None
 
 class CharacterOut(BaseModel):
     id: int
@@ -24,6 +34,8 @@ class CharacterOut(BaseModel):
     sustained_dps: int | None
     buff_amount: int | None
     sun_buff: int | None
+    adventure_party_id: int | None = None
+    adventure_party_name: str | None = None
 
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=64)

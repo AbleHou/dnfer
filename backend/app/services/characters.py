@@ -8,12 +8,15 @@ from ..schemas import CharacterIn, CharacterOut
 
 def character_out(c: Character) -> CharacterOut:
     meta = job_data.job_meta(c.job_name) or {"title": "", "parent_name": ""}
+    party = c.adventure_party
     return CharacterOut(id=c.id, name=c.name, job_name=c.job_name,
                         job_title=meta["title"], parent_name=meta["parent_name"],
                         class_type=c.class_type, fame=c.fame,
                         simulated_damage=c.simulated_damage,
                         sustained_dps=c.sustained_dps, buff_amount=c.buff_amount,
-                        sun_buff=c.sun_buff)
+                        sun_buff=c.sun_buff,
+                        adventure_party_id=c.adventure_party_id,
+                        adventure_party_name=party.name if party else None)
 
 
 def validate_job(job_name: str) -> None:

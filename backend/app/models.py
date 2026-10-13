@@ -19,6 +19,7 @@ class User(Base):
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     characters: Mapped[list["Character"]] = relationship(back_populates="owner")
+    adventure_parties: Mapped[list["AdventureParty"]] = relationship(back_populates="owner")
 
 class RegistrationCode(Base):
     __tablename__ = "registration_codes"
@@ -43,6 +44,19 @@ class Character(Base):
     buff_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)        # 辅助
     sun_buff: Mapped[int | None] = mapped_column(Integer, nullable=True)        # 辅助：太阳增益
     owner: Mapped[User] = relationship(back_populates="characters")
+    adventure_party_id: Mapped[int | None] = mapped_column(
+        ForeignKey("adventure_parties.id"), nullable=True, index=True)
+    adventure_party: Mapped["AdventureParty | None"] = relationship(back_populates="characters")
+
+class AdventureParty(Base):
+    __tablename__ = "adventure_parties"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    owner: Mapped[User] = relationship(back_populates="adventure_parties")
+    characters: Mapped[list["Character"]] = relationship(back_populates="adventure_party")
 
 class Dungeon(Base):
     __tablename__ = "dungeons"
