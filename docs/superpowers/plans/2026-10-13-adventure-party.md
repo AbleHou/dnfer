@@ -23,21 +23,24 @@
 - Modify: `backend/app/schemas.py`
 - Modify: `backend/app/services/characters.py`
 
-- [ ] **Step 1: 写失败测试**（先补一个验证序列化携带团字段的用例，追加到 `backend/tests/test_members.py`）
+- [ ] **Step 1: 写失败测试**（纯 service 级用例，直接驱动 `character_out`，不依赖端点；追加到 `backend/tests/test_members.py`，import 放文件头部）
 
 ```python
-def test_character_serializes_adventure_party(client):
-    h, _ = register_user(client, "party1", "阿团")
-    # 注册后应已有初始冒险团
-    parties = client.get("/api/me/adventure-parties", headers=h).json()
-    assert len(parties) == 1 and parties[0]["name"] == "阿团的冒险团"
-    r = client.post("/api/me/characters", headers=h, json={
-        "name": "剑魂", "job_name": "weapon_master", "fame": 1})
-    assert r.status_code == 200
-    assert r.json()["adventure_party_id"] == parties[0]["id"]
-    assert r.json()["adventure_party_name"] == "阿团的冒险团"
+def test_character_out_includes_adventure_party(db):
+    from app.models import AdventureParty
+    from app.services.characters import character_out
+    u = User(username="s1", password_hash="x", nickname="阿伟", is_admin=False)
+    db.add(u); db.flush()
+    p = AdventureParty(user_id=u.id, name="阿伟的冒险团")
+    db.add(p); db.flush()
+    c = Character(user_id=u.id, name="剑魂", job_name="weapon_master",
+                  class_type="输出", adventure_party_id=p.id)
+    db.add(c); db.flush()
+    out = character_out(c)
+    assert out.adventure_party_id == p.id
+    assert out.adventure_party_name == "阿伟的冒险团"
 ```
-（本用例依赖后续 Task 的端点，可先注释；TDD 粒度上先建模型+序列化，接口测试在 Task 4/5 补。实际执行时以「先让 `character_out` 带字段」为最小目标，跑 `test_members.py` 看新增字段断言失败。）
+（端点级「角色归团/缺省第一团」断言在 Task 5 覆盖，此处只驱动序列化；`User`/`Character` 已在 test_members.py 导入或用 `from app.models import ...`。）
 
 - [ ] **Step 2: 运行确认失败**
 
@@ -292,7 +295,7 @@ git commit -m "[feat] 冒险团 service（默认团/增改删/归属校验）"
 - [ ] **Step 1: 写失败测试**（追加到 `test_migrations.py`）
 
 ```python
-def test_migrate_adventure_parties_backfills(clientless_engine_fixture_unused=True):
+def test_migrate_adventure_parties_backfills():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     with engine.begin() as conn:
         conn.execute(text("""CREATE TABLE users (
@@ -392,15 +395,20 @@ git commit -m "[feat] 冒险团迁移：存量角色回填初始团"
 
 ---
 
-### Task 4: 成员冒险团 CRUD 路由 + main.py 注册
+### Task 4: 注册即建初始冒险团 + 成员冒险团 CRUD 路由 + main.py 注册
+
+> 为什么合并：CRUD/角色归属测试都依赖「注册即有初始团」（`GET /api/me/adventure-parties` 返回 1 个团）；而注册建团又依赖 parties 路由可查。两者必须在同一任务落地，避免任务序死锁。Task 5 起即可放心用 `register_user` 后直接取 `[0]` 团。
 
 **Files:**
 - Create: `backend/app/routers/parties.py`
 - Modify: `backend/app/main.py`
-- Test: `backend/tests/test_adventure_parties.py`
+- Modify: `backend/app/routers/auth.py`
+- Modify: `backend/app/routers/bot.py`
+- Test: `backend/tests/test_adventure_parties.py`, `backend/tests/test_auth.py`, `backend/tests/test_bot_register.py`
 
-- [ ] **Step 1: 写失败测试**（追加到 `test_adventure_parties.py`）
+- [ ] **Step 1: 写失败测试**
 
+`test_adventure_parties.py` 追加 CRUD + 归属用例：
 ```python
 def test_parties_api_crud(client):
     h, _ = register_user(client, "party2", "阿伟")
@@ -432,14 +440,54 @@ def test_parties_api_ownership(client):
                       json={"name": "x"}).status_code == 404
     assert client.delete(f"/api/me/adventure-parties/{pid}", headers=h2).status_code == 404
 ```
+`test_auth.py` 追加：
+```python
+def test_register_creates_initial_party(client):
+    admin = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    ah = {"Authorization": f"Bearer {admin.json()['token']}"}
+    code = client.post("/api/admin/codes", json={"single_use": True}, headers=ah).json()["code"]
+    r = client.post("/api/auth/register", json={
+        "username": "newbie", "password": "secret1", "nickname": "萌新", "code": code})
+    assert r.status_code == 200
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    parties = client.get("/api/me/adventure-parties", headers=h).json()
+    assert len(parties) == 1 and parties[0]["name"] == "萌新的冒险团"
+```
+`test_bot_register.py` 追加：
+```python
+def test_bot_register_creates_initial_party(client):
+    r = client.post("/api/public/register", json={"identifier": "12345678"},
+                    headers={"Authorization": "Bearer change-me-bot-token"})
+    assert r.status_code == 200
+    h = client.post("/api/auth/login", json={"username": "12345678", "password": "12345678"})
+    token = h.json()["token"]
+    parties = client.get("/api/me/adventure-parties",
+                         headers={"Authorization": f"Bearer {token}"}).json()
+    assert len(parties) == 1 and parties[0]["name"] == "12345678的冒险团"
+```
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_adventure_parties.py -v`
-Expected: 新增用例 FAIL（404 route）。
+Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_adventure_parties.py tests/test_auth.py tests/test_bot_register.py -v`
+Expected: 新增用例 FAIL（404 route / parties 为空）。
 
-- [ ] **Step 3: 实现路由**（`routers/parties.py`）
+- [ ] **Step 3: 实现注册即建团**（`auth.py` + `bot.py`）
 
+`auth.py` register：`from ..models import User` 改 `from ..models import AdventureParty, User`；`db.flush()` 后加：
+```python
+    db.add(AdventureParty(user_id=user.id, name=f"{body.nickname}的冒险团"))
+```
+`bot.py` register：`from ..models import AdventureParty, Character, RaidSignup, User`；`db.add(user)` 后、commit 前：
+```python
+    db.add(user)
+    db.flush()
+    db.add(AdventureParty(user_id=user.id, name=f"{identifier}的冒险团"))
+```
+（原 `db.add(user)` 后紧跟 `try: db.commit()`；改为 flush + add party 后再 commit。`test_bot_register.py` 既有用例若断言注册后数据，一般不受影响——只多建一条 party 行。）
+
+- [ ] **Step 4: 实现路由 + main.py 注册**
+
+`routers/parties.py`：
 ```python
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -487,9 +535,6 @@ def delete_my_party(pid: int, user: User = Depends(get_current_user),
     db.commit()
     return {"ok": True}
 ```
-
-- [ ] **Step 4: main.py 注册**
-
 `main.py`：`from .routers import admin, auth, bot, dungeons, jobs, members, parties, public, raids, votes` 加 `parties`；在 `app.include_router(members.router)` 后加 `app.include_router(parties.router)`。
 
 - [ ] **Step 5: 运行确认通过**
@@ -500,8 +545,8 @@ Expected: PASS。
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/app/routers/parties.py backend/app/main.py backend/tests/test_adventure_parties.py
-git commit -m "[feat] 成员冒险团 CRUD 端点"
+git add backend/app/routers/parties.py backend/app/main.py backend/app/routers/auth.py backend/app/routers/bot.py backend/tests/test_adventure_parties.py backend/tests/test_auth.py backend/tests/test_bot_register.py
+git commit -m "[feat] 注册即建初始冒险团 + 成员冒险团 CRUD 端点"
 ```
 
 ---
@@ -575,6 +620,8 @@ create：
 ```
 update：`apply_character_payload(c, body)` 后加 `c.adventure_party_id = resolve_party(db, user, body.adventure_party_id).id`。
 
+> **编辑语义**：编辑请求未带 `adventure_party_id`（None）时 `resolve_party` 会归到第一个团——这是 spec §3.5 的既定行为（CharacterForm 在 Task 10 之后总会提交该字段，故真实 UI 不会误触发）。实现时**不要**自作主张改成「编辑缺省保留原团」。
+
 - [ ] **Step 4: 运行确认通过**
 
 Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_members.py -v`
@@ -589,76 +636,7 @@ git commit -m "[feat] 成员角色创建/编辑指定冒险团（缺省第一团
 
 ---
 
-### Task 6: 注册（web + 机器人）即建初始冒险团
-
-**Files:**
-- Modify: `backend/app/routers/auth.py`
-- Modify: `backend/app/routers/bot.py`
-- Test: `backend/tests/test_auth.py`, `backend/tests/test_bot_register.py`
-
-- [ ] **Step 1: 写失败测试**
-
-`test_auth.py` 追加：
-```python
-def test_register_creates_initial_party(client):
-    admin = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
-    ah = {"Authorization": f"Bearer {admin.json()['token']}"}
-    code = client.post("/api/admin/codes", json={"single_use": True}, headers=ah).json()["code"]
-    r = client.post("/api/auth/register", json={
-        "username": "newbie", "password": "secret1", "nickname": "萌新", "code": code})
-    assert r.status_code == 200
-    h = {"Authorization": f"Bearer {r.json()['token']}"}
-    parties = client.get("/api/me/adventure-parties", headers=h).json()
-    assert len(parties) == 1 and parties[0]["name"] == "萌新的冒险团"
-```
-`test_bot_register.py` 追加：
-```python
-def test_bot_register_creates_initial_party(client):
-    r = client.post("/api/public/register", json={"identifier": "12345678"},
-                    headers={"Authorization": "Bearer change-me-bot-token"})
-    assert r.status_code == 200
-    h = client.post("/api/auth/login", json={"username": "12345678", "password": "12345678"})
-    token = h.json()["token"]
-    parties = client.get("/api/me/adventure-parties",
-                         headers={"Authorization": f"Bearer {token}"}).json()
-    assert len(parties) == 1 and parties[0]["name"] == "12345678的冒险团"
-```
-（注：`test_bot_register.py` 已有 register 成功用例，若其断言用户列表等不受影响；若该文件有「注册后直接建角色」的用例，机器人建角色已走 ensure_default_party，无需改。）
-
-- [ ] **Step 2: 运行确认失败**
-
-Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_auth.py tests/test_bot_register.py -v`
-Expected: 新增用例 FAIL（parties 为空）。
-
-- [ ] **Step 3: 实现**
-
-`auth.py` register：`from ..models import User` 改 `from ..models import AdventureParty, User`；`db.flush()` 后加：
-```python
-    db.add(AdventureParty(user_id=user.id, name=f"{body.nickname}的冒险团"))
-```
-`bot.py` register：`from ..models import AdventureParty, Character, RaidSignup, User`；在 `db.add(user)` 后、commit 前：
-```python
-    db.add(user)
-    db.flush()
-    db.add(AdventureParty(user_id=user.id, name=f"{identifier}的冒险团"))
-```
-（原 `db.add(user)` 后紧跟 `try: db.commit()`；改为 flush + add party 后再 commit。）
-
-- [ ] **Step 4: 运行确认通过**
-
-Run: `cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_auth.py tests/test_bot_register.py tests/test_bot_characters.py -v`
-Expected: PASS。
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add backend/app/routers/auth.py backend/app/routers/bot.py backend/tests/test_auth.py backend/tests/test_bot_register.py
-git commit -m "[feat] 注册即建初始冒险团（web/QQ）"
-```
-
----
-
-### Task 7: 机器人建角色默认归第一个团
+### Task 6: 机器人建角色默认归第一个团
 
 **Files:**
 - Modify: `backend/app/routers/bot.py`
@@ -715,7 +693,7 @@ git commit -m "[feat] 机器人建角色默认归第一冒险团"
 
 ---
 
-### Task 8: admin 端点（读用户团 + 建角色指定团）
+### Task 7: admin 端点（读用户团 + 建角色指定团）
 
 **Files:**
 - Modify: `backend/app/routers/admin.py`
@@ -795,7 +773,7 @@ git commit -m "[feat] admin 读用户冒险团 + 建角色指定团"
 
 ---
 
-### Task 9: 后端全量回归
+### Task 8: 后端全量回归
 
 **Files:**（无新增）
 
@@ -813,7 +791,7 @@ git commit -m "[fix] 冒险团后端回归修复"
 
 ---
 
-### Task 10: 前端 types.ts + 全部 Character 字面量 fixture 补字段
+### Task 9: 前端 types.ts + 全部 Character 字面量 fixture 补字段
 
 **Files:**
 - Modify: `frontend/src/types.ts`
@@ -863,7 +841,7 @@ git commit -m "[ref] Character 类型补冒险团字段并修全部 fixture"
 
 ---
 
-### Task 11: CharacterForm 冒险团下拉
+### Task 10: CharacterForm 冒险团下拉
 
 **Files:**
 - Modify: `frontend/src/components/CharacterForm.vue`
@@ -903,7 +881,7 @@ Expected: 新增用例 FAIL（无下拉元素）。
 
 - 导入 `onMounted`、`AdventureParty` 类型。
 - `form` 加 `adventure_party_id: props.editing?.adventure_party_id ?? null as number | null`。
-- 新 state：
+- 新 state（**注意 `?? []`**：既有 `CharacterForm.spec.ts` 只 `vi.clearAllMocks()` 未 stub parties 接口，`api.get` resolve 为 `undefined`，不防护会在 `parties.value.length` 抛 TypeError 破坏旧用例）：
 ```ts
 const parties = ref<AdventureParty[]>([])
 const partiesBase = computed(() => {
@@ -911,7 +889,7 @@ const partiesBase = computed(() => {
   return m ? `/api/admin/users/${m[1]}/adventure-parties` : '/api/me/adventure-parties'
 })
 onMounted(async () => {
-  try { parties.value = await api.get<AdventureParty[]>(partiesBase.value) }
+  try { parties.value = (await api.get<AdventureParty[]>(partiesBase.value)) ?? [] }
   catch { parties.value = [] }
   if (!props.editing && form.value.adventure_party_id == null && parties.value.length) {
     form.value.adventure_party_id = parties.value[0].id
@@ -944,7 +922,7 @@ git commit -m "[feat] 角色表单冒险团下拉（默认第一团/编辑回填
 
 ---
 
-### Task 12: MyCharactersView 冒险团管理 + AdventurePartyModal
+### Task 11: MyCharactersView 冒险团管理 + AdventurePartyModal
 
 **Files:**
 - Create: `frontend/src/components/AdventurePartyModal.vue`
@@ -1005,7 +983,7 @@ git commit -m "[feat] 我的角色页冒险团管理弹窗 + 卡片团名"
 
 ---
 
-### Task 13: RosterPool 按冒险团分小节
+### Task 12: RosterPool 按冒险团分小节
 
 **Files:**
 - Modify: `frontend/src/components/RosterPool.vue`
@@ -1085,6 +1063,7 @@ const groups = computed(() => props.signups
 </div>
 ```
 - `toggleParty(pid: number)`：`collapsedParty` 内 toggle（无团角色用哨兵 `-1`）。
+- **角色行 `.pool-char` 的现有标记/属性必须原样保留**（`data-act="pool-char-{id}"`、`blocked/holding/slack` 类、`划水`/`推荐→队色` 角标、图标与战力文本）——只改外层嵌套结构，不动行内逻辑。
 
 - [ ] **Step 4: 运行确认通过（含既有 15 例回归）**
 
@@ -1100,7 +1079,7 @@ git commit -m "[feat] 编队角色池按冒险团分小节（可折叠）"
 
 ---
 
-### Task 14: AdminUsersView 角色查询表加冒险团列
+### Task 13: AdminUsersView 角色查询表加冒险团列
 
 **Files:**
 - Modify: `frontend/src/views/AdminUsersView.vue`
@@ -1147,7 +1126,7 @@ git commit -m "[feat] 用户管理角色查询表显示冒险团列"
 
 ---
 
-### Task 15: 前端全量构建 + 测试回归
+### Task 14: 前端全量构建 + 测试回归
 
 **Files:**（无新增）
 
