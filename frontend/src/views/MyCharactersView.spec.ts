@@ -269,4 +269,33 @@ describe('MyCharactersView job picker', () => {
     await nextTick()
     expect(modal.props('open')).toBe(true)
   })
+
+  it('按冒险团排序：同团相邻、团内名望降序、未分组最后', async () => {
+    apiMock.get.mockResolvedValueOnce([
+      { ...mk(1, '无团奶', '辅助', 900), adventure_party_id: null, adventure_party_name: null },
+      { ...mk(2, '甲输出', '输出', 100), adventure_party_id: 1, adventure_party_name: '甲团' },
+      { ...mk(3, '甲奶', '辅助', 500), adventure_party_id: 1, adventure_party_name: '甲团' },
+      { ...mk(4, '乙输出', '输出', 300), adventure_party_id: 2, adventure_party_name: '乙团' },
+    ])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    const partyBtn = wrapper.findAll('button').find(b => b.text() === '按冒险团')!
+    await partyBtn.trigger('click')
+    await nextTick()
+    expect(wrapper.findAll('.dnf-panel b').map(b => b.text()))
+      .toEqual(['甲奶', '甲输出', '乙输出', '无团奶'])
+  })
+
+  it('按冒险团按钮激活高亮（按类型高亮取消）', async () => {
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    const typeBtn = wrapper.findAll('button').find(b => b.text() === '按类型')!
+    const partyBtn = wrapper.findAll('button').find(b => b.text() === '按冒险团')!
+    expect(typeBtn.classes()).toContain('dnf-btn-primary')
+    expect(partyBtn.classes()).not.toContain('dnf-btn-primary')
+    await partyBtn.trigger('click')
+    await nextTick()
+    expect(partyBtn.classes()).toContain('dnf-btn-primary')
+    expect(typeBtn.classes()).not.toContain('dnf-btn-primary')
+  })
 })

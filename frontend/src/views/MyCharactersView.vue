@@ -14,13 +14,18 @@ const editing = ref<Character | null>(null)
 const error = ref('')
 const partyModalOpen = ref(false)
 
-type SortMode = 'type' | 'fame'
+type SortMode = 'type' | 'fame' | 'party'
 const sortMode = ref<SortMode>('type')
 const TYPE_RANK: Record<Character['class_type'], number> = { 输出: 0, 辅助: 1 }
 
 const sorted = computed(() =>
   [...list.value].sort((a, b) => {
     if (sortMode.value === 'fame') return b.fame - a.fame || a.id - b.id
+    if (sortMode.value === 'party') {
+      const pa = a.adventure_party_id ?? Infinity
+      const pb = b.adventure_party_id ?? Infinity
+      return pa - pb || b.fame - a.fame || a.id - b.id
+    }
     return TYPE_RANK[a.class_type] - TYPE_RANK[b.class_type] || b.fame - a.fame || a.id - b.id
   }))
 
@@ -69,6 +74,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
                 @click="sortMode = 'type'">按类型</button>
         <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'fame' }"
                 @click="sortMode = 'fame'">按名望</button>
+        <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'party' }"
+                @click="sortMode = 'party'">按冒险团</button>
       </div>
     </div>
 
