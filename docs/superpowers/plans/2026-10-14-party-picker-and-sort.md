@@ -1,6 +1,6 @@
 # 冒险团信息进选人面板 + 我的角色按冒险团排序 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** ①攻坚详情页「点击占位」选人弹窗（CharacterPickerModal）的角色卡片上显示冒险团；②「我的角色」页新增「按冒险团」前端排序（同团相邻、团内名望降序、未分组最后）。
 
@@ -21,7 +21,7 @@
 - Modify: `frontend/src/components/CharacterCard.vue`
 - Test: `frontend/src/components/CharacterPickerModal.spec.ts`
 
-- [ ] **Step 1: 写失败测试**（在 `CharacterPickerModal.spec.ts` 末尾追加 describe 块；成员模式 `/api/me/characters` 模式参照既有「成员模式按自己 id 灰显」用例）
+- [x] **Step 1: 写失败测试**（在 `CharacterPickerModal.spec.ts` 末尾追加 describe 块；成员模式 `/api/me/characters` 模式参照既有「成员模式按自己 id 灰显」用例）
 
 ```ts
 describe('CharacterPickerModal adventure party', () => {
@@ -57,12 +57,12 @@ describe('CharacterPickerModal adventure party', () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
 Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/components/CharacterPickerModal.spec.ts`
 Expected: 新增「冒险团：阿伟的冒险团」用例 FAIL（卡片无该文本）；「无冒险团」用例 PASS（本就无该行）。
 
-- [ ] **Step 3: 实现 `CharacterCard.vue`**（在战力行 `div`（行 22-26）之后、flex 列 `div` 闭合（行 27）之前插入；样式对齐 SlotActionModal 的 `var(--dnf-text-faint)` / `12px`）
+- [x] **Step 3: 实现 `CharacterCard.vue`**（在战力行 `div`（行 22-26）之后、flex 列 `div` 闭合（行 27）之前插入；样式对齐 SlotActionModal 的 `var(--dnf-text-faint)` / `12px`）
 
 ```html
       <div v-if="character.adventure_party_name" style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
@@ -70,12 +70,12 @@ Expected: 新增「冒险团：阿伟的冒险团」用例 FAIL（卡片无该�
       </div>
 ```
 
-- [ ] **Step 4: 运行确认通过**
+- [x] **Step 4: 运行确认通过**
 
 Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/components/CharacterPickerModal.spec.ts`
 Expected: 全 PASS（含新增两例与既有用例）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/components/CharacterCard.vue frontend/src/components/CharacterPickerModal.spec.ts
@@ -90,7 +90,7 @@ git commit -m "[feat] 选人面板角色卡片显示冒险团"
 - Modify: `frontend/src/views/MyCharactersView.vue`
 - Test: `frontend/src/views/MyCharactersView.spec.ts`
 
-- [ ] **Step 1: 写失败测试**（在 `MyCharactersView.spec.ts` 的 `describe` 末尾追加两例；`mk(id, name, class_type, fame)` 已存在，用 spread 补团字段）
+- [x] **Step 1: 写失败测试**（在 `MyCharactersView.spec.ts` 的 `describe` 末尾追加两例；`mk(id, name, class_type, fame)` 已存在，用 spread 补团字段）
 
 ```ts
 it('按冒险团排序：同团相邻、团内名望降序、未分组最后', async () => {
@@ -123,12 +123,12 @@ it('按冒险团按钮激活高亮（按类型高亮取消）', async () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
 Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/views/MyCharactersView.spec.ts`
 Expected: 「按冒险团排序」用例 FAIL（无该按钮，find 抛错）；「高亮」用例 FAIL。
 
-- [ ] **Step 3: 实现 `MyCharactersView.vue`**
+- [x] **Step 3: 实现 `MyCharactersView.vue`**
 
 ① `SortMode` 扩为三值（行 17）：
 ```ts
@@ -150,12 +150,12 @@ type SortMode = 'type' | 'fame' | 'party'
                 @click="sortMode = 'party'">按冒险团</button>
 ```
 
-- [ ] **Step 4: 运行确认通过**
+- [x] **Step 4: 运行确认通过**
 
 Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/views/MyCharactersView.spec.ts`
 Expected: 全 PASS（含新增两例与既有用例）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/MyCharactersView.vue frontend/src/views/MyCharactersView.spec.ts
@@ -168,7 +168,7 @@ git commit -m "[feat] 我的角色页支持按冒险团排序"
 
 **Files:**（无新增）
 
-- [ ] **Step 1: 前端构建 + 全量测试**
+- [x] **Step 1: 前端构建 + 全量测试**
 
 Run: `cd /Users/able/toys/dnfer/frontend && npm run build`
 Expected: 构建 PASS（vue-tsc + vite，spec 也被 vue-tsc 检查）。
@@ -176,7 +176,7 @@ Expected: 构建 PASS（vue-tsc + vite，spec 也被 vue-tsc 检查）。
 Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run`
 Expected: 全 PASS。若有失败修复（如既有 spec 文本断言受 CharacterCard 新行影响——已核查无，但仍以实际为准）。
 
-- [ ] **Step 2: Commit（如有修复）**
+- [x] **Step 2: Commit（如有修复）**
 
 ```bash
 git add -A
@@ -187,7 +187,7 @@ git commit -m "[fix] 冒险团展示/排序前端回归修复"
 
 ## 验收清单（对照 spec）
 
-- [ ] `CharacterCard.vue` 显示 `冒险团：xxx`（null 不渲染）；`CharacterPickerModal.spec` 覆盖「显示/不显示」两分支。
-- [ ] `MemberCharactersModal`/`AdminUserCharactersModal` 复用 CharacterCard，同步显示（无需单独改动）。
-- [ ] `MyCharactersView` 支持「按冒险团」排序：同团相邻、团内名望降序、未分组（null）最后；按钮高亮。
-- [ ] `npm run build` 通过；前端 vitest 全量绿。
+- [x] `CharacterCard.vue` 显示 `冒险团：xxx`（null 不渲染）；`CharacterPickerModal.spec` 覆盖「显示/不显示」两分支。
+- [x] `MemberCharactersModal`/`AdminUserCharactersModal` 复用 CharacterCard，同步显示（无需单独改动）。
+- [x] `MyCharactersView` 支持「按冒险团」排序：同团相邻、团内名望降序、未分组（null）最后；按钮高亮。
+- [x] `npm run build` 通过；前端 vitest 全量绿。
