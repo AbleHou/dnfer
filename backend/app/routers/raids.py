@@ -43,6 +43,7 @@ def _clear_slot(slot: Slot) -> None:
 def _slot_out(slot: Slot) -> SlotOut:
     c = slot.character
     meta = job_data.job_meta(c.job_name) if c else None
+    party = c.adventure_party if c else None
     return SlotOut(
         id=slot.id, squad_index=slot.squad_index, row_index=slot.row_index,
         character_id=slot.character_id,
@@ -59,7 +60,8 @@ def _slot_out(slot: Slot) -> SlotOut:
         owner_nickname=c.owner.nickname if c else None,
         owner_avatar=c.owner.avatar if c else None,
         duty=slot.duty, version=slot.version,
-    )
+        adventure_party_id=c.adventure_party_id if c else None,
+        adventure_party_name=party.name if party else None)
 
 def _participates(db: Session, raid: Raid, user_id: int) -> bool:
     """用户是否参与本场攻坚：团长恒参与，其余须有报名行。"""

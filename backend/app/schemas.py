@@ -175,6 +175,8 @@ class SlotOut(BaseModel):
     owner_avatar: str | None
     duty: str | None
     version: int
+    adventure_party_id: int | None = None
+    adventure_party_name: str | None = None
 
 class WaveOut(BaseModel):
     id: int

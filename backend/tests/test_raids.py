@@ -347,3 +347,28 @@ def test_slot_out_includes_sun_buff(client):
     assert r.status_code == 200
     assert r.json()["slot"]["sun_buff"] == 3000
     assert r.json()["slot"]["buff_amount"] == 9000
+
+def test_fill_slot_serializes_adventure_party(client):
+    ah = _admin(client)
+    h, user = register_user(client, "p30", "阿伟")
+    parties = client.get("/api/me/adventure-parties", headers=h).json()
+    assert parties[0]["name"] == "阿伟的冒险团"  # 注册即建默认团
+    pid = parties[0]["id"]
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "剑魂", "job_name": "weapon_master", "fame": 20000}).json()["id"]
+    rid = make_raid(client, ah)["id"]
+    signup(client, rid, h)
+    slots = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"]
+    # 空格：两字段 null
+    assert slots[0]["adventure_party_id"] is None
+    assert slots[0]["adventure_party_name"] is None
+    # 填格后 slot 带团
+    r = client.post(f"/api/raids/{rid}/slots/{slots[0]['id']}/fill", headers=h,
+                    json={"character_id": cid})
+    assert r.status_code == 200
+    assert r.json()["slot"]["adventure_party_id"] == pid
+    assert r.json()["slot"]["adventure_party_name"] == "阿伟的冒险团"
+    # 详情页波网格 slot 带团
+    filled = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    assert filled["adventure_party_id"] == pid
+    assert filled["adventure_party_name"] == "阿伟的冒险团"
