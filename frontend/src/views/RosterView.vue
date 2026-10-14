@@ -219,7 +219,7 @@ onBeforeUnmount(() => {
 
     <div style="display:flex;gap:16px;align-items:flex-start">
       <!-- position:sticky;top:60px 依赖全局 .dnf-nav 顶栏高度（约50px）：改顶栏高度需同步调整 top -->
-      <aside style="width:260px;flex-shrink:0;max-height:70vh;overflow:auto;position:sticky;top:60px" data-test="roster-pool"
+      <aside style="width:260px;flex-shrink:0;max-height:70vh;overflow:auto;position:sticky;top:60px;padding:10px" data-test="roster-pool"
              class="dnf-panel" >
         <RosterPool :signups="store.raid.signups" :blocked-char-ids="blockedCharIds"
                     :slack-char-ids="slackCharIds" :recommend-top3="recommendTop3"
