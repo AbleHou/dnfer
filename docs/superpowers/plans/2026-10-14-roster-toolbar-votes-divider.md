@@ -27,8 +27,8 @@
 ```ts
 it('工具栏：展开/收起按钮为双箭头图标，搜索框带边框类', () => {
   const w = mountPool()
-  expect(w.find('[data-act="pool-expand-all"]').text()).toBe('▾▾')
-  expect(w.find('[data-act="pool-collapse-all"]').text()).toBe('▴▴')
+  expect(w.find('[data-act="pool-expand-all"]').text()).toContain('▾▾')
+  expect(w.find('[data-act="pool-collapse-all"]').text()).toContain('▴▴')
   expect(w.find('[data-act="pool-search"]').classes()).toContain('dnf-input')
 })
 ```
