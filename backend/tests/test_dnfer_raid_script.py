@@ -83,51 +83,70 @@ def test_pick_range_no_match_fallback_prefers_unlocked():
     assert meta.get("preferred_unlocked") is True
 
 
-def test_signup_target_prefers_next_future():
-    now = datetime(2026, 9, 23, 10, 0)  # 周三
-    raids = [
-        _raid(1, "2026-09-23T09:00:00"),   # 今天已过
-        _raid(2, "2026-09-26T14:00:00"),   # 下周六
-    ]
-    raid, reason = dnfer_raid._pick_signup_target(raids, now)
-    assert raid["id"] == 2
-    assert reason == "next"
-
-
-def test_signup_target_today_future_is_next():
+def test_signup_targets_no_unlocked():
     now = datetime(2026, 9, 23, 10, 0)
-    raids = [_raid(1, "2026-09-23T20:00:00")]
-    raid, reason = dnfer_raid._pick_signup_target(raids, now)
-    assert raid["id"] == 1
-    assert reason == "next"
+    raids = [_raid(1, "2026-09-23T10:00:00", locked=True)]
+    assert dnfer_raid._signup_targets(raids, now) == (None, [], "no_target")
 
 
-def test_signup_target_today_unlocked_fallback():
+def test_signup_targets_single_future_next():
+    now = datetime(2026, 9, 23, 10, 0)
+    target, cands, reason = dnfer_raid._signup_targets(
+        [_raid(1, "2026-09-23T20:00:00")], now)
+    assert target["id"] == 1 and cands == [] and reason == "next"
+
+
+def test_signup_targets_single_today_unlocked():
     now = datetime(2026, 9, 23, 15, 0)
-    raids = [
-        _raid(1, "2026-09-23T14:00:00"),              # 今天已过但未锁定
-        _raid(2, "2026-09-23T09:00:00", locked=True),  # 今天锁定 → 排除
-    ]
-    raid, reason = dnfer_raid._pick_signup_target(raids, now)
-    assert raid["id"] == 1
-    assert reason == "today_unlocked"
+    target, cands, reason = dnfer_raid._signup_targets(
+        [_raid(1, "2026-09-23T14:00:00")], now)
+    assert target["id"] == 1 and cands == [] and reason == "today_unlocked"
 
 
-def test_signup_target_excludes_locked_future():
+def test_signup_targets_single_stale_past_no_target():
+    now = datetime(2026, 9, 23, 10, 0)
+    # 唯一未锁定团是非当天的已过团 → 沿用旧逻辑 no_target
+    assert dnfer_raid._signup_targets(
+        [_raid(1, "2026-09-20T14:00:00")], now) == (None, [], "no_target")
+
+
+def test_signup_targets_multiple_unlocked_ambiguous_sorted():
     now = datetime(2026, 9, 23, 10, 0)
     raids = [
-        _raid(1, "2026-09-26T14:00:00", locked=True),  # 最近的下一次团已锁定 → 跳过
-        _raid(2, "2026-09-27T14:00:00"),               # 更远的未锁定团
+        _raid(3, "2026-09-26T15:00:00"),
+        _raid(1, "2026-09-26T14:00:00"),
+        _raid(2, "2026-09-26T14:00:00"),
+        _raid(9, "2026-09-27T10:00:00", locked=True),  # 锁定 → 排除
     ]
-    raid, reason = dnfer_raid._pick_signup_target(raids, now)
-    assert raid["id"] == 2
-    assert reason == "next"
+    target, cands, reason = dnfer_raid._signup_targets(raids, now)
+    assert target is None and reason == "ambiguous"
+    assert [c["id"] for c in cands] == [1, 2, 3]  # starts_at asc, id 次 key
 
 
-def test_signup_target_none():
+def test_signup_targets_multiple_but_one_unlocked_auto():
     now = datetime(2026, 9, 23, 10, 0)
-    raids = [_raid(1, "2026-09-20T14:00:00", locked=True)]
-    assert dnfer_raid._pick_signup_target(raids, now) == (None, None)
+    raids = [
+        _raid(1, "2026-09-26T14:00:00"),
+        _raid(2, "2026-09-27T10:00:00", locked=True),
+    ]
+    target, cands, reason = dnfer_raid._signup_targets(raids, now)
+    assert target["id"] == 1 and cands == [] and reason == "next"
+
+
+def test_candidate_out_shape_minimal_fixture():
+    r = {"id": 3, "name": "周本", "starts_at": "2026-10-18T20:00:00", "locked": False}
+    out = dnfer_raid._candidate_out(r)
+    assert out["id"] == 3 and out["name"] == "周本"
+    assert out["dungeon_name"] is None and out["size"] is None
+    assert out["locked"] is False
+    assert out["starts_at_local"] == "2026-10-18 20:00 周日"
+
+
+def test_candidate_out_passes_dungeon_and_size():
+    r = {"id": 3, "name": "周本", "dungeon_name": "雾神", "size": 12,
+         "locked": False, "starts_at": "2026-10-18T20:00:00"}
+    out = dnfer_raid._candidate_out(r)
+    assert out["dungeon_name"] == "雾神" and out["size"] == 12
 
 
 def test_signup_call_nickname_404_falls_back_to_account(monkeypatch):

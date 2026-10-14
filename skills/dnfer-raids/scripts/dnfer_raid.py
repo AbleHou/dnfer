@@ -194,6 +194,36 @@ def _pick_signup_target(raids: list, now: datetime) -> tuple[dict | None, str | 
     return None, None
 
 
+def _signup_targets(raids: list, now: datetime) -> tuple[dict | None, list, str]:
+    """报名/取消报名的目标判定（纯函数）。
+    返回 (target, candidates, reason)：
+    - 未锁定团 == 0            → (None, [], "no_target")
+    - 未锁定团 == 1            → 沿用 _pick_signup_target：
+                                未来→next / 当天→today_unlocked / 陈旧过去→no_target
+    - 未锁定团 >= 2            → (None, 全部未锁定团, "ambiguous")
+                                candidates 按 (starts_at asc, id asc) 排序
+    """
+    unlocked = [r for r in raids if not r["locked"]]
+    if not unlocked:
+        return None, [], "no_target"
+    if len(unlocked) > 1:
+        candidates = sorted(unlocked,
+                            key=lambda r: (_parse_iso(r["starts_at"]), r["id"]))
+        return None, candidates, "ambiguous"
+    target, reason = _pick_signup_target(raids, now)
+    if target is None:
+        return None, [], "no_target"
+    return target, [], reason
+
+
+def _candidate_out(r: dict) -> dict:
+    """候选输出形状；可选字段 .get() 宽容（测试 fixture 字段集不同）。"""
+    return {"id": r["id"], "name": r["name"],
+            "dungeon_name": r.get("dungeon_name"), "size": r.get("size"),
+            "locked": r["locked"],
+            "starts_at_local": _fmt_local(_parse_iso(r["starts_at"]))}
+
+
 # ---------- 命令 ----------
 
 def _shape_wave(wave: dict) -> dict:
