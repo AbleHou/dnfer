@@ -103,3 +103,18 @@ def test_parties_api_ownership(client):
     assert client.put(f"/api/me/adventure-parties/{pid}", headers=h2,
                       json={"name": "x"}).status_code == 404
     assert client.delete(f"/api/me/adventure-parties/{pid}", headers=h2).status_code == 404
+
+
+def test_party_create_duplicate_race_returns_400(client, db):
+    """并发兜底：绕过应用层预检查插入同名团，再经 API 创建同名 → 400 而非 500。"""
+    from sqlalchemy import text
+    h, user = register_user(client, "race1", "阿伟")
+    # 用 SQL 直接插入一个同名团（绕过 create_party 的预检查），但不 commit → 同事务可见
+    db.execute(text("INSERT INTO adventure_parties (user_id, name, created_at)"
+                    " VALUES (:uid, '奶爸团', :t)"),
+               {"uid": user["id"], "t": "2026-10-13 00:00:00"})
+    db.flush()
+    # API 创建同名团 → 应用层预检查发现同名 → 400
+    r = client.post("/api/me/adventure-parties", headers=h, json={"name": "奶爸团"})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "冒险团已存在"

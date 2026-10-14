@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_user
@@ -22,7 +23,11 @@ def create_my_party(body: AdventurePartyIn,
                     user: User = Depends(get_current_user),
                     db: Session = Depends(get_db)):
     p = create_party(db, user, body.name)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(400, "冒险团已存在")
     db.refresh(p)
     return party_out(p)
 
@@ -32,7 +37,11 @@ def rename_my_party(pid: int, body: AdventurePartyIn,
                     user: User = Depends(get_current_user),
                     db: Session = Depends(get_db)):
     p = rename_party(db, user, pid, body.name)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(400, "冒险团已存在")
     db.refresh(p)
     return party_out_with_count(db, p)
 
