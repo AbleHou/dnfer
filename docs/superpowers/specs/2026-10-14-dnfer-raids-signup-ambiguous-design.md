@@ -153,9 +153,11 @@ python scripts/dnfer_raid.py unsign 龙应藏进云里 --raid 3
 - `test_signup_target_excludes_locked_future`（一团未锁定未来 + 一团锁定）→ 单团路径仍 `next`。
 - `test_signup_target_none`（全锁定）→ 仍 `no_target`。
 
-### 可选：`cmd_signup --raid` 走通
+### 可选：`cmd_signup` 走通（monkeypatch `_request` + `capsys`）
 
-monkeypatch `_request` + `capsys`，断言带 `--raid` 时直接调用对应 `/api/public/raids/{id}/signup` 且 stdout `reason:"specified"`。
+- 带 `--raid`：直接调用对应 `/api/public/raids/{id}/signup`，stdout `reason:"specified"`。
+- 不带 `--raid` 且 `_request` 返回多未锁定团：stdout 为 `ambiguous` + `candidates` JSON（锁定 `_signup_targets` 与 stdout 发射之间的胶水，防纯函数单测通过但输出契约漂移）。
+- `--raid` 成功路径访问 `resp["raid"]` 时用 `.get()` 取（与脚本既有防御式风格一致）。
 
 ## 7. CHANGELOG
 
