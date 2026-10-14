@@ -8,13 +8,13 @@ const u1: User = { id: 1, username: 'a', nickname: '甲', is_admin: false, avata
 const u2: User = { id: 2, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
 const c1: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂', parent_name: '鬼剑士',
   class_type: '输出', fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null,
-  adventure_party_id: 1, adventure_party_name: '甲的冒险团' }
+  adventure_party_id: 100, adventure_party_name: '甲团' }
 const c2: Character = { id: 11, name: '奶', job_name: 'crusader_female', job_title: '神启·圣骑士', parent_name: '圣职者',
   class_type: '辅助', fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0,
-  adventure_party_id: 1, adventure_party_name: '甲的冒险团' }
+  adventure_party_id: 100, adventure_party_name: '甲团' }
 const c3: Character = { ...c1, id: 12, name: '划水剑', simulated_damage: 100,
-  adventure_party_id: 2, adventure_party_name: '乙的冒险团' }
-const c4: Character = { ...c1, id: 13, name: '弱剑', simulated_damage: 100 }
+  adventure_party_id: 200, adventure_party_name: '乙团' }
+const c4: Character = { ...c1, id: 13, name: '弱剑', simulated_damage: 100, adventure_party_id: 100, adventure_party_name: '甲团' }
 const signups: RaidSignup[] = [
   { user: u1, created_at: null, characters: [c1, c2] },
   { user: u2, created_at: 'x', characters: [c3] },
@@ -123,5 +123,24 @@ describe('RosterPool', () => {
     await w.find('[data-act="pool-search"]').setValue('')    // 清空
     expect(w.find('[data-act="pool-char-12"]').exists()).toBe(false)  // 折叠态保留
     expect(w.findAll('[data-test="pool-user"]').length).toBe(2)
+  })
+  it('用户组下按冒险团分小节，小节头显示团名与角色数', () => {
+    const w = mountPool()
+    const user1 = w.find('[data-test="pool-user"]')
+    expect(user1.text()).toContain('甲团')
+    expect(w.find('[data-party-id="100"]').text()).toContain('甲团')
+    expect(w.findAll('[data-test="pool-party"]').length).toBe(2)  // 甲团(用户1) + 乙团(用户2)
+  })
+  it('团小节可折叠：收起后该团角色不渲染', async () => {
+    const w = mountPool()
+    await w.find('[data-party-id="100"]').trigger('click')
+    expect(w.find('[data-act="pool-char-10"]').exists()).toBe(false)
+    expect(w.find('[data-act="pool-char-11"]').exists()).toBe(false)
+    expect(w.find('[data-act="pool-char-12"]').exists()).toBe(true)  // 乙团仍在
+  })
+  it('同用户多团：角色按团分开渲染', () => {
+    const w = mountPool({ signups: [{ user: u1, created_at: null,
+      characters: [c1, c2, { ...c1, id: 20, name: '小号', adventure_party_id: 300, adventure_party_name: '小号团' }] }] })
+    expect(w.findAll('[data-test="pool-party"]').length).toBe(2)
   })
 })

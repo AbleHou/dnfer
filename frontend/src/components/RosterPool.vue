@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import { sortByPower } from '../lib/roster'
-import type { Character, RaidSignup } from '../types'
+import type { Character, RaidSignup, User } from '../types'
 
 const props = withDefaults(defineProps<{
   signups: RaidSignup[]
@@ -16,10 +16,26 @@ const props = withDefaults(defineProps<{
 }>(), { recommendTop3: () => new Set(), recommendTarget: () => ({}) })
 const emit = defineEmits<{ (e: 'pick', c: Character): void }>()
 
-// 按用户分组；组内按战力排序（输出模拟伤害/辅助增益 desc）
+interface PoolParty { id: number | null; name: string; chars: Character[] }
+interface PoolUser { user: User; parties: PoolParty[] }
+
+// 按冒险团分组（未分组归入 null）；组内按战力排序（输出模拟伤害/辅助增益 desc）
+function groupByParty(chars: Character[]): PoolParty[] {
+  const map = new Map<number | null, Character[]>()
+  for (const c of chars) {
+    const k = c.adventure_party_id
+    if (!map.has(k)) map.set(k, [])
+    map.get(k)!.push(c)
+  }
+  return [...map.entries()].sort((a, b) => (a[0] ?? Infinity) - (b[0] ?? Infinity))
+    .map(([id, list]) => ({ id, name: id == null ? '未分组' : (list[0].adventure_party_name ?? '冒险团'),
+                            chars: sortByPower(list) }))
+}
+
+// 两层分组：用户 → 冒险团小节
 const groups = computed(() => props.signups
   .filter(s => s.characters.length > 0)
-  .map(s => ({ user: s.user, chars: sortByPower(s.characters) })))
+  .map(s => ({ user: s.user, parties: groupByParty(s.characters) })))
 
 // 折叠态（内存态，离开页面重置）：收起 user.id 集合，默认全展开
 const collapsed = ref<Set<number>>(new Set())
@@ -31,6 +47,15 @@ function toggleGroup(uid: number) {
 }
 function collapseAll() { collapsed.value = new Set(groups.value.map(g => g.user.id)) }
 function expandAll() { collapsed.value = new Set() }
+
+// 冒险团小节折叠态（内存态）：独立于用户折叠 Set（团 id 与用户 id 可撞号）
+const collapsedParty = ref<Set<number>>(new Set())
+function toggleParty(pid: number) {
+  const next = new Set(collapsedParty.value)
+  if (next.has(pid)) next.delete(pid)
+  else next.add(pid)
+  collapsedParty.value = next
+}
 
 // 用户名搜索（角色名不参与、不改折叠态）：空词显示全部
 const query = ref('')
@@ -64,24 +89,33 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
         </span>{{ g.user.nickname }}
       </div>
       <div v-if="!collapsed.has(g.user.id)">
-        <div v-for="c in g.chars" :key="c.id" class="pool-char"
-             :class="{ blocked: blockedCharIds.has(c.id), holding: holdingId === c.id,
-                       slack: slackCharIds.has(c.id) }"
-             :data-act="`pool-char-${c.id}`" @click="onPick(c)">
-          <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:26px;height:26px">
-          <div style="flex:1;min-width:0">
-            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              <b>{{ c.name }}</b>
-              <span style="color:var(--dnf-text-muted);font-size:12px">
-                {{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }}
+        <div v-for="p in g.parties" :key="p.id ?? '__u'" class="pool-party" data-test="pool-party">
+          <div class="pool-party-head" :data-party-id="p.id ?? '__u'" @click="toggleParty(p.id ?? -1)">
+            <span style="color:var(--dnf-text-muted,#9aa3b2);width:12px;display:inline-block">
+              {{ collapsedParty.has(p.id ?? -1) ? '▸' : '▾' }}
+            </span>{{ p.name }}<span style="color:var(--dnf-text-faint,#6b7280);font-size:12px">（{{ p.chars.length }}）</span>
+          </div>
+          <div v-if="!collapsedParty.has(p.id ?? -1)">
+            <div v-for="c in p.chars" :key="c.id" class="pool-char"
+                 :class="{ blocked: blockedCharIds.has(c.id), holding: holdingId === c.id,
+                           slack: slackCharIds.has(c.id) }"
+                 :data-act="`pool-char-${c.id}`" @click="onPick(c)">
+              <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:26px;height:26px">
+              <div style="flex:1;min-width:0">
+                <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  <b>{{ c.name }}</b>
+                  <span style="color:var(--dnf-text-muted);font-size:12px">
+                    {{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }}
+                  </span>
+                </div>
+                <div style="color:var(--dnf-text-faint);font-size:12px">{{ powerText(c) }}</div>
+              </div>
+              <span v-if="slackCharIds.has(c.id)" class="pool-tag slack">划水</span>
+              <span v-if="recommendTop3.has(c.id)" class="pool-tag rec">
+                推荐<template v-if="recommendTarget[c.id] != null">→{{ SQUAD_NAMES[recommendTarget[c.id]!] ?? `队${recommendTarget[c.id]! + 1}` }}</template>
               </span>
             </div>
-            <div style="color:var(--dnf-text-faint);font-size:12px">{{ powerText(c) }}</div>
           </div>
-          <span v-if="slackCharIds.has(c.id)" class="pool-tag slack">划水</span>
-          <span v-if="recommendTop3.has(c.id)" class="pool-tag rec">
-            推荐<template v-if="recommendTarget[c.id] != null">→{{ SQUAD_NAMES[recommendTarget[c.id]!] ?? `队${recommendTarget[c.id]! + 1}` }}</template>
-          </span>
         </div>
       </div>
     </div>
@@ -91,6 +125,8 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
 <style scoped>
 .pool-user { margin-bottom: 10px; }
 .pool-user-head { font-weight: bold; margin-bottom: 4px; color: var(--dnf-text-muted,#9aa3b2); cursor: pointer; }
+.pool-party { margin-bottom: 6px; }
+.pool-party-head { margin-bottom: 2px; color: var(--dnf-text-muted,#9aa3b2); cursor: pointer; }
 .pool-char { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--dnf-border,#3a3f4b);
   border-radius: 6px; margin-bottom: 4px; cursor: pointer; }
 .pool-char.blocked { opacity: .45; filter: grayscale(1); cursor: default; }
