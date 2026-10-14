@@ -21,11 +21,13 @@ adventure_party_name: str | None = None
 
 ### 2.2 raids.py — `_slot_out()` 填充
 
-`_slot_out(slot)`（raids.py:43，唯一 Slot 序列化点）当前取 `c = slot.character` 与 `meta`。补：
+`_slot_out(slot)`（raids.py:43，唯一 Slot 序列化点）当前取 `c = slot.character` 与 `meta`。补（绑定 `party` 一次，同 `character_out` 风格）：
 
 ```python
-adventure_party_id=c.adventure_party_id if c else None,
-adventure_party_name=c.adventure_party.name if c and c.adventure_party else None,
+    party = c.adventure_party if c else None
+    ...
+    adventure_party_id=c.adventure_party_id if c else None,
+    adventure_party_name=party.name if party else None,
 ```
 
 - None 防护：空格（`c is None`）与「角色无团」（理论不出现，防御）均输出 null。
@@ -40,7 +42,7 @@ adventure_party_name=c.adventure_party.name if c and c.adventure_party else None
 adventure_party_id: number | null; adventure_party_name: string | null
 ```
 
-- `Slot` 是必填字段，手写 `Slot` 字面量 fixture（SlotCell/RosterGrid/RosterSlot/RaidDetailView/stores/raid/RosterView 等 spec）会过不了 vue-tsc，需一并补（vue-tsc 为准，同类坑见记忆库）。
+- `Slot` 是必填字段，手写 `Slot` 字面量 fixture 会过不了 vue-tsc，需一并补（vue-tsc 为准，同类坑见记忆库）。已知候选（含但不限于）：`RaidDetailView.spec`、`SlotCell.spec`、`RosterSlot.spec`、`RosterGrid.spec`、`RosterView.spec`、`stores/raid.spec`、`composables/useSlotMove.spec`、`lib/damage.spec`、`lib/roster.spec`、`lib/placement.spec`。
 
 ### 3.2 SlotActionModal.vue — 展示冒险团
 
