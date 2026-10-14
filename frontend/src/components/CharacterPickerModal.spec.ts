@@ -180,3 +180,35 @@ describe('CharacterPickerModal grayByUser', () => {
     expect(grayed.text()).toContain('奶')
   })
 })
+
+describe('CharacterPickerModal adventure party', () => {
+  it('角色卡片显示所属冒险团', async () => {
+    const char = { id: 12, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+      parent_name: 'priest_male', class_type: '辅助', fame: 1, simulated_damage: null,
+      sustained_dps: null, buff_amount: 9000, sun_buff: null,
+      adventure_party_id: 7, adventure_party_name: '阿伟的冒险团' }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/me/characters') return [char]
+      return []
+    })
+    const wrapper = mount(CharacterPickerModal, {
+      props: { open: true, adminMode: false },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('冒险团：阿伟的冒险团')
+  })
+
+  it('无冒险团时不显示冒险团行', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/me/characters') return [mine.characters[0]] // mine 未设团字段
+      return []
+    })
+    const wrapper = mount(CharacterPickerModal, {
+      props: { open: true, adminMode: false },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('冒险团')
+  })
+})

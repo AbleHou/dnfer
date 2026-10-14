@@ -24,6 +24,9 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
           ? `模拟 ${fmtDps(character.simulated_damage)} · 秒伤 ${fmtDps(character.sustained_dps)}`
           : `增益 ${fmtBuff(character.buff_amount)} · 太阳 ${fmtBuff(character.sun_buff)}` }}
       </div>
+      <div v-if="character.adventure_party_name" style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
+        冒险团：{{ character.adventure_party_name }}
+      </div>
     </div>
     <span v-if="placement" class="placed-badge">
       已占位 · 第{{ placement.wave_index }}波 · {{ SQUAD_NAMES[placement.squad_index] ?? `队${placement.squad_index + 1}` }}
