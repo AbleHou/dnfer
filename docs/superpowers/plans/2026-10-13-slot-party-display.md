@@ -29,6 +29,7 @@ def test_fill_slot_serializes_adventure_party(client):
     ah = _admin(client)
     h, user = register_user(client, "p30", "阿伟")
     parties = client.get("/api/me/adventure-parties", headers=h).json()
+    assert parties[0]["name"] == "阿伟的冒险团"  # 注册即建默认团
     pid = parties[0]["id"]
     cid = client.post("/api/me/characters", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 20000}).json()["id"]
@@ -70,7 +71,7 @@ Expected: FAIL（`adventure_party_id` KeyError / None）。
 ```python
     party = c.adventure_party if c else None
 ```
-在 `SlotOut(...)` 构造尾部加：
+在 `SlotOut(...)` 构造尾部、现有 `version=slot.version` 之后、**闭合 `)` 之前**插入两行（现有 `version` 行尾带逗号，直接追加即可；`adventure_party_name` 行尾改成闭合 `)`）：
 ```python
         adventure_party_id=c.adventure_party_id if c else None,
         adventure_party_name=party.name if party else None)
