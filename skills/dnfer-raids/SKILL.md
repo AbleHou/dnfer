@@ -33,7 +33,7 @@ python scripts/dnfer_raid.py detail <id> --all
 python scripts/dnfer_raid.py detail <id> --wave 3
 python scripts/dnfer_raid.py detail <id> --waves 3
 
-# 替玩家报名/取消报名：目标团为「当前时间下一次的团」，无则回退「当天未锁定的团」
+# 替玩家报名/取消报名：单团自动（未来优先/当天未锁定回退）；多团列候选询问；--raid 指定
 python scripts/dnfer_raid.py signup 872557240
 python scripts/dnfer_raid.py signup 龙应藏进云里
 python scripts/dnfer_raid.py unsign 872557240
