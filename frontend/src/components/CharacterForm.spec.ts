@@ -71,6 +71,50 @@ describe('CharacterForm', () => {
     await wrapper.find('[data-job="weapon_master"]').trigger('click')
     expect(wrapper.find('#char-sun-buff').exists()).toBe(false)
   })
+  it('冒险团下拉默认第一个团并在保存时提交', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/me/adventure-parties') return [
+        { id: 1, name: '甲的冒险团', created_at: '', character_count: 0 },
+        { id: 2, name: '奶爸团', created_at: '', character_count: 0 },
+      ]
+      return []
+    })
+    apiMock.post.mockResolvedValue({})
+    const wrapper = mount(CharacterForm, { props: { categories, editing: null } })
+    await flushPromises()
+    const sel = wrapper.find('[data-act="adventure-party"]').element as HTMLSelectElement
+    expect(sel.value).toBe('1')
+    await fillAndSave(wrapper)
+    expect(apiMock.post.mock.calls[0][1].adventure_party_id).toBe(1)
+  })
+
+  it('编辑态回填当前冒险团', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/me/adventure-parties') return [
+        { id: 1, name: '甲的冒险团', created_at: '', character_count: 0 },
+        { id: 2, name: '奶爸团', created_at: '', character_count: 0 },
+      ]
+      return []
+    })
+    const editing = { id: 5, name: '旧', job_name: 'weapon_master', job_title: 'x',
+      parent_name: 'swordman_male', class_type: '输出' as const, fame: 1,
+      simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+      adventure_party_id: 2, adventure_party_name: '奶爸团' }
+    const wrapper = mount(CharacterForm, { props: { categories, editing } })
+    await flushPromises()
+    const sel = wrapper.find('[data-act="adventure-party"]').element as HTMLSelectElement
+    expect(sel.value).toBe('2')
+  })
+
+  it('admin baseUrl 时请求该用户的团列表', async () => {
+    const spy = vi.fn(async () => [])
+    apiMock.get.mockImplementation(spy)
+    const wrapper = mount(CharacterForm,
+      { props: { categories, editing: null, baseUrl: '/api/admin/users/7/characters' } })
+    await flushPromises()
+    expect(spy).toHaveBeenCalledWith('/api/admin/users/7/adventure-parties')
+  })
+
   it('辅助切回输出职业清空太阳增益（与增益量对称）', async () => {
     apiMock.post.mockResolvedValue({})
     const both = [

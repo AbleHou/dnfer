@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '../api/client'
 import { categoryIcon, jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
-import type { Character, JobCategory, JobChild } from '../types'
+import type { AdventureParty, Character, JobCategory, JobChild } from '../types'
 
 const props = defineProps<{ categories: JobCategory[]; editing: Character | null; baseUrl?: string }>()
 const base = () => props.baseUrl ?? '/api/me/characters'
@@ -12,7 +12,20 @@ const form = ref({ name: props.editing?.name ?? '', fame: props.editing?.fame ??
   simulated_damage: props.editing?.simulated_damage ?? null as number | null,
   sustained_dps: props.editing?.sustained_dps ?? null as number | null,
   buff_amount: props.editing?.buff_amount ?? null as number | null,
-  sun_buff: props.editing?.sun_buff ?? null as number | null })
+  sun_buff: props.editing?.sun_buff ?? null as number | null,
+  adventure_party_id: props.editing?.adventure_party_id ?? null as number | null })
+const parties = ref<AdventureParty[]>([])
+const partiesBase = computed(() => {
+  const m = props.baseUrl?.match(/\/api\/admin\/users\/(\d+)/)
+  return m ? `/api/admin/users/${m[1]}/adventure-parties` : '/api/me/adventure-parties'
+})
+onMounted(async () => {
+  try { parties.value = (await api.get<AdventureParty[]>(partiesBase.value)) ?? [] }
+  catch { parties.value = [] }
+  if (!props.editing && form.value.adventure_party_id == null && parties.value.length) {
+    form.value.adventure_party_id = parties.value[0].id
+  }
+})
 const selectedCat = ref<JobCategory | null>(
   props.categories.find(cat => cat.name === props.editing?.parent_name) ?? null)
 const selectedJob = ref<JobChild | null>(
@@ -38,7 +51,7 @@ async function save() {
       fame: Number(form.value.fame) || 0,
       simulated_damage: form.value.simulated_damage,
       sustained_dps: form.value.sustained_dps, buff_amount: form.value.buff_amount,
-      sun_buff: form.value.sun_buff }
+      sun_buff: form.value.sun_buff, adventure_party_id: form.value.adventure_party_id }
     if (props.editing) await api.put(`${base()}/${props.editing.id}`, payload)
     else await api.post(base(), payload)
     emit('saved')
@@ -83,6 +96,13 @@ async function save() {
     <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
       <label for="char-fame" class="form-label">名望：</label>
       <input id="char-fame" v-model.number="form.fame" type="number" class="dnf-input" style="flex:1" />
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+      <label for="char-party" class="form-label">冒险团：</label>
+      <select id="char-party" v-model.number="form.adventure_party_id" class="dnf-select"
+              style="flex:1" data-act="adventure-party">
+        <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
     </div>
     <template v-if="selectedJob">
       <template v-if="!isSupport">
