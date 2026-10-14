@@ -230,3 +230,35 @@ def test_cmd_signup_ambiguous_outputs_candidates(monkeypatch, capsys):
     assert out["selected"] is None and out["reason"] == "ambiguous"
     assert [c["id"] for c in out["candidates"]] == [1, 2]
     assert out["candidates"][0]["starts_at_local"] == "2026-10-18 20:00 周日"
+
+
+def test_cmd_signup_raid_failure_passthrough(monkeypatch, capsys):
+    """--raid 指向不存在团：后端 404 透传 _fail（退出 1，stdout ok:false）。
+    昵称→账号 404 回退会触发一次冗余二次请求（spec §3.3 已注明无害）。"""
+    calls = []
+    def fake_request(method, url, body=None):
+        calls.append((method, url, body))
+        return {"ok": False, "status": 404, "error": "攻坚不存在"}
+    monkeypatch.setattr(dnfer_raid, "_request", fake_request)
+    args = argparse.Namespace(identifier="872557240", raid_id=3, cancel=False)
+    code = dnfer_raid.cmd_signup(args)
+    out = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert out == {"ok": False, "status": 404, "error": "攻坚不存在"}
+    assert len(calls) == 2  # nickname 404 → 回退 account（仍 404）
+    assert calls[0][1].endswith("/api/public/raids/3/signup")
+
+
+def test_cmd_signup_no_target(monkeypatch, capsys):
+    """全部团已锁定 → _signup_targets 返回 no_target，stdout selected:null + reason:no_target。"""
+    monkeypatch.setattr(dnfer_raid, "_now_local",
+                        lambda: datetime(2026, 9, 23, 10, 0))
+    def fake_request(method, url, body=None):
+        return [{"id": 1, "name": "团1", "locked": True,
+                 "starts_at": "2026-09-23T09:00:00"}]
+    monkeypatch.setattr(dnfer_raid, "_request", fake_request)
+    args = argparse.Namespace(identifier="872557240", raid_id=None, cancel=False)
+    code = dnfer_raid.cmd_signup(args)
+    out = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert out == {"ok": True, "selected": None, "reason": "no_target"}
