@@ -43,4 +43,14 @@ describe('VotesView', () => {
     expect(wrapper.find('[data-act="create-toggle"]').exists()).toBe(false) // auth.user 为 null → 非管理员
     wrapper.unmount()
   })
+  it('投票卡包在 .vote-list 容器内（间距分隔）', async () => {
+    const wrapper = mount(VotesView, {
+      global: { plugins: [createPinia()], stubs: { VoteCard: true } },
+    })
+    await flushPromises()
+    const list = wrapper.find('.vote-list')
+    expect(list.exists()).toBe(true)
+    expect(list.findComponent({ name: 'VoteCard' }).exists()).toBe(true)
+    wrapper.unmount()  // 清掉 5s 轮询定时器
+  })
 })

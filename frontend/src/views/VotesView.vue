@@ -32,8 +32,14 @@ onUnmounted(stopPolling)
       <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-primary" data-act="create-toggle"
               @click="showCreate = !showCreate">＋ 发起投票</button>
     </div>
-    <VoteCard v-for="v in votes" :key="v.id" :vote="v" :is-admin="auth.isAdmin" @refresh="load" />
+    <div class="vote-list">
+      <VoteCard v-for="v in votes" :key="v.id" :vote="v" :is-admin="auth.isAdmin" @refresh="load" />
+    </div>
     <p v-if="!votes.length" style="color:var(--dnf-text-faint)">还没有投票，管理员可点击「＋ 发起投票」</p>
     <VoteCreateModal :open="showCreate" @close="showCreate = false" @created="load" />
   </div>
 </template>
+
+<style scoped>
+.vote-list { display: flex; flex-direction: column; gap: 14px; }
+</style>
