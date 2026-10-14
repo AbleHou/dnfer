@@ -2,6 +2,10 @@
 
 本项目所有值得记录的版本变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+- 修复：dnfer-raids skill 多个未锁定团时报名/取消报名会固定落到自动选中的一场；现改为列出全部未锁定候选让玩家选择（脚本新增 `--raid <id>` 精确定位，`signup`/`unsign` 支持）。
+
 ## [v1.14] - 2026-10-14
 
 ### 新增
