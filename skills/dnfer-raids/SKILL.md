@@ -37,6 +37,9 @@ python scripts/dnfer_raid.py detail <id> --waves 3
 python scripts/dnfer_raid.py signup 872557240
 python scripts/dnfer_raid.py signup 龙应藏进云里
 python scripts/dnfer_raid.py unsign 872557240
+# 多团时玩家已选择：按候选 id 精确定位报名/取消
+python scripts/dnfer_raid.py signup 872557240 --raid 3
+python scripts/dnfer_raid.py unsign 龙应藏进云里 --raid 3
 ```
 
 stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`，再调 `detail`。
@@ -49,13 +52,19 @@ stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`�
 | 「第 n 波」 | `pick` 选团 → `detail <id> --wave n` |
 | 「前 n 波」 | `pick` 选团 → `detail <id> --waves n` |
 | 消息含时间（今天/明天/周X/星期X/几点/上午/下午/晚上） | 解析成 `--weekday/--period/--from/--to` → `pick` 过滤 → 再 `detail` |
-| 「（QQ号或昵称）报名」 | `signup <QQ号或昵称>` |
-| 「（QQ号或昵称）取消报名」 | `unsign <QQ号或昵称>` |
+| 「（QQ号或昵称）报名」 | `signup <QQ号或昵称>`；stdout 为 `ambiguous` → 列出候选问「报哪个？」，玩家回序号或团名 → 映射为候选 `id` → `signup <QQ号或昵称> --raid <id>` |
+| 「（QQ号或昵称）取消报名」 | `unsign <QQ号或昵称>`；stdout 为 `ambiguous` → 列出候选问「取消哪个？」，同上用 `--raid` 定位 |
 
 - 解析「今天/明天/周X/星期X」时换算成具体 `--from/--to` 或 `--weekday`；「上午/下午/晚上」对应 `morning/afternoon/evening`。
 - 「周六下午」→ `--weekday 5 --period afternoon`。注意：**0=周一**，周六是 `5`，周日是 `6`。
 - 无数字的「下一波」不要瞎猜，回复「发我波次号，如『第 3 波』」。
-- 报名/取消报名的目标团：脚本自动取「当前时间下一次的团」（`starts_at` 未过且最早），仅当没有未来未锁定团时回退「当天未锁定的团」。标识（QQ 号或昵称均可）按原样传给脚本即可；脚本自动昵称优先、404 回退账号，模型无需判断。
+- 报名/取消报名的目标团：
+  - 恰好一个未锁定团 → 脚本自动操作（未来优先，当天未锁定回退）；
+  - **多个未锁定团 → 脚本输出全部候选，列出询问玩家报/退哪个**；
+  - 无未锁定团 → 无可报名团。
+  - 玩家回复候选的序号或团名后，把它映射到候选的 `id`，再用 `--raid <id>` 精确定位（不要自行猜测团 id）。
+  - 标识（QQ 号或昵称均可）按原样传给脚本即可；脚本自动昵称优先、404 回退账号，模型无需判断。
+- 玩家回复序号或团名都接受，一律映射回候选 `id` 再带 `--raid` 调用；首条消息若自带目标（如「报名周六的团」）仍走「先 `signup` 拿候选 → 映射 → `--raid`」同一路径，不引入 `pick` 定位。
 
 ## 回复格式
 
@@ -72,6 +81,8 @@ stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`�
 | `{"ok":true,"selected":null,"reason":"no_raids"}` | 「当前还没有攻坚计划」 |
 | `signup` 成功 `{"ok":true,"action":"signup",...}` | 「已帮 昵称（账号）报名《名称》 周六 14:30」 |
 | `unsign` 成功 `{"ok":true,"action":"unsign",...}` | 「已帮 昵称（账号）取消报名《名称》」 |
+| `{"ok":true,"selected":null,"reason":"ambiguous","candidates":[...]}` | 「有 N 个未锁定的团，报哪个？\n1.《A》（雾神）周日 20:00\n…\n回复序号或团名」（`unsign` 时「取消哪个？」） |
+| `--raid` 指定成功 | 同 signup/unsign 成功回执（「已帮 昵称 报名《名称》 周六 14:30」） |
 | `{"ok":true,"selected":null,"reason":"no_target"}` | 「当前没有可报名的团」（跑的是 `unsign` 时改说「当前没有可取消报名的团」） |
 | `{"ok":false,"status":400,"error":"该用户已报名"}` | 「该成员已报名该团」 |
 | `{"ok":false,"status":400,"error":"该用户尚未报名"}` | 「该成员尚未报名」 |
@@ -87,3 +98,4 @@ stdout 只输出 JSON，直接解析它。`pick` 输出 `selected` 里的 `id`�
 | `{"ok":false,"status":401,...}` | 「机器人还没配好 Token，找管理员」 |
 
 - 若 stdout 为 `--from/--to 格式应为...` / `--weekday/--period 与 --from/--to 不能同时使用` / `--from 不能晚于 --to` 这类**参数错误**：是模型自己解析时间表达式出错，应重新推导时间后再调 `pick`，不要回复「系统暂时不可用」。
+- 玩家回复的序号/团名匹配不到候选（如团刚被锁定）→ 告知「这个团不存在或已锁定，重新列出候选」并重跑 `signup <标识>` 刷新。
