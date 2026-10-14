@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
+import AdventurePartyModal from '../components/AdventurePartyModal.vue'
 import { jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { Character, JobCategory } from '../types'
@@ -11,6 +12,7 @@ const categories = ref<JobCategory[]>([])
 const showForm = ref(false)
 const editing = ref<Character | null>(null)
 const error = ref('')
+const partyModalOpen = ref(false)
 
 type SortMode = 'type' | 'fame'
 const sortMode = ref<SortMode>('type')
@@ -61,6 +63,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
       <h2>我的角色</h2>
       <div style="display:flex;align-items:center;gap:8px">
         <button class="dnf-btn dnf-btn-primary" @click="startCreate">＋ 添加角色</button>
+        <button class="dnf-btn dnf-btn-sm" data-act="manage-parties"
+                @click="partyModalOpen = true">冒险团管理</button>
         <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'type' }"
                 @click="sortMode = 'type'">按类型</button>
         <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'fame' }"
@@ -80,7 +84,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
           <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
           <div>
             <b style="margin-right:6px">{{ c.name }}</b>
-            <span style="color:var(--dnf-text-muted);font-size:12px">{{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }} · 名望 {{ c.fame }}</span>
+            <span style="color:var(--dnf-text-muted);font-size:12px">{{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }} · 名望 {{ c.fame }}<template v-if="c.adventure_party_name"> · {{ c.adventure_party_name }}</template></span>
             <div style="color:var(--dnf-text-faint);font-size:12px">
               {{ c.class_type === '输出'
                 ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}`
@@ -95,5 +99,9 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
                      @saved="onSaved" @cancel="onCancel" />
     </template>
     <p v-if="!list.length" style="color:var(--dnf-text-faint)">还没有角色</p>
+
+    <AdventurePartyModal :open="partyModalOpen"
+                         @close="partyModalOpen = false"
+                         @changed="load" />
   </div>
 </template>

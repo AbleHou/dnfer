@@ -244,4 +244,29 @@ describe('MyCharactersView job picker', () => {
     expect(wrapper.text()).toContain('增益 9000')
     expect(wrapper.text()).toContain('太阳 3000')
   })
+
+  it('角色卡片副标题追加冒险团名', async () => {
+    const char = { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 100,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
+      adventure_party_id: 7, adventure_party_name: '阿伟的冒险团' }
+    apiMock.get.mockResolvedValueOnce([char])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    expect(wrapper.text()).toContain('极诣·剑魂 · 输出 · 名望 100 · 阿伟的冒险团')
+  })
+
+  it('冒险团管理按钮打开团管理弹窗', async () => {
+    const wrapper = mount(MyCharactersView, {
+      global: { stubs: { AdventurePartyModal: true } },
+    })
+    await flushPromises()
+    const btn = wrapper.find('[data-act="manage-parties"]')
+    expect(btn.exists()).toBe(true)
+    const modal = wrapper.findComponent({ name: 'AdventurePartyModal' })
+    expect(modal.props('open')).toBe(false)
+    await btn.trigger('click')
+    await nextTick()
+    expect(modal.props('open')).toBe(true)
+  })
 })
