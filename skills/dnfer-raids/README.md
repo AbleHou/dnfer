@@ -45,10 +45,16 @@ DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_raid.py signup 872557240
 DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
   python scripts/dnfer_raid.py unsign 872557240
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_raid.py signup 872557240 --raid 3
+DNFER_API_BASE=http://127.0.0.1:8000 DNFER_API_TOKEN=<你的token> \
+  python scripts/dnfer_raid.py unsign 872557240 --raid 3
 ```
 
 - stdout 为机器可读 JSON；stderr 为中文摘要。
 - 命令失败时退出码非 0，stdout 为 `{"ok":false,...}`。
+
+> **多团报名/取消**：恰好一个未锁定团时脚本自动操作；存在多个未锁定团时脚本输出全部候选（stdout `reason:"ambiguous"` + `candidates`），模型列出候选询问玩家报/退哪个，玩家回复序号或团名后模型映射为候选 `id` 再以 `signup/unsign <标识> --raid <id>` 精确定位。
 
 ## 目录结构
 
