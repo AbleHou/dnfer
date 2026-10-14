@@ -25,6 +25,7 @@
 3. **单团自动操作语义完全保留**：唯一未锁定团为未来 → `next` 自动操作；唯一未锁定团为当天已过 → `today_unlocked` 自动操作；唯一未锁定团为陈旧过去（非当天）→ `no_target`。
 4. **指定方式**：玩家回复「序号」或「团名/关键词」均可；**由模型凭会话记忆把回复映射到脚本输出的候选 `id`**，脚本不做名称/序号解析，只新增 `--raid <id>` 精确定位。
 5. 多团候选按 `(starts_at asc, id asc)` 确定性排序。
+6. **首条消息直接指定团不在本次范围**（如「报名周六的团」「报名《雾神》」）：本次只覆盖「未指定 → 询问 → 按序号/团名回执映射」的完整流程；`--raid` 参数同样服务于该询问流程的二次调用。若后续需要首条消息直接指定，再单独排期。
 
 ## 3. 脚本改动（`skills/dnfer-raids/scripts/dnfer_raid.py`）
 
@@ -43,7 +44,7 @@ def _signup_targets(raids: list, now: datetime) -> tuple[dict | None, list, str]
 ```
 
 - `unlocked = [r for r in raids if not r["locked"]]`。
-- 单团路径直接委托现有 `_pick_signup_target(raids, now)`（内部同样只考虑未锁定团），保持既有单团语义与 reason。
+- 单团路径直接委托现有 `_pick_signup_target(raids, now)`（内部同样只考虑未锁定团），保持既有单团语义与 reason；**`_pick_signup_target` 返回 `(None, None)`（陈旧过去团）须显式转成 `(None, [], "no_target")`**，返回值类型恒为 `(dict | None, list, str)`。
 - 多团路径：`candidates = sorted(unlocked, key=lambda r: (_parse_iso(r["starts_at"]), r["id"]))`。
 - 这是**有意的行为变更**：现有 `_pick_signup_target` 在多个未锁定团时会自动挑「下一次团」，新逻辑改为返回候选询问。
 
@@ -69,8 +70,9 @@ python scripts/dnfer_raid.py unsign 龙应藏进云里 --raid 3
 ```
 
 - 给定 `--raid`：跳过选团与拉取列表，直接 `_signup_call(raid_id, ...)`。
-  - 成功 stdout `reason:"specified"`；raid 信息取后端响应（后端本就返回 `raid: {id, name, starts_at}`），`starts_at_local = _fmt_local(_parse_iso(resp["raid"]["starts_at"]))`。
+  - 成功 stdout `reason:"specified"`；raid 信息取后端响应（后端本就返回 `raid: {id, name, starts_at}`），`starts_at_local = _fmt_local(_parse_iso(resp["raid"]["starts_at"]))`；stderr 摘要沿用现格式（`[dnfer-raid] {action}：{who} → {name}（specified）`）。
   - 后端 400/404 透传（锁定/不存在由 SKILL.md 既有回执映射兜住，脚本不预检）。
+  - 注意：`--raid` 指向不存在团时后端 404 会触发 `_signup_call` 的昵称→账号回退，产生一次冗余二次请求；功能无害（404 仍透传），实现时无须特判。
 - 未给 `--raid`：`GET /api/public/raids` → `_signup_targets` 判定：
   - `reason == "ambiguous"` → stdout `{"ok": true, "selected": null, "reason": "ambiguous", "candidates": [<candidate_out>...]}`，stderr 摘要「有 N 个未锁定团，待玩家选择」，退出 0。
   - `target is None`（no_target）→ 维持现状 stdout `{"ok": true, "selected": null, "reason": "no_target"}`。
@@ -110,9 +112,9 @@ python scripts/dnfer_raid.py unsign 龙应藏进云里 --raid 3
 |---|---|
 | `（QQ号或昵称）报名` | `signup <标识>`；stdout 为 `ambiguous` → 列出候选问「报哪个？」，玩家回序号或团名 → 映射为候选 `id` → `signup <标识> --raid <id>` |
 | `（QQ号或昵称）取消报名` | `unsign <标识>`；stdout 为 `ambiguous` → 列出候选问「取消哪个？」，同上用 `--raid` 定位 |
-| `（QQ号或昵称）报名 1` / `报名《团名》` 等带目标 | 先 `signup <标识>` 取候选（或 `pick` 定位），把玩家说的序号/团名映射到候选 `id` → `signup <标识> --raid <id>` |
 
 - 明确指示模型：**玩家回复序号或团名都接受**，一律由模型映射回脚本输出的候选 `id`，再带 `--raid` 调用；不要自行猜测团 id。
+- **首条消息的「报名 1」「报名《团名》」等直接指定形式不在本次范围**（见决策 6）；若玩家在询问前就带目标，模型仍走「先 `signup <标识>` 拿候选 → 映射 → `--raid`」的同一路径即可，不引入 `pick` 定位。
 
 ### 4.4 回执映射新增
 
@@ -120,6 +122,8 @@ python scripts/dnfer_raid.py unsign 龙应藏进云里 --raid 3
 |---|---|
 | `{"ok":true,"selected":null,"reason":"ambiguous","candidates":[...]}` | 「有 N 个未锁定的团，报哪个？\n1.《A》（雾神）周日 20:00\n…\n回复序号或团名」（`unsign` 时「取消哪个？」） |
 | `--raid` 指定成功 | 同 signup/unsign 成功回执（「已帮 昵称 报名《名称》 周六 14:30」） |
+
+- 玩家回复的序号/团名匹配不到候选（如团刚被锁定）→ 告知「这个团不存在或已锁定，重新列出候选」并重跑 `signup <标识>` 刷新。
 
 ## 5. README 更新（`skills/dnfer-raids/README.md`）
 
@@ -155,7 +159,7 @@ monkeypatch `_request` + `capsys`，断言带 `--raid` 时直接调用对应 `/a
 
 ## 7. CHANGELOG
 
-`CHANGELOG.md` [Unreleased] 新增：
+`CHANGELOG.md` 当前最新为 `[v1.14] - 2026-10-14`、尚无 `[Unreleased]`，计划须**新建 `[Unreleased]` 小节**并追加：
 
 - 修复：dnfer-raids skill 多个未锁定团时报名/取消报名会固定落到自动选中的一场；现改为列出全部未锁定候选让玩家选择（脚本新增 `--raid <id>` 精确定位，`signup`/`unsign` 支持）。
 
