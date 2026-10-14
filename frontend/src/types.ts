@@ -23,7 +23,8 @@ export interface Slot { id: number; squad_index: number; row_index: number;
   character_class: ClassType | null; job_name: string | null; job_title: string | null;
   fame: number | null; simulated_damage: number | null; sustained_dps: number | null;
   buff_amount: number | null; sun_buff: number | null; owner_id: number | null; owner_nickname: string | null;
-  owner_avatar: string | null; duty: Duty | null; version: number }
+  owner_avatar: string | null; duty: Duty | null; version: number;
+  adventure_party_id: number | null; adventure_party_name: string | null }
 export interface CharacterPlacement { wave_index: number; squad_index: number; duty: Duty }
 export interface JobChild { id: number; name: string; title: string; class_type: ClassType }
 export interface JobCategory { id: number; name: string; title: string; children: JobChild[] }

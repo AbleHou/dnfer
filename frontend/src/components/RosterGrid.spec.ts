@@ -7,9 +7,11 @@ import type { Slot, Wave } from '../types'
 const empty = (id: number, sq: number): Slot => ({ id, squad_index: sq, row_index: 0, character_id: null,
   character_name: null, character_class: null, job_name: null, job_title: null, fame: null,
   simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
-  owner_id: null, owner_nickname: null, owner_avatar: null, duty: null, version: 1 })
+  owner_id: null, owner_nickname: null, owner_avatar: null, duty: null, version: 1,
+  adventure_party_id: null, adventure_party_name: null })
 const out = (id: number, sq: number): Slot => ({ ...empty(id, sq), character_id: 10, character_name: '剑魂',
-  character_class: '输出', simulated_damage: 12000, owner_id: 3, owner_nickname: '队员', duty: '主C', version: 2 })
+  character_class: '输出', simulated_damage: 12000, owner_id: 3, owner_nickname: '队员', duty: '主C', version: 2,
+  adventure_party_id: 5, adventure_party_name: '队员的冒险团' })
 const wave = (id: number, slots: Slot[]): Wave => ({ id, index: id, group_id: null, round_index: 1, group_index: 1, slots })
 
 function mountGrid(overrides: Record<string, unknown> = {}) {

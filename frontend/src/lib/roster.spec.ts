@@ -9,6 +9,7 @@ function slot(duty: string | null, classType: ClassType | null = '输出'): Slot
     character_name: duty ? 'x' : null, character_class: classType, job_name: null, job_title: null,
     fame: null, simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
     owner_id: null, owner_nickname: null, owner_avatar: null, duty: duty as any, version: 1,
+    adventure_party_id: null, adventure_party_name: null,
   }
 }
 

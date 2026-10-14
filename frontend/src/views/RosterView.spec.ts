@@ -37,12 +37,13 @@ function mkSlot(id: number, sq = 0): Slot {
   return { id, squad_index: sq, row_index: 0, character_id: null, character_name: null,
     character_class: null, job_name: null, job_title: null, fame: null, simulated_damage: null,
     sustained_dps: null, buff_amount: null, sun_buff: null, owner_id: null, owner_nickname: null,
-    owner_avatar: null, duty: null, version: 1 }
+    owner_avatar: null, duty: null, version: 1, adventure_party_id: null, adventure_party_name: null }
 }
 function occupiedSlot(): Slot {
   return { ...mkSlot(1), character_id: 10, character_name: '剑魂', character_class: '输出',
     job_name: 'weapon_master', job_title: '极诣·剑魂', simulated_damage: 12000, sustained_dps: 3000,
-    owner_id: member.id, owner_nickname: '队员', duty: '主C', version: 2 }
+    owner_id: member.id, owner_nickname: '队员', duty: '主C', version: 2,
+    adventure_party_id: 1, adventure_party_name: '队员的冒险团' }
 }
 function makeRaid(signups: Raid['signups'], filled?: Slot): Raid {
   return { id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: 'x',

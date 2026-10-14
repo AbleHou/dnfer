@@ -8,7 +8,7 @@ function slot(id: number, characterId: number | null, squad: number, duty: strin
     job_name: characterId ? 'weapon_master' : null, job_title: null, fame: null,
     simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
     owner_id: characterId, owner_nickname: null, owner_avatar: null,
-    duty: duty as any, version: 0 }
+    duty: duty as any, version: 0, adventure_party_id: null, adventure_party_name: null }
 }
 
 function makeRaid(waves: Raid['waves']): Raid {

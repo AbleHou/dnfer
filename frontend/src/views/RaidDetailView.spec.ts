@@ -82,6 +82,7 @@ function makeRaidWithPlacement(signups: Raid['signups']): Raid {
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂',
       fame: 52000, simulated_damage: 5, sustained_dps: 2, buff_amount: null, sun_buff: null,
       owner_id: member.id, owner_nickname: '队员', owner_avatar: null, duty: '主C', version: 1,
+      adventure_party_id: 1, adventure_party_name: '队员的冒险团',
     }],
   }]
   return raid
