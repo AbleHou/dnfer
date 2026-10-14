@@ -143,4 +143,14 @@ describe('RosterPool', () => {
       characters: [c1, c2, { ...c1, id: 20, name: '小号', adventure_party_id: 300, adventure_party_name: '小号团' }] }] })
     expect(w.findAll('[data-test="pool-party"]').length).toBe(2)
   })
+  it('无团角色归「未分组」小节，可折叠', async () => {
+    const w = mountPool({ signups: [{ user: u1, created_at: null,
+      characters: [{ ...c1, id: 30, name: '无团', adventure_party_id: null, adventure_party_name: null }] }] })
+    const head = w.find('[data-party-id="__u"]')
+    expect(head.exists()).toBe(true)
+    expect(head.text()).toContain('未分组')
+    expect(w.find('[data-act="pool-char-30"]').exists()).toBe(true)
+    await head.trigger('click')
+    expect(w.find('[data-act="pool-char-30"]').exists()).toBe(false)  // 收起
+  })
 })

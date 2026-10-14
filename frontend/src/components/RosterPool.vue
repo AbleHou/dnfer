@@ -33,7 +33,7 @@ function groupByParty(chars: Character[]): PoolParty[] {
 }
 
 // 两层分组：用户 → 冒险团小节
-const groups = computed(() => props.signups
+const groups = computed<PoolUser[]>(() => props.signups
   .filter(s => s.characters.length > 0)
   .map(s => ({ user: s.user, parties: groupByParty(s.characters) })))
 
