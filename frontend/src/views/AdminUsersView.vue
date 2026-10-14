@@ -149,7 +149,7 @@ onMounted(() => {
         <thead>
           <tr><th scope="col">角色名</th><th scope="col">职业</th><th scope="col">类别</th>
             <th scope="col">名望</th><th scope="col">模拟伤害</th><th scope="col">持续输出</th>
-            <th scope="col">增益量</th><th scope="col">太阳增益</th><th scope="col">归属玩家</th></tr>
+            <th scope="col">增益量</th><th scope="col">太阳增益</th><th scope="col">冒险团</th><th scope="col">归属玩家</th></tr>
         </thead>
         <tbody>
           <tr v-for="c in queryItems" :key="c.id">
@@ -161,6 +161,7 @@ onMounted(() => {
             <td>{{ c.class_type === '输出' ? fmtNum(c.sustained_dps) : '—' }}</td>
             <td>{{ c.class_type === '辅助' ? fmtNum(c.buff_amount) : '—' }}</td>
             <td>{{ c.class_type === '辅助' ? fmtNum(c.sun_buff) : '—' }}</td>
+            <td>{{ c.adventure_party_name ?? '—' }}</td>
             <td>
               <button class="dnf-btn dnf-btn-sm" :data-act="'manage-owner-' + c.owner_id"
                       @click="openOwner(c)">{{ c.owner_nickname }}</button>

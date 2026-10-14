@@ -116,6 +116,19 @@ describe('AdminUsersView', () => {
     await wrapper.find('[data-act="reset-pw-2"]').trigger('click')
     expect(wrapper.findComponent({ name: 'AdminResetPasswordModal' }).exists()).toBe(true)
   })
+  it('角色查询表显示冒险团列', async () => {
+    apiMock.get.mockResolvedValueOnce({ items: [{
+      id: 9, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
+      simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+      owner_id: 2, owner_nickname: '阿甲', owner_username: 'a', owner_is_banned: false,
+      adventure_party_id: 1, adventure_party_name: '阿甲的冒险团',
+    }], total: 1 })
+    const wrapper = mount(AdminUsersView, { global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('冒险团')          // 表头
+    expect(wrapper.text()).toContain('阿甲的冒险团')    // 行值
+  })
   it('管理员行也有改密按钮且不连带打开角色管理弹窗', async () => {
     apiMock.get.mockImplementation((url: string) => {
       if (url === '/api/admin/users') {
