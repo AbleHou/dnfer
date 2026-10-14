@@ -7,8 +7,8 @@
       [--weekday 0-6] [--period morning|afternoon|evening] \
       [--from 'YYYY-MM-DD HH:MM'] [--to 'YYYY-MM-DD HH:MM']
   DNFER_API_TOKEN=xxx python dnfer_raid.py detail <raid_id> [--wave n | --waves n | --all]
-  DNFER_API_TOKEN=xxx python dnfer_raid.py signup <identifier>
-  DNFER_API_TOKEN=xxx python dnfer_raid.py unsign <identifier>
+  DNFER_API_TOKEN=xxx python dnfer_raid.py signup <identifier> [--raid <id>]
+  DNFER_API_TOKEN=xxx python dnfer_raid.py unsign <identifier> [--raid <id>]
 
 时区：后端 starts_at 存的是本地时间（前端直传 naive 本地串，如 2026-09-26T14:00:00），
 脚本按本地时间直接读取、比较与展示；`_now_local` 取当前中国本地时间（UTC+8）用于匹配。
@@ -308,27 +308,56 @@ def _signup_call(raid_id: int, identifier: str, action: str) -> dict:
 
 def cmd_signup(args) -> int:
     action = "unsign" if getattr(args, "cancel", False) else "signup"
+    identifier = args.identifier
+
+    # 玩家已指定团（多团询问后模型映射的 --raid）：跳过选团与拉列表
+    if getattr(args, "raid_id", None) is not None:
+        resp = _signup_call(args.raid_id, identifier, action)
+        if resp.get("ok") is False:
+            return _fail(resp)
+        raid = resp.get("raid") or {}
+        starts_at = raid.get("starts_at")
+        out = {"ok": True, "action": action, "reason": "specified",
+               "raid": {"id": raid.get("id"), "name": raid.get("name"),
+                        "starts_at_local": _fmt_local(_parse_iso(starts_at))
+                        if starts_at else None},
+               "user": resp.get("user")}
+        print(json.dumps(out, ensure_ascii=False))
+        who = (resp.get("user") or {}).get("nickname") or identifier
+        print(f"[dnfer-raid] {action}：{who} → {raid.get('name')}（specified）",
+              file=sys.stderr)
+        return 0
+
     result = _request("GET", f"{_base()}/api/public/raids")
     if isinstance(result, dict) and result.get("ok") is False:
         return _fail(result)
     if not isinstance(result, list):
         return _fail({"ok": False, "error": "响应格式异常"})
-    raid, reason = _pick_signup_target(result, _now_local())
-    if raid is None:
+
+    target, candidates, reason = _signup_targets(result, _now_local())
+    if reason == "ambiguous":
+        out = {"ok": True, "selected": None, "reason": "ambiguous",
+               "candidates": [_candidate_out(c) for c in candidates]}
+        print(json.dumps(out, ensure_ascii=False))
+        print(f"[dnfer-raid] 有 {len(candidates)} 个未锁定团，待玩家选择",
+              file=sys.stderr)
+        return 0
+    if target is None:
         out = {"ok": True, "selected": None, "reason": "no_target"}
         print(json.dumps(out, ensure_ascii=False))
         print("[dnfer-raid] 当前没有可报名/取消的团", file=sys.stderr)
         return 0
-    resp = _signup_call(raid["id"], args.identifier, action)
+    resp = _signup_call(target["id"], identifier, action)
     if resp.get("ok") is False:
         return _fail(resp)
     out = {"ok": True, "action": action, "reason": reason,
-           "raid": {"id": raid["id"], "name": raid["name"],
-                    "starts_at_local": _fmt_local(_parse_iso(raid["starts_at"]))},
+           "raid": {"id": target["id"], "name": target["name"],
+                    "starts_at_local": _fmt_local(_parse_iso(target["starts_at"]))},
            "user": resp.get("user")}
     print(json.dumps(out, ensure_ascii=False))
-    who = (resp.get("user") or {}).get("nickname") or args.identifier
-    print(f"[dnfer-raid] {action}：{who} → {raid['name']}（{reason}）", file=sys.stderr)
+    who = (resp.get("user") or {}).get("nickname") or identifier
+    print(f"[dnfer-raid] {action}：{who} → {target['name']}（{reason}）",
+          file=sys.stderr)
     return 0
 
 
@@ -394,12 +423,16 @@ def main() -> int:
     grp.add_argument("--all", action="store_true", help="返回全部波次（缺省）")
     p_detail.set_defaults(func=cmd_detail)
 
-    p_signup = sub.add_parser("signup", help="替玩家报名下一次/当天未锁定的团")
+    p_signup = sub.add_parser("signup", help="替玩家报名（单团自动；多团列出候选；--raid 指定）")
     p_signup.add_argument("identifier", help="DNfer 账号 username 或昵称")
+    p_signup.add_argument("--raid", dest="raid_id", type=int, default=None,
+                          help="指定团 id（跳过自动选团）")
     p_signup.set_defaults(func=cmd_signup, cancel=False)
 
-    p_unsign = sub.add_parser("unsign", help="替玩家取消报名下一次/当天未锁定的团")
+    p_unsign = sub.add_parser("unsign", help="替玩家取消报名（单团自动；多团列出候选；--raid 指定）")
     p_unsign.add_argument("identifier", help="DNfer 账号 username 或昵称")
+    p_unsign.add_argument("--raid", dest="raid_id", type=int, default=None,
+                          help="指定团 id（跳过自动选团）")
     p_unsign.set_defaults(func=cmd_signup, cancel=True)
 
     args = parser.parse_args()

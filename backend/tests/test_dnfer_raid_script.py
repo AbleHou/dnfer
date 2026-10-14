@@ -1,5 +1,7 @@
 """dnfer_raid.py 纯函数单测（importlib 加载 skill 脚本，零依赖）。"""
 import importlib.util
+import argparse
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -188,3 +190,43 @@ def test_signup_call_unsign_uses_cancel_suffix(monkeypatch):
     assert len(calls) == 1
     assert calls[0][1].endswith("/api/public/raids/7/signup/cancel")
     assert calls[0][2] == {"nickname": "龙应藏进云里"}
+
+
+def test_cmd_signup_raid_specified(monkeypatch, capsys):
+    calls = []
+    def fake_request(method, url, body=None):
+        calls.append((method, url, body))
+        return {"ok": True,
+                "user": {"account": "872557240", "nickname": "帅哥"},
+                "raid": {"id": 3, "name": "周本",
+                         "starts_at": "2026-10-18T20:00:00"}}
+    monkeypatch.setattr(dnfer_raid, "_request", fake_request)
+    args = argparse.Namespace(identifier="872557240", raid_id=3, cancel=False)
+    code = dnfer_raid.cmd_signup(args)
+    out = json.loads(capsys.readouterr().out)
+    assert code == 0 and out["ok"] is True
+    assert out["reason"] == "specified"
+    assert out["raid"] == {"id": 3, "name": "周本",
+                           "starts_at_local": "2026-10-18 20:00 周日"}
+    assert len(calls) == 1
+    assert calls[0][1].endswith("/api/public/raids/3/signup")
+
+
+def test_cmd_signup_ambiguous_outputs_candidates(monkeypatch, capsys):
+    monkeypatch.setattr(dnfer_raid, "_now_local",
+                        lambda: datetime(2026, 9, 23, 10, 0))
+    def fake_request(method, url, body=None):
+        return [
+            {"id": 1, "name": "团1", "dungeon_name": "雾神", "size": 12,
+             "locked": False, "starts_at": "2026-10-18T20:00:00"},
+            {"id": 2, "name": "团2", "dungeon_name": "雾神", "size": 12,
+             "locked": False, "starts_at": "2026-10-18T21:00:00"},
+        ]
+    monkeypatch.setattr(dnfer_raid, "_request", fake_request)
+    args = argparse.Namespace(identifier="872557240", raid_id=None, cancel=False)
+    code = dnfer_raid.cmd_signup(args)
+    out = json.loads(capsys.readouterr().out)
+    assert code == 0 and out["ok"] is True
+    assert out["selected"] is None and out["reason"] == "ambiguous"
+    assert [c["id"] for c in out["candidates"]] == [1, 2]
+    assert out["candidates"][0]["starts_at_local"] == "2026-10-18 20:00 周日"
