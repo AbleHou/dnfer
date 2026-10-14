@@ -69,13 +69,13 @@ const sorted = computed(() =>
 ### 4.1 CharacterCard / CharacterPickerModal（Vitest）
 
 - 现有无 `CharacterCard.spec.ts`（组件经各弹窗 spec 间接覆盖）。在 `CharacterPickerModal.spec.ts` 追加（对齐 SlotActionModal.spec 的「显示/不显示」双例模式）：
-  - 角色带 `adventure_party_name` 时渲染 `冒险团：xxx`。
-  - 角色 `adventure_party_name` 为 null 时不渲染「冒险团」。
+  - 角色带 `adventure_party_name` 时渲染 `冒险团：xxx`（现有 fixture 均未设该字段，需新写一个 `adventure_party_name: 'xxx'` 的角色 fixture）。
+  - 角色 `adventure_party_name` 为 null 时不渲染「冒险团」（可复用现有 fixture，`undefined` 与 `null` 同为 falsy）。
 - 因团行 v-if 且现有 fixture 多为 null，既有弹窗 spec（MemberCharactersModal/AdminUserCharactersModal/CharacterPickerModal）不受影响；若有 fixture 带团名，确认渲染后文本不破坏既有断言。
 
 ### 4.2 MyCharactersView.spec.ts（Vitest）
 
-- **party 排序**：返回 `[无团辅助(高名望), 甲团输出(低名望), 甲团辅助(中名望), 乙团输出(高名望)]`，切「按冒险团」后顺序为 `甲团角色(团内名望降序) → 乙团角色 → 未分组`。
+- **party 排序**：返回 `[无团辅助(高名望), 甲团输出(低名望), 甲团辅助(中名望), 乙团输出(高名望)]`，切「按冒险团」后顺序为 `甲团角色(团内名望降序) → 乙团角色 → 未分组`。**注意确定性**：甲团 `adventure_party_id` 须小于乙团，未分组为 `null`（如甲=1、乙=2、无团=null），预期顺序才唯一。
 - **按钮激活态**：默认「按类型」高亮；点「按冒险团」后该按钮 `dnf-btn-primary`、原高亮取消。
 - 断言方式沿用现有：`wrapper.findAll('.dnf-panel b').map(b => b.text())` 对比角色名顺序；`find(...).find(b => b.text() === '按冒险团')` 触发。
 
