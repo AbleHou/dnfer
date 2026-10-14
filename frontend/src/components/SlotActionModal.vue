@@ -17,6 +17,9 @@ const emit = defineEmits<{
     <div v-if="slot" style="margin-bottom:12px;color:var(--dnf-text-muted)">
       <b style="color:var(--dnf-text)">{{ slot.owner_nickname }}</b>
       （{{ slot.character_name }} · {{ slot.duty }}）
+      <p v-if="slot.adventure_party_name" style="margin-top:4px;color:var(--dnf-text-faint);font-size:12px">
+        冒险团：{{ slot.adventure_party_name }}
+      </p>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="dnf-btn" @click="slot && emit('replace', slot)">换人</button>
