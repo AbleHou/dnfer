@@ -357,7 +357,7 @@ def test_convert_guest(client, admin_headers):
 def test_convert_non_guest_rejected(client, admin_headers):
     _, u = register_user(client, "normal1", "普通甲")
     r = client.post(f"/api/admin/users/{u['id']}/convert", headers=admin_headers,
-                    json={"username": "x", "password": "secret1"})
+                    json={"username": "xy", "password": "secret1"})
     assert r.status_code == 400 and r.json()["detail"] == "该用户不是临时用户"
 
 
@@ -504,7 +504,7 @@ async def delete_guest_user(uid: int, admin: User = Depends(require_admin),
 - [ ] **Step 4: 运行确认通过（全量 guest 测试）**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_admin_guests.py -v`
-Expected: 全部 PASS（13 例）
+Expected: 全部 PASS（12 例：创建 6 + 转正 3 + 删除/e2e 3）
 
 - [ ] **Step 5: 回归相关既有测试**
 
@@ -1135,12 +1135,12 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 写失败测试**
 
-在 `RaidDetailView.spec.ts` 追加（沿用其 `mountView(signups, user=admin, snapshot=...)` 既有助手；`GuestCreateModal` 加入 stub，以便在视图层直接 `$emit('created')` 走联动逻辑）：
+`RaidDetailView.spec.ts` 的 `mountView` 签名为 `mountView(signups, user: User = admin, snapshot = makeRaid(signups))`，返回 `{ wrapper, auth, store }`。先在其 `mountView` 的 `stubs` 列表加 `GuestCreateModal: { name: 'GuestCreateModal', template: '<div />' }`（仅 `guestOpen` 时渲染，不影响既有用例）。类型 import 若缺 `RaidSignup` 则补。然后追加：
 
 ```ts
 it('管理员添加临时选手并代报名', async () => {
   apiMock.post.mockResolvedValue({})
-  const wrapper = mountView([], { user: admin }, makeRaid([]))
+  const { wrapper } = await mountView([], admin, makeRaid([]))
   await flushPromises()
   await wrapper.find('[data-test="add-guest"]').trigger('click')
   const guest = { id: 55, username: 'guest_x', nickname: '外援', is_admin: false,
@@ -1153,22 +1153,24 @@ it('管理员添加临时选手并代报名', async () => {
 it('已锁定攻坚不显示添加临时选手入口', async () => {
   const snapshot = makeRaid([])
   snapshot.locked = true
-  const wrapper = mountView([], { user: admin }, snapshot)
+  const { wrapper } = await mountView([], admin, snapshot)
   await flushPromises()
   expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
 })
 
 it('报名面板临时用户显示临时徽章', async () => {
-  const guestSignup = { user: { id: 55, username: 'guest_x', nickname: '外援', is_admin: false,
-    avatar: null, is_banned: false, is_guest: true }, created_at: '2026-10-01T00:00:00', characters: [] }
-  const wrapper = mountView([guestSignup as any], { user: admin }, makeRaid([]))
+  const guestSignup: RaidSignup = {
+    user: { id: 55, username: 'guest_x', nickname: '外援', is_admin: false,
+      avatar: null, is_banned: false, is_guest: true },
+    created_at: '2026-10-01T00:00:00', characters: [],
+  }
+  const { wrapper } = await mountView([guestSignup], admin, makeRaid([guestSignup]))
   await flushPromises()
-  expect(wrapper.text()).toContain('外援')
-  expect(wrapper.text()).toContain('临时')
+  // 徽章断言收窄到报名行内，避免被「添加临时选手」按钮自身的“临时”二字误判
+  expect(wrapper.find('.signup-group').text()).toContain('外援')
+  expect(wrapper.find('.signup-group .dnf-badge').text()).toContain('临时')
 })
 ```
-
-若该 spec 的 `mountView`/`makeRaid` 与上述签名不同，以现有签名为准调整（stub 配置处把 `GuestCreateModal` 加入 stubs）。
 
 - [ ] **Step 2: 运行确认失败**
 
@@ -1249,12 +1251,12 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 写失败测试**
 
-在 `RosterView.spec.ts` 追加（沿用其现有 mount 助手；`GuestCreateModal` 入 stub，视图层 `$emit('created')` 走联动）：
+`RosterView.spec.ts` 的 `mountView` 签名为 `mountView(signups, user: User = admin, snapshot = makeRaid(signups))`，返回 `{ wrapper, auth, store }`（**无 `mountRoster`**）。先在其 `mountView` 的 `stubs` 列表加 `GuestCreateModal: { name: 'GuestCreateModal', template: '<div />' }`（RosterView 用真实 RosterPool，按钮经其 `#toolbar-extra` 插槽渲染；`findComponent({name})` 命中 stub 后 `$emit('created')` 走联动）。然后追加：
 
 ```ts
 it('编队池工具栏添加临时选手并代报名', async () => {
   apiMock.post.mockResolvedValue({})
-  const wrapper = mountRoster() // 以现有 helper 为准
+  const { wrapper } = await mountView([], admin)
   await flushPromises()
   await wrapper.find('[data-test="add-guest"]').trigger('click')
   const guest = { id: 66, username: 'guest_y', nickname: '编队外援', is_admin: false,
@@ -1265,7 +1267,7 @@ it('编队池工具栏添加临时选手并代报名', async () => {
 })
 
 it('非管理员不显示编队添加临时选手入口', async () => {
-  const wrapper = mountRoster({ admin: false }) // 以现有 helper 为准
+  const { wrapper } = await mountView([], member)
   await flushPromises()
   expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
 })
