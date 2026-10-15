@@ -45,8 +45,8 @@
 
 - `UserOut` 加必填 `is_guest: bool = False` → `AdminUserOut`（= UserOut + character_count）自动携带。
 - `GuestCreate`：`nickname`（必填，`min_length=1,max_length=64`，同 ProfileUpdate 的字符白名单）、`username: str | None`（可选，指定则校验唯一）、`characters: list[CharacterIn] | None = None`（可选，复用 `apply_character_payload`/`validate_job` 校验与写库，`adventure_party_id` 忽略，一律挂默认团）。
-- `GuestConvertIn`：`username`（必填）、`password`（`min_length=6,max_length=128`，同 RegisterIn 约束）。
-- `AdminCreateUserOut`：返回新建用户完整信息（UserOut + characters + default party id/name），供前端弹窗回填。
+- `GuestConvertIn`：`username`（必填，`min_length=2,max_length=64`，同 RegisterIn）、`password`（`min_length=6,max_length=128`，同 RegisterIn 约束）。
+- `AdminCreateUserOut`：`{ user: AdminUserOut, characters: list[CharacterOut], default_party_id: int | None, default_party_name: str | None }`——返回新建用户、其角色、默认冒险团，供前端弹窗回填。
 
 ### 3.2 端点（`routers/admin.py`，均 `require_admin`）
 
@@ -65,12 +65,11 @@
 **`DELETE /api/admin/users/{uid}` — 删除临时用户**
 - 守卫：`target.is_guest` 为 False → 400「仅可删除临时用户」。
 - 清理顺序（对齐取消报名的撤位语义）：
-  1. 对每个含该用户报名行的 raid：撤下该用户全部占位（`_clear_slot`）+ 删报名行（ORM 级联清 `raid_signup_characters`）；
+  1. 对每个含该用户报名行的 raid：**直接复用 `_remove_signup(db, raid, uid)`**——内部各做一次 commit + 广播（`slot:removed` 逐个撤位 + `raid:signup_removed`），对齐现有 `cancel_other` 语义；guest 只可能经报名占位（不能建团），因此逐 raid 撤位后其占位已全部清空；
   2. 删除该用户全部角色；
-  3. 删除其全部冒险团；
+  3. **直接 `db.delete(party)` 删除其全部冒险团**——注意不能复用 `services/parties.py` 的 `delete_party`（它会在团内还有角色时 400「请先转移或删除该团角色」、仅剩一团时 400「至少保留一个冒险团」，guest 通常恰好一个默认团，必被拦）；因角色已在第 2 步删光，此处直接删团即可；
   4. 删除 User。
-- 广播：每场 raid 逐个 `slot:removed`（撤位）与 `raid:signup_removed`（删报名）——复用 `_remove_signup` 的广播方式，跨多场循环调用。
-- 复用现有 `raids.py` 的 `_clear_slot`/`_remove_signup`；为避免竞态，全程一个事务 commit，广播在 commit 后。
+- 事务模型：第 1 步每场 raid 各自 commit（沿用 `_remove_signup` 现状，不重构成单事务）；第 2-4 步合并为最后一个事务 commit。中途失败只留下「部分 raid 已撤位」的可恢复中间态，与 `cancel_other` 现有行为一致。
 
 ### 3.3 零改动复用
 
@@ -86,6 +85,7 @@
 - **`GuestConvertModal`**（新组件）：用户名 + 密码（含确认）→ `POST /users/{uid}/convert`。
 - **攻坚详情页（RaidDetailView）**：管理员区「添加临时选手」按钮 → `GuestCreateModal` → 成功后调 `admin_signup`（代报名本场）→ 报名面板出现该 guest，立即可排表。
 - **编队页（RosterView）**：RosterPool 工具栏「添加临时选手」按钮 → 同一 `GuestCreateModal` + 代报名。
+- **锁定攻坚**：攻坚详情页与编队页的入口按钮在 `raid.locked` 时**禁用**（代报名对锁定攻坚会 400「攻坚已锁定，无法报名」，与现有报名面板语义一致）。
 - **AdminUsersView**：用户列表 guest 行标「临时」徽章（`v-if="u.is_guest"`）；「添加临时用户」按钮（GuestCreateModal）；guest 行操作「转正」（GuestConvertModal）、「删除」（confirmDialog → DELETE）。
 - **临时徽章**（低成本）：攻坚详情报名面板与编队池的 guest 头像旁标「临时」。
 - 权限：创建/转正/删除均为管理员操作（`auth.isAdmin` 判定，与现有管理入口一致）。
