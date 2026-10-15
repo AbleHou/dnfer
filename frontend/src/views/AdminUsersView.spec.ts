@@ -162,6 +162,7 @@ describe('AdminUsersView', () => {
     expect(wrapper.text()).toContain('临时')
     expect(wrapper.find('[data-act="convert-3"]').exists()).toBe(true)
     expect(wrapper.find('[data-act="delete-guest-3"]').exists()).toBe(true)
+    expect(wrapper.find('[data-act="reset-pw-3"]').exists()).toBe(false)  // guest 行不显示改密
   })
   it('添加临时用户按钮打开创建弹窗', async () => {
     const wrapper = mount(AdminUsersView, {
