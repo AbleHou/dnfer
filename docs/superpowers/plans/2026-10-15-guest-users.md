@@ -237,15 +237,30 @@ def test_create_guest_bad_job(client, admin_headers):
     assert r.status_code == 400 and r.json()["detail"] == "职业不存在"
 
 
-def test_create_guest_requires_admin(client):
+def test_create_guest_requires_auth(client):
+    # 未带 token：get_current_user 抛 401（require_admin 的 403 仅对已登录非管理员触发）
     r = client.post("/api/admin/users", json={"nickname": "普通来客"})
+    assert r.status_code == 401
+
+
+def test_create_guest_non_admin_forbidden(client):
+    h, _ = register_user(client, "mynormal", "普通丙")
+    r = client.post("/api/admin/users", headers=h, json={"nickname": "普通来客"})
     assert r.status_code == 403
+
+
+def test_create_guest_banned_admin_blocked(client, admin_headers, db):
+    admin = db.query(User).filter(User.username == "admin").one()
+    admin.is_banned = True
+    db.commit()
+    r = client.post("/api/admin/users", headers=admin_headers, json={"nickname": "客己"})
+    assert r.status_code == 403 and r.json()["detail"] == "你已被封禁，无法创建用户"
 ```
 
 - [ ] **Step 2: 运行确认失败**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_admin_guests.py -v`
-Expected: FAIL（404/405——端点未注册）
+Expected: 本 Task 用例 FAIL（端点未注册——`POST /users` 与既有 `GET /users` 同路径返回 405；注册/登录相关的 401/403 用例除外）
 
 - [ ] **Step 3: 实现创建端点**
 
@@ -314,7 +329,7 @@ def create_guest_user(body: GuestCreate, admin: User = Depends(require_admin),
 - [ ] **Step 4: 运行确认通过**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_admin_guests.py -v`
-Expected: 本 Task 6 例 PASS（其余用例因端点未实现仍失败属预期）
+Expected: 本 Task 8 例 PASS（其余用例因端点未实现仍失败属预期）
 
 - [ ] **Step 5: Commit**
 
@@ -372,7 +387,7 @@ def test_convert_username_duplicate(client, admin_headers):
 - [ ] **Step 2: 运行确认失败**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_admin_guests.py -v`
-Expected: 新增 3 例 FAIL（405 端点未注册）
+Expected: 新增 3 例 FAIL（端点未注册 → 404）
 
 - [ ] **Step 3: 实现转正端点**
 
@@ -469,7 +484,7 @@ def test_guest_e2e_create_signup_place(client, admin_headers):
 - [ ] **Step 2: 运行确认失败**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_admin_guests.py -v`
-Expected: 新增 3 例 FAIL（405 端点未注册）
+Expected: 新增 3 例 FAIL（端点未注册 → 404）
 
 - [ ] **Step 3: 实现删除端点**
 
@@ -504,7 +519,7 @@ async def delete_guest_user(uid: int, admin: User = Depends(require_admin),
 - [ ] **Step 4: 运行确认通过（全量 guest 测试）**
 
 Run: `cd backend && .venv/bin/python -m pytest tests/test_admin_guests.py -v`
-Expected: 全部 PASS（12 例：创建 6 + 转正 3 + 删除/e2e 3）
+Expected: 全部 PASS（14 例：创建 8 + 转正 3 + 删除/e2e 3）
 
 - [ ] **Step 5: 回归相关既有测试**
 
@@ -1278,12 +1293,30 @@ it('非管理员不显示编队添加临时选手入口', async () => {
 Run: `cd frontend && npx vitest run src/views/RosterView.spec.ts`
 Expected: 新增 2 例 FAIL
 
-- [ ] **Step 3: RosterPool 加工具栏插槽**
+- [ ] **Step 3: RosterPool 加工具栏插槽 + guest 临时徽章**
 
-`RosterPool.vue` 工具栏 div（`pool-collapse-all` 按钮后）加：
+`RosterPool.vue`：
+1. 工具栏 div（`pool-collapse-all` 按钮后）加：
 
 ```html
 <slot name="toolbar-extra" />
+```
+
+2. `.pool-user-head` 昵称后加临时徽章（spec §4 要求编队池也标「临时」）：
+
+```html
+<span style="color:var(--dnf-text-muted,#9aa3b2);width:12px;display:inline-block">
+  {{ collapsed.has(g.user.id) ? '▸' : '▾' }}
+</span>{{ g.user.nickname }}<span v-if="g.user.is_guest" class="dnf-badge" style="margin-left:6px">临时</span>
+```
+
+3. `RosterPool.spec.ts` 的 `u1`/`u2` fixture 补 `is_guest: false`（Task 6），并追加徽章用例：
+
+```ts
+it('guest 用户在组头显示临时徽章', () => {
+  const w = mountPool({ signups: [{ user: { ...u1, is_guest: true }, created_at: null, characters: [c1, c2] }] })
+  expect(w.find('[data-user-id="1"]').text()).toContain('临时')
+})
 ```
 
 - [ ] **Step 4: RosterView 加按钮与联动**
