@@ -73,7 +73,8 @@ async function mountView(signups: Raid['signups'], user: User = admin,
   await router.push('/raids/1/roster'); await router.isReady()
   return { wrapper: mount(RosterView, { global: { plugins: [pinia, router],
     stubs: { 'router-link': true, 'router-view': true, DutySelect: true, UserAvatar: true,
-      RosterTargetModal: { name: 'RosterTargetModal', template: '<div />' }, teleport: true } } }), auth, store }
+      RosterTargetModal: { name: 'RosterTargetModal', template: '<div />' },
+      GuestCreateModal: { name: 'GuestCreateModal', template: '<div />' }, teleport: true } } }), auth, store }
 }
 
 beforeEach(() => { vi.clearAllMocks(); localStorage.clear() })
@@ -199,5 +200,23 @@ describe('RosterView', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await flushPromises()
     expect(wrapper.find('.move-hint').exists()).toBe(false)
+  })
+
+  it('编队池工具栏添加临时选手并代报名', async () => {
+    apiMock.post.mockResolvedValue({})
+    const { wrapper } = await mountView([], admin)
+    await flushPromises()
+    await wrapper.find('[data-test="add-guest"]').trigger('click')
+    const guest = { id: 66, username: 'guest_y', nickname: '编队外援', is_admin: false,
+      avatar: null, is_banned: false, is_guest: true }
+    wrapper.findComponent({ name: 'GuestCreateModal' }).vm.$emit('created', guest, 1)
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/signups', { user_id: 66 })
+  })
+
+  it('非管理员不显示编队添加临时选手入口', async () => {
+    const { wrapper } = await mountView([], member)
+    await flushPromises()
+    expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
   })
 })

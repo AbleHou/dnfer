@@ -16,9 +16,10 @@ import type { SquadTarget, SquadTargets } from '../lib/roster'
 import RosterPool from '../components/RosterPool.vue'
 import RosterGrid from '../components/RosterGrid.vue'
 import RosterTargetModal from '../components/RosterTargetModal.vue'
+import GuestCreateModal from '../components/GuestCreateModal.vue'
 import { SQUAD_NAMES } from '../lib/colors'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
-import type { Character, Slot, Wave } from '../types'
+import type { Character, Slot, User, Wave } from '../types'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -31,6 +32,7 @@ const holding = ref<Character | null>(null)
 const recommendOn = ref(localStorage.getItem(RECOMMEND_KEY) !== '0')
 const targets = ref<SquadTargets>(loadTargets(rid))
 const targetModal = ref<{ open: boolean; squadIndex: number }>({ open: false, squadIndex: 0 })
+const guestOpen = ref(false)
 let disconnect: (() => void) | null = null
 
 const currentWave = computed<Wave | null>(() =>
@@ -161,6 +163,19 @@ function onSaveTarget(t: SquadTarget) {
 }
 
 async function load() { await store.load(rid) }
+async function onGuestCreated(u: User, charCount: number) {
+  guestOpen.value = false
+  if (!store.raid) return
+  if (charCount === 0) {
+    notifyWarning('已创建临时用户，但未填角色，请先在角色管理添加角色后再代报名')
+    return
+  }
+  try {
+    await api.post(`/api/raids/${store.raid.id}/signups`, { user_id: u.id })
+    notifySuccess('已代报名')
+    await load()
+  } catch (e: any) { notifyError(e.message) }
+}
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
   disconnect = connectRaidWs(rid, {
@@ -224,7 +239,12 @@ onBeforeUnmount(() => {
         <RosterPool :signups="store.raid.signups" :blocked-char-ids="blockedCharIds"
                     :slack-char-ids="slackCharIds" :recommend-top3="recommendTop3"
                     :recommend-target="recommendTarget" :holding-id="holding?.id ?? null"
-                    :can-edit="canEdit" @pick="onPick" />
+                    :can-edit="canEdit" @pick="onPick">
+          <template #toolbar-extra>
+            <button v-if="canEdit && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+                    data-test="add-guest" @click="guestOpen = true">＋临时</button>
+          </template>
+        </RosterPool>
       </aside>
       <main style="flex:1;min-width:0" data-test="roster-grid">
         <RosterGrid :groups="currentGroups" :targets="targets" :can-edit="canEdit"
@@ -239,6 +259,9 @@ onBeforeUnmount(() => {
                        :target="targets[targetModal.squadIndex] ?? null"
                        @close="targetModal.open = false"
                        @save="onSaveTarget" />
+
+    <GuestCreateModal v-if="guestOpen" :open="guestOpen" :require-character="true"
+                      @close="guestOpen = false" @created="onGuestCreated" />
   </div>
 </template>
 

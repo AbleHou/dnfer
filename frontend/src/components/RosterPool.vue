@@ -81,12 +81,13 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
              style="flex:1;min-width:0" />
       <button class="dnf-btn dnf-btn-sm" title="全部展开" data-act="pool-expand-all" @click="expandAll">▾▾</button>
       <button class="dnf-btn dnf-btn-sm" title="全部收起" data-act="pool-collapse-all" @click="collapseAll">▴▴</button>
+      <slot name="toolbar-extra" />
     </div>
     <div v-for="g in visibleGroups" :key="g.user.id" class="pool-user" data-test="pool-user">
       <div class="pool-user-head" :data-user-id="g.user.id" @click="toggleGroup(g.user.id)">
         <span style="color:var(--dnf-text-muted,#9aa3b2);width:12px;display:inline-block">
           {{ collapsed.has(g.user.id) ? '▸' : '▾' }}
-        </span>{{ g.user.nickname }}
+        </span>{{ g.user.nickname }}<span v-if="g.user.is_guest" class="dnf-badge" style="margin-left:6px">临时</span>
       </div>
       <div v-if="!collapsed.has(g.user.id)">
         <div v-for="p in g.parties" :key="p.id ?? '__u'" class="pool-party" data-test="pool-party">

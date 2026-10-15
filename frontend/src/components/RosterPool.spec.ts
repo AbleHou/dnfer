@@ -37,6 +37,10 @@ describe('RosterPool', () => {
     expect(w.text()).toContain('甲'); expect(w.text()).toContain('乙')
     expect(w.text()).toContain('剑魂'); expect(w.text()).toContain('奶')
   })
+  it('guest 用户在组头显示临时徽章', () => {
+    const w = mountPool({ signups: [{ user: { ...u1, is_guest: true }, created_at: null, characters: [c1, c2] }] })
+    expect(w.find('[data-user-id="1"]').text()).toContain('临时')
+  })
   it('blocked 角色置灰且点击不 emit pick', async () => {
     const w = mountPool({ blockedCharIds: new Set([10]) })
     const card = w.find('[data-act="pool-char-10"]')
