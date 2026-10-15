@@ -50,6 +50,8 @@
 
 ### 3.2 端点（`routers/admin.py`，均 `require_admin`）
 
+**`DELETE` 端点异步注意**：`admin.py` 现有端点全是同步 `def`；删除端点需 `await _remove_signup`（raids.py:667 是 `async def`），故该端点为 `async def`——admin 路由第一个异步端点，无路由级阻碍。
+
 **`POST /api/admin/users` — 创建临时用户**
 - nickname 已存在 → 400「昵称已存在」；指定 username 已存在 → 400「用户名已存在」。
 - 流程：建 User(is_guest=True, is_admin=False, username, 随机密码 hash) → flush → 建默认冒险团 → 逐角色 `validate_job` + `apply_character_payload` + 挂默认团。
@@ -81,7 +83,9 @@
 ## 4. 前端
 
 - `types.ts`：`User` 加必填 `is_guest: boolean` → **连带更新所有 User 字面量 fixture**（RaidList/RaidDetail/stores/raid/MemberCharactersModal 等 spec，以 `npm run build` 的 vue-tsc 为准）。`AdminUser` 继承 User 自动携带。
-- **`GuestCreateModal`**（新组件，n-modal）：昵称 + 可选用户名 + 角色列表（复用 CharacterForm 的职业/名望/伤害·增益字段）→ `POST /api/admin/users`；成功 emit('created', user)。
+- **`GuestCreateModal`**（新组件，n-modal）：昵称 + 可选用户名 + 角色列表（**轻量多行角色编辑器**——每行复用 CharacterForm 的职业/名望/伤害·增益字段集，不整体嵌入 CharacterForm；可加行/删行）→ `POST /api/admin/users`；成功 emit('created', user)。
+  - **角色数量策略**：攻坚详情页/编队页的「添加临时选手」**要求至少一个角色**（无角色时提交按钮禁用）——因为代报名要求至少一个角色（`_signup_user` 400「至少选择一个角色」），且该入口意图就是"可立即排表"；AdminUsersView 的「添加临时用户」允许 0 角色（后续经角色管理补）。
+  - **防御**：无论哪种入口，创建成功后前端若发现返回的 `characters` 为空，则**跳过代报名**并提示「已创建临时用户，请先在角色管理添加角色后再代报名」，避免 `admin_signup` 报「至少选择一个角色」。
 - **`GuestConvertModal`**（新组件）：用户名 + 密码（含确认）→ `POST /users/{uid}/convert`。
 - **攻坚详情页（RaidDetailView）**：管理员区「添加临时选手」按钮 → `GuestCreateModal` → 成功后调 `admin_signup`（代报名本场）→ 报名面板出现该 guest，立即可排表。
 - **编队页（RosterView）**：RosterPool 工具栏「添加临时选手」按钮 → 同一 `GuestCreateModal` + 代报名。
