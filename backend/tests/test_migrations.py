@@ -150,3 +150,17 @@ def test_migrate_adventure_parties_backfills():
     migrate_adventure_parties(engine)  # 幂等：不报错、不重复建团
     with engine.begin() as conn:
         assert conn.execute(text("SELECT COUNT(*) FROM adventure_parties")).scalar() == 2
+
+def test_migrate_users_guest_adds_column():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE users (
+            id INTEGER PRIMARY KEY, username VARCHAR(64) UNIQUE,
+            password_hash VARCHAR(128), nickname VARCHAR(64),
+            is_admin BOOLEAN, is_banned BOOLEAN, created_at DATETIME)"""))
+    from app.migrations import migrate_users_guest
+    migrate_users_guest(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).all()}
+        assert "is_guest" in cols
+    migrate_users_guest(engine)  # 幂等：再次运行不报错

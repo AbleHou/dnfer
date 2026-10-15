@@ -88,6 +88,18 @@ def migrate_users_ban(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_banned BOOLEAN NOT NULL DEFAULT 0"))
 
 
+def migrate_users_guest(engine: Engine) -> None:
+    """为存量库补建 users.is_guest 列（幂等）。"""
+    from . import models  # noqa: F401  确保模型注册
+    from .db import Base
+
+    Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(users)")).all()}
+        if "is_guest" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_guest BOOLEAN NOT NULL DEFAULT 0"))
+
+
 def migrate_characters_sun_buff(engine: Engine) -> None:
     """为存量库补建 characters.sun_buff 列（幂等）。"""
     from . import models  # noqa: F401  确保模型注册

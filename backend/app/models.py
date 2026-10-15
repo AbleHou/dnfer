@@ -17,6 +17,7 @@ class User(Base):
     avatar: Mapped[str | None] = mapped_column(String(256), nullable=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_guest: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     characters: Mapped[list["Character"]] = relationship(back_populates="owner")
     adventure_parties: Mapped[list["AdventureParty"]] = relationship(back_populates="owner")
