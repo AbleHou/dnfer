@@ -4,6 +4,8 @@ import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
 import AdminUserCharactersModal from '../components/AdminUserCharactersModal.vue'
 import AdminResetPasswordModal from '../components/AdminResetPasswordModal.vue'
+import GuestCreateModal from '../components/GuestCreateModal.vue'
+import GuestConvertModal from '../components/GuestConvertModal.vue'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
 import { jobGenderTitle } from '../lib/job'
 import type { AdminCharacterRow, AdminUser, CharacterQueryResult, JobCategory, User } from '../types'
@@ -104,6 +106,20 @@ async function toggleBan(u: AdminUser) {
   } catch (e: any) { notifyError(e.message) }
 }
 
+// ---- 临时用户 ----
+const guestOpen = ref(false)
+const convertOpen = ref(false)
+const convertUser = ref<User | null>(null)
+function openConvert(u: AdminUser) { convertUser.value = u; convertOpen.value = true }
+async function onDeleteGuest(u: AdminUser) {
+  const ok = await confirmDialog({ content: `确认删除临时用户 ${u.nickname}？将撤下其全部占位并删除其角色` })
+  if (!ok) return
+  try { await api.del(`/api/admin/users/${u.id}`); notifySuccess('已删除'); await loadUsers() }
+  catch (e: any) { notifyError(e.message) }
+}
+function onGuestClose() { guestOpen.value = false; loadUsers() }
+function onConvertClose() { convertOpen.value = false; loadUsers() }
+
 onMounted(() => {
   void loadQuery()
   void loadUsers()
@@ -178,6 +194,7 @@ onMounted(() => {
         <input v-model="userQ" placeholder="搜索昵称/用户名" class="dnf-input" data-filter="user_q"
                @keyup.enter="loadUsers" />
         <button class="dnf-btn dnf-btn-sm" data-act="user-search" @click="loadUsers">搜索</button>
+        <button class="dnf-btn dnf-btn-sm dnf-btn-primary" data-act="add-guest" @click="guestOpen = true">＋ 添加临时用户</button>
       </div>
       <p v-if="userError" class="form-error">{{ userError }}</p>
       <table class="dnf-table">
@@ -187,7 +204,7 @@ onMounted(() => {
         </thead>
         <tbody>
           <tr v-for="u in users" :key="u.id">
-            <td>{{ u.nickname }}</td>
+            <td>{{ u.nickname }}<span v-if="u.is_guest" class="dnf-badge" style="margin-left:6px">临时</span></td>
             <td>{{ u.username }}</td>
             <td>{{ u.is_admin ? '是' : '否' }}</td>
             <td>{{ u.character_count }}</td>
@@ -196,6 +213,11 @@ onMounted(() => {
               <div style="display:flex;gap:8px">
                 <button class="dnf-btn dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</button>
                 <button class="dnf-btn dnf-btn-sm" :data-act="'reset-pw-' + u.id" @click="openResetPw(u)">改密</button>
+                <template v-if="u.is_guest">
+                  <button class="dnf-btn dnf-btn-sm" :data-act="'convert-' + u.id" @click="openConvert(u)">转正</button>
+                  <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'delete-guest-' + u.id"
+                          @click="onDeleteGuest(u)">删除</button>
+                </template>
                 <template v-if="!u.is_admin">
                   <button v-if="!u.is_banned" class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'ban-' + u.id"
                           @click="toggleBan(u)">封禁</button>
@@ -212,5 +234,9 @@ onMounted(() => {
                               @close="onModalClose" />
     <AdminResetPasswordModal v-if="resetPwOpen" :open="resetPwOpen" :user="resetPwUser"
                              @close="onResetPwClose" />
+    <GuestCreateModal v-if="guestOpen" :open="guestOpen" :require-character="false"
+                      @close="onGuestClose" @created="onGuestClose" />
+    <GuestConvertModal v-if="convertOpen" :open="convertOpen" :user="convertUser"
+                       @close="onConvertClose" />
   </div>
 </template>

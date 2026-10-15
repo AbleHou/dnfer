@@ -14,6 +14,8 @@ vi.mock('../lib/notify', () => ({
 
 const users = [{ id: 2, username: 'a', nickname: '阿甲', is_admin: false, avatar: null,
   is_banned: false, is_guest: false, character_count: 1 }]
+const guestUsers = [{ id: 3, username: 'guest_x', nickname: '外援', is_admin: false, avatar: null,
+  is_banned: false, is_guest: true, character_count: 2 }]
 const query = { items: [{ id: 9, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
   simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
@@ -145,5 +147,57 @@ describe('AdminUsersView', () => {
     await wrapper.find('[data-act="reset-pw-1"]').trigger('click')
     expect(wrapper.findComponent({ name: 'AdminResetPasswordModal' }).exists()).toBe(true)
     expect(wrapper.findComponent({ name: 'AdminUserCharactersModal' }).exists()).toBe(false)  // 独立弹窗不连带打开
+  })
+  it('临时用户显示徽章与转正/删除操作', async () => {
+    apiMock.get.mockImplementation((url: string) => {
+      if (url === '/api/admin/users') return Promise.resolve([...users, ...guestUsers])
+      if (url.startsWith('/api/admin/characters/query')) return Promise.resolve(query)
+      return Promise.resolve([])
+    })
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true, AdminResetPasswordModal: true, GuestCreateModal: true, GuestConvertModal: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('外援')
+    expect(wrapper.text()).toContain('临时')
+    expect(wrapper.find('[data-act="convert-3"]').exists()).toBe(true)
+    expect(wrapper.find('[data-act="delete-guest-3"]').exists()).toBe(true)
+  })
+  it('添加临时用户按钮打开创建弹窗', async () => {
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true, AdminResetPasswordModal: true, GuestCreateModal: true, GuestConvertModal: true } },
+    })
+    await flushPromises()
+    await wrapper.find('[data-act="add-guest"]').trigger('click')
+    expect(wrapper.findComponent({ name: 'GuestCreateModal' }).exists()).toBe(true)
+  })
+  it('删除临时用户调用 DELETE 并刷新', async () => {
+    apiMock.get.mockImplementation((url: string) => {
+      if (url === '/api/admin/users') return Promise.resolve([...users, ...guestUsers])
+      if (url.startsWith('/api/admin/characters/query')) return Promise.resolve(query)
+      return Promise.resolve([])
+    })
+    apiMock.del.mockResolvedValue({})
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true, AdminResetPasswordModal: true, GuestCreateModal: true, GuestConvertModal: true } },
+    })
+    await flushPromises()
+    await wrapper.find('[data-act="delete-guest-3"]').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.del).toHaveBeenCalledWith('/api/admin/users/3')
+  })
+  it('转正按钮打开转正弹窗', async () => {
+    apiMock.get.mockImplementation((url: string) => {
+      if (url === '/api/admin/users') return Promise.resolve([...users, ...guestUsers])
+      if (url.startsWith('/api/admin/characters/query')) return Promise.resolve(query)
+      return Promise.resolve([])
+    })
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true, AdminResetPasswordModal: true, GuestCreateModal: true, GuestConvertModal: true } },
+    })
+    await flushPromises()
+    await wrapper.find('[data-act="convert-3"]').trigger('click')
+    expect(wrapper.findComponent({ name: 'GuestConvertModal' }).exists()).toBe(true)
   })
 })
