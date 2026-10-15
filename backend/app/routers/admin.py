@@ -259,7 +259,11 @@ def convert_guest_user(uid: int, body: GuestConvertIn,
     target.username = body.username
     target.password_hash = hash_password(body.password)
     target.is_guest = False
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # 并发唯一约束兜底（username）
+        db.rollback()
+        raise HTTPException(400, "用户名已存在")
     db.refresh(target)
     return _admin_user_out(db, target)
 

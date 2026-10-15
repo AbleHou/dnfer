@@ -112,3 +112,6 @@ def test_convert_username_duplicate(client, admin_headers):
     r = client.post(f"/api/admin/users/{g['id']}/convert", headers=admin_headers,
                     json={"username": "taken1", "password": "mypass99"})
     assert r.status_code == 400 and r.json()["detail"] == "用户名已存在"
+    # 转正被拒后仍保持 guest 状态
+    g2 = client.get("/api/admin/users", headers=admin_headers).json()
+    assert next(x for x in g2 if x["id"] == g["id"])["is_guest"] is True
