@@ -1,13 +1,18 @@
+import secrets
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager
 
 from ..auth import hash_password, make_code, require_admin
 from ..db import get_db
-from ..models import Character, RegistrationCode, User
-from ..schemas import (AdminCharacterRow, AdminUserOut, AdventurePartyOut, CharacterIn,
-                       CharacterOut, CharacterQueryResult, CodeCreate, CodeOut,
-                       PasswordResetIn, PlayerCharacters, UserOut, VoteCreate, VoteDetail)
+from ..models import AdventureParty, Character, Raid, RaidSignup, RegistrationCode, User
+from ..schemas import (AdminCharacterRow, AdminCreateUserOut, AdminUserOut, AdventurePartyOut,
+                       CharacterIn, CharacterOut, CharacterQueryResult, CodeCreate, CodeOut,
+                       GuestConvertIn, GuestCreate, PasswordResetIn, PlayerCharacters,
+                       UserOut, VoteCreate, VoteDetail)
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
 from ..services.parties import parties_out, resolve_party
@@ -40,6 +45,52 @@ def list_users(q: str | None = None, admin: User = Depends(require_admin),
     counts = _counts(db)
     return [AdminUserOut(character_count=counts.get(u.id, 0),
                          **UserOut.model_validate(u).model_dump()) for u in users]
+
+@router.post("/users", response_model=AdminCreateUserOut)
+def create_guest_user(body: GuestCreate, admin: User = Depends(require_admin),
+                      db: Session = Depends(get_db)):
+    if admin.is_banned:
+        raise HTTPException(403, "你已被封禁，无法创建用户")
+    if db.query(User).filter(User.nickname == body.nickname).first():
+        raise HTTPException(400, "昵称已存在")
+    username = body.username
+    if username is None:
+        for _ in range(16):
+            candidate = f"guest_{uuid.uuid4().hex[:10]}"
+            if db.query(User).filter(User.username == candidate).first() is None:
+                username = candidate
+                break
+        else:
+            raise HTTPException(500, "生成用户名失败")
+    elif db.query(User).filter(User.username == username).first():
+        raise HTTPException(400, "用户名已存在")
+    user = User(username=username,
+                password_hash=hash_password(secrets.token_urlsafe(24)),
+                nickname=body.nickname, is_admin=False, is_guest=True)
+    db.add(user)
+    db.flush()
+    party = AdventureParty(user_id=user.id, name=f"{body.nickname}的冒险团")
+    db.add(party)
+    db.flush()
+    chars: list[Character] = []
+    for item in (body.characters or []):
+        validate_job(item.job_name)
+        c = Character(user_id=user.id)
+        apply_character_payload(c, item)
+        c.adventure_party_id = party.id
+        db.add(c)
+        chars.append(c)
+    try:
+        db.commit()
+    except IntegrityError:  # 并发唯一约束兜底（username/nickname）
+        db.rollback()
+        raise HTTPException(400, "用户名已存在")
+    for c in chars:
+        db.refresh(c)
+    return AdminCreateUserOut(user=_admin_user_out(db, user),
+                              characters=[character_out(c) for c in chars],
+                              default_party_id=party.id,
+                              default_party_name=party.name)
 
 @router.get("/characters", response_model=list[PlayerCharacters])
 def list_all_characters(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
