@@ -13,6 +13,7 @@ from ..schemas import (AdminCharacterRow, AdminCreateUserOut, AdminUserOut, Adve
                        CharacterIn, CharacterOut, CharacterQueryResult, CodeCreate, CodeOut,
                        GuestConvertIn, GuestCreate, PasswordResetIn, PlayerCharacters,
                        UserOut, VoteCreate, VoteDetail)
+from ..routers.raids import _remove_signup
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
 from ..services.parties import parties_out, resolve_party
@@ -266,6 +267,26 @@ def convert_guest_user(uid: int, body: GuestConvertIn,
         raise HTTPException(400, "用户名已存在")
     db.refresh(target)
     return _admin_user_out(db, target)
+
+@router.delete("/users/{uid}")
+async def delete_guest_user(uid: int, admin: User = Depends(require_admin),
+                            db: Session = Depends(get_db)):
+    target = _user_or_404(db, uid)
+    if not target.is_guest:
+        raise HTTPException(400, "仅可删除临时用户")
+    # 1) 逐 raid 撤占位 + 删报名行（_remove_signup 各自 commit + 广播，对齐 cancel_other）
+    raid_ids = [rs.raid_id for rs in db.query(RaidSignup)
+                .filter(RaidSignup.user_id == uid).all()]
+    for rid in raid_ids:
+        raid = db.get(Raid, rid)
+        if raid is not None:
+            await _remove_signup(db, raid, uid)
+    # 2-4) 删角色 → 删冒险团 → 删用户（单事务）
+    db.query(Character).filter(Character.user_id == uid).delete()
+    db.query(AdventureParty).filter(AdventureParty.user_id == uid).delete()
+    db.delete(target)
+    db.commit()
+    return {"ok": True}
 
 @router.post("/votes", response_model=VoteDetail)
 def create_vote_endpoint(body: VoteCreate, admin: User = Depends(require_admin),

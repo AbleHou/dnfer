@@ -115,3 +115,47 @@ def test_convert_username_duplicate(client, admin_headers):
     # 转正被拒后仍保持 guest 状态
     g2 = client.get("/api/admin/users", headers=admin_headers).json()
     assert next(x for x in g2 if x["id"] == g["id"])["is_guest"] is True
+
+
+def test_delete_guest_cleans_all(client, admin_headers, db):
+    g = client.post("/api/admin/users", headers=admin_headers, json={
+        "nickname": "删除甲", "characters": [_char()]}).json()
+    uid, cid = g["user"]["id"], g["characters"][0]["id"]
+    raid = make_raid(client, admin_headers)
+    rid = raid["id"]
+    # 代报名 + 占位
+    assert client.post(f"/api/raids/{rid}/signups", headers=admin_headers,
+                       json={"user_id": uid}).status_code == 200
+    slot_id = raid["waves"][0]["slots"][0]["id"]
+    assert client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
+                       json={"character_id": cid}).status_code == 200
+    r = client.delete(f"/api/admin/users/{uid}", headers=admin_headers)
+    assert r.status_code == 200
+    assert db.get(User, uid) is None
+    assert db.query(Character).filter(Character.user_id == uid).count() == 0
+    assert db.query(AdventureParty).filter(AdventureParty.user_id == uid).count() == 0
+    assert db.query(RaidSignup).filter(RaidSignup.user_id == uid).count() == 0
+    # 占位被撤
+    detail = client.get(f"/api/raids/{rid}", headers=admin_headers).json()
+    assert detail["waves"][0]["slots"][0]["character_id"] is None
+
+
+def test_delete_non_guest_rejected(client, admin_headers):
+    _, u = register_user(client, "normal2", "普通乙")
+    r = client.delete(f"/api/admin/users/{u['id']}", headers=admin_headers)
+    assert r.status_code == 400 and r.json()["detail"] == "仅可删除临时用户"
+
+
+def test_guest_e2e_create_signup_place(client, admin_headers):
+    g = client.post("/api/admin/users", headers=admin_headers, json={
+        "nickname": "外援", "characters": [_char()]}).json()
+    uid, cid = g["user"]["id"], g["characters"][0]["id"]
+    raid = make_raid(client, admin_headers)
+    rid = raid["id"]
+    assert client.post(f"/api/raids/{rid}/signups", headers=admin_headers,
+                       json={"user_id": uid}).status_code == 200
+    slot_id = raid["waves"][0]["slots"][0]["id"]
+    r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
+                    json={"character_id": cid})
+    assert r.status_code == 200
+    assert r.json()["slot"]["owner_nickname"] == "外援"
