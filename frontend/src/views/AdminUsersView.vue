@@ -114,10 +114,10 @@ function openConvert(u: AdminUser) { convertUser.value = u; convertOpen.value = 
 async function onDeleteGuest(u: AdminUser) {
   const ok = await confirmDialog({ content: `确认删除临时用户 ${u.nickname}？将撤下其全部占位并删除其角色` })
   if (!ok) return
-  try { await api.del(`/api/admin/users/${u.id}`); notifySuccess('已删除'); await loadUsers() }
+  try { await api.del(`/api/admin/users/${u.id}`); notifySuccess('已删除'); await loadUsers(); loadQuery() }
   catch (e: any) { notifyError(e.message) }
 }
-function onGuestClose() { guestOpen.value = false; loadUsers() }
+function onGuestClose() { guestOpen.value = false; loadUsers(); loadQuery() }
 function onConvertClose() { convertOpen.value = false; loadUsers() }
 
 onMounted(() => {
@@ -235,7 +235,7 @@ onMounted(() => {
     <AdminResetPasswordModal v-if="resetPwOpen" :open="resetPwOpen" :user="resetPwUser"
                              @close="onResetPwClose" />
     <GuestCreateModal v-if="guestOpen" :open="guestOpen" :require-character="false"
-                      @close="onGuestClose" @created="onGuestClose" />
+                      @close="onGuestClose" />
     <GuestConvertModal v-if="convertOpen" :open="convertOpen" :user="convertUser"
                        @close="onConvertClose" />
   </div>
