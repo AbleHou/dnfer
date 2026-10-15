@@ -67,6 +67,7 @@ class UserOut(BaseModel):
     avatar: str | None = None
     is_admin: bool
     is_banned: bool = False
+    is_guest: bool = False
 
 class PlayerCharacters(BaseModel):
     user: UserOut
@@ -140,6 +141,16 @@ class RaidSignupOut(BaseModel):
 
 class SignupUserIn(BaseModel):
     user_id: int
+
+class GuestCreate(BaseModel):
+    nickname: str = Field(min_length=1, max_length=64,
+                          pattern="^[\u4e00-\u9fa5A-Za-z0-9]+$")
+    username: str | None = Field(default=None, min_length=2, max_length=64)
+    characters: list[CharacterIn] | None = None
+
+class GuestConvertIn(BaseModel):
+    username: str = Field(min_length=2, max_length=64)
+    password: str = Field(min_length=6, max_length=128)
 
 class SignupIn(BaseModel):
     character_ids: list[int] | None = None  # None=默认全部角色
@@ -292,6 +303,12 @@ class AdminCharacterRow(CharacterOut):
     owner_nickname: str
     owner_username: str
     owner_is_banned: bool
+
+class AdminCreateUserOut(BaseModel):
+    user: AdminUserOut
+    characters: list[CharacterOut]
+    default_party_id: int | None = None
+    default_party_name: str | None = None
 
 class CharacterQueryResult(BaseModel):
     items: list[AdminCharacterRow]
