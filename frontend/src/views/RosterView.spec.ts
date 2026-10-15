@@ -219,4 +219,12 @@ describe('RosterView', () => {
     await flushPromises()
     expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
   })
+
+  it('已锁定攻坚不显示编队添加临时选手入口', async () => {
+    const snapshot = makeRaid([])
+    snapshot.locked = true
+    const { wrapper } = await mountView([], admin, snapshot)
+    await flushPromises()
+    expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
+  })
 })
