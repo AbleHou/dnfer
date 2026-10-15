@@ -20,8 +20,8 @@ vi.mock('../api/ws', () => ({ connectRaidWs: vi.fn(() => () => {}) }))
 vi.mock('../lib/notify', () => ({ confirmDialog: vi.fn(async () => true),
   notifyError: notifyMock.error, notifyWarning: notifyMock.warning, notifySuccess: notifyMock.success }))
 
-const admin: User = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false }
-const member: User = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
+const admin: User = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false, is_guest: false }
+const member: User = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false, is_guest: false }
 const outChar: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: '鬼剑士', class_type: '输出', fame: 52000, simulated_damage: 12000,
   sustained_dps: 3000, buff_amount: null, sun_buff: null,

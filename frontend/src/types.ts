@@ -1,7 +1,7 @@
 export type ClassType = '输出' | '辅助'
 export type Duty = '主C' | '辅C' | '主奶' | '太阳奶' | '划水'
 
-export interface User { id: number; username: string; nickname: string; is_admin: boolean; avatar: string | null; is_banned: boolean }
+export interface User { id: number; username: string; nickname: string; is_admin: boolean; avatar: string | null; is_banned: boolean; is_guest: boolean }
 export interface AdminUser extends User { character_count: number }
 export interface AdminCharacterRow extends Character {
   owner_id: number; owner_nickname: string; owner_username: string; owner_is_banned: boolean

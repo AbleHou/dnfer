@@ -88,7 +88,7 @@ function onModalClose() {
 function openOwner(c: AdminCharacterRow) {
   modalUser.value = {
     id: c.owner_id, username: c.owner_username, nickname: c.owner_nickname,
-    is_admin: false, avatar: null, is_banned: c.owner_is_banned,
+    is_admin: false, avatar: null, is_banned: c.owner_is_banned, is_guest: false,
   }
   modalOpen.value = true
 }

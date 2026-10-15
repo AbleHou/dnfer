@@ -13,7 +13,7 @@ vi.mock('../lib/notify', () => ({
 }))
 
 const users = [{ id: 2, username: 'a', nickname: '阿甲', is_admin: false, avatar: null,
-  is_banned: false, character_count: 1 }]
+  is_banned: false, is_guest: false, character_count: 1 }]
 const query = { items: [{ id: 9, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
   simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,

@@ -42,8 +42,8 @@ const WaveSectionForward = {
     <button data-act="unpar" @click="$emit('unparallelize', wave)">取消并行</button></div>`,
 }
 
-const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false }
-const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false }
+const admin = { id: 9, username: 'a', nickname: '团长', is_admin: true, avatar: null, is_banned: false, is_guest: false }
+const member = { id: 3, username: 'm', nickname: '队员', is_admin: false, avatar: null, is_banned: false, is_guest: false }
 const memberChars: Character[] = [
   { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂', parent_name: '鬼剑士',
     class_type: '输出', fame: 52000, simulated_damage: 5, sustained_dps: 2,
@@ -229,7 +229,7 @@ describe('RaidDetailView enhance', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.user = { id: 99, username: 'newbie', nickname: '新人', is_admin: false, avatar: null, is_banned: false }
+    auth.user = { id: 99, username: 'newbie', nickname: '新人', is_admin: false, avatar: null, is_banned: false, is_guest: false }
     const store = useRaidStore()
     store.raid = makeRaid([adminRow, memberRow])
     apiMock.get.mockImplementation(async (url: string) => {

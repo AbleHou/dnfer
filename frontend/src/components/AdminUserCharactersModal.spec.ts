@@ -12,7 +12,7 @@ vi.mock('../lib/notify', () => ({
   confirmDialog: vi.fn(async () => true), notifyError: vi.fn(), notifySuccess: vi.fn(),
 }))
 
-const user = { id: 7, username: 'p', nickname: '玩家', is_admin: false, avatar: null, is_banned: false }
+const user = { id: 7, username: 'p', nickname: '玩家', is_admin: false, avatar: null, is_banned: false, is_guest: false }
 const chars = [{ id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
   parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
   simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null }]

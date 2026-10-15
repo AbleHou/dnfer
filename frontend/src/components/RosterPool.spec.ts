@@ -4,8 +4,8 @@ import { mount } from '@vue/test-utils'
 import RosterPool from './RosterPool.vue'
 import type { Character, RaidSignup, User } from '../types'
 
-const u1: User = { id: 1, username: 'a', nickname: '甲', is_admin: false, avatar: null, is_banned: false }
-const u2: User = { id: 2, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
+const u1: User = { id: 1, username: 'a', nickname: '甲', is_admin: false, avatar: null, is_banned: false, is_guest: false }
+const u2: User = { id: 2, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false, is_guest: false }
 const c1: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂', parent_name: '鬼剑士',
   class_type: '输出', fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null,
   adventure_party_id: 100, adventure_party_name: '甲团' }

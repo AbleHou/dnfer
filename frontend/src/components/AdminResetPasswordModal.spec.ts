@@ -10,7 +10,7 @@ const { apiMock, notifyMock } = vi.hoisted(() => ({
 vi.mock('../api/client', () => ({ api: apiMock, getToken: vi.fn(() => 'tok') }))
 vi.mock('../lib/notify', () => notifyMock)
 
-const user = { id: 7, username: 'p', nickname: '玩家', is_admin: false, avatar: null, is_banned: false }
+const user = { id: 7, username: 'p', nickname: '玩家', is_admin: false, avatar: null, is_banned: false, is_guest: false }
 
 describe('AdminResetPasswordModal', () => {
   beforeEach(() => vi.clearAllMocks())

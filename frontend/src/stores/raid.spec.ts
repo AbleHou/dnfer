@@ -90,7 +90,7 @@ describe('raid store', () => {
     setActivePinia(createPinia())
     const store = useRaidStore()
     store.raid = makeRaid()
-    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
+    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false, is_guest: false }
     applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00', characters: [] })
     expect(store.raid!.signups).toHaveLength(1)
     expect(store.raid!.signups[0].user.id).toBe(9)
@@ -105,7 +105,7 @@ describe('raid store', () => {
     setActivePinia(createPinia())
     const store = useRaidStore()
     store.raid = makeRaid()
-    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false }
+    const u = { id: 9, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false, is_guest: false }
     applyEvent(store, { type: 'raid:signup', user: u, created_at: '2026-09-22T10:00:00', characters: [] })
     const chars = [{ id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: '鬼剑士', class_type: '输出' as const, fame: 1, simulated_damage: 2,
