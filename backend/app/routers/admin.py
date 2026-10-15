@@ -247,6 +247,22 @@ def reset_user_password(uid: int, body: PasswordResetIn,
     db.refresh(target)
     return _admin_user_out(db, target)
 
+@router.post("/users/{uid}/convert", response_model=AdminUserOut)
+def convert_guest_user(uid: int, body: GuestConvertIn,
+                       admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    target = _user_or_404(db, uid)
+    if not target.is_guest:
+        raise HTTPException(400, "该用户不是临时用户")
+    if db.query(User).filter(User.username == body.username,
+                             User.id != target.id).first():
+        raise HTTPException(400, "用户名已存在")
+    target.username = body.username
+    target.password_hash = hash_password(body.password)
+    target.is_guest = False
+    db.commit()
+    db.refresh(target)
+    return _admin_user_out(db, target)
+
 @router.post("/votes", response_model=VoteDetail)
 def create_vote_endpoint(body: VoteCreate, admin: User = Depends(require_admin),
                          db: Session = Depends(get_db)):

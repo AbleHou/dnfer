@@ -75,3 +75,40 @@ def test_create_guest_banned_admin_blocked(client, admin_headers, db):
     db.commit()
     r = client.post("/api/admin/users", headers=admin_headers, json={"nickname": "客己"})
     assert r.status_code == 403 and r.json()["detail"] == "你已被封禁，无法创建用户"
+
+
+def _mk_guest(client, admin_headers, nickname="转正甲"):
+    return client.post("/api/admin/users", headers=admin_headers,
+                       json={"nickname": nickname}).json()["user"]
+
+
+def test_convert_guest(client, admin_headers):
+    g = _mk_guest(client, admin_headers)
+    r = client.post(f"/api/admin/users/{g['id']}/convert", headers=admin_headers,
+                    json={"username": "realuser1", "password": "mypass99"})
+    assert r.status_code == 200
+    assert r.json()["is_guest"] is False
+    assert r.json()["username"] == "realuser1"
+    assert r.json()["nickname"] == "转正甲"  # 昵称不变
+    # 转正后可用新凭据登录
+    assert client.post("/api/auth/login",
+                       json={"username": "realuser1", "password": "mypass99"}).status_code == 200
+    # 冒险团名不变
+    parties = client.get(f"/api/admin/users/{g['id']}/adventure-parties",
+                         headers=admin_headers).json()
+    assert parties[0]["name"] == "转正甲的冒险团"
+
+
+def test_convert_non_guest_rejected(client, admin_headers):
+    _, u = register_user(client, "normal1", "普通甲")
+    r = client.post(f"/api/admin/users/{u['id']}/convert", headers=admin_headers,
+                    json={"username": "xy", "password": "secret1"})
+    assert r.status_code == 400 and r.json()["detail"] == "该用户不是临时用户"
+
+
+def test_convert_username_duplicate(client, admin_headers):
+    _, u = register_user(client, "taken1", "占用甲")
+    g = _mk_guest(client, admin_headers, "转正乙")
+    r = client.post(f"/api/admin/users/{g['id']}/convert", headers=admin_headers,
+                    json={"username": "taken1", "password": "mypass99"})
+    assert r.status_code == 400 and r.json()["detail"] == "用户名已存在"
