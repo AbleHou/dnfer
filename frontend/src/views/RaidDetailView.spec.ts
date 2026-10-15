@@ -10,7 +10,7 @@ import CharacterPickerModal from '../components/CharacterPickerModal.vue'
 import WaveSection from '../components/WaveSection.vue'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore } from '../stores/raid'
-import type { Character, Raid, User } from '../types'
+import type { Character, Raid, RaidSignup, User } from '../types'
 import { confirmDialog } from '../lib/notify'
 
 const { apiMock, notifyMock } = vi.hoisted(() => ({
@@ -110,6 +110,7 @@ async function mountView(signups: Raid['signups'], user: User = admin,
         'router-link': true, 'router-view': true, WaveSection: true, CharacterPickerModal: true,
         SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true, SignupMemberPicker: true,
         SignupModal: true, SlackRulesModal: true, teleport: true,
+        GuestCreateModal: { name: 'GuestCreateModal', template: '<div />' },
       },
     },
   }), auth, store }
@@ -447,5 +448,40 @@ describe('RosterView 入口', () => {
   it('非管理员看不到「编队」按钮', async () => {
     const { wrapper } = await mountView([adminRow, memberRow], member)
     expect(wrapper.find('[data-test="roster-link"]').exists()).toBe(false)
+  })
+})
+
+describe('RaidDetailView 添加临时选手', () => {
+  it('管理员添加临时选手并代报名', async () => {
+    apiMock.post.mockResolvedValue({})
+    const { wrapper } = await mountView([], admin, makeRaid([]))
+    await flushPromises()
+    await wrapper.find('[data-test="add-guest"]').trigger('click')
+    const guest = { id: 55, username: 'guest_x', nickname: '外援', is_admin: false,
+      avatar: null, is_banned: false, is_guest: true }
+    wrapper.findComponent({ name: 'GuestCreateModal' }).vm.$emit('created', guest, 1)
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/signups', { user_id: 55 })
+  })
+
+  it('已锁定攻坚不显示添加临时选手入口', async () => {
+    const snapshot = makeRaid([])
+    snapshot.locked = true
+    const { wrapper } = await mountView([], admin, snapshot)
+    await flushPromises()
+    expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
+  })
+
+  it('报名面板临时用户显示临时徽章', async () => {
+    const guestSignup: RaidSignup = {
+      user: { id: 55, username: 'guest_x', nickname: '外援', is_admin: false,
+        avatar: null, is_banned: false, is_guest: true },
+      created_at: '2026-10-01T00:00:00', characters: [],
+    }
+    const { wrapper } = await mountView([guestSignup], admin, makeRaid([guestSignup]))
+    await flushPromises()
+    // 徽章断言收窄到报名行内，避免被「添加临时选手」按钮自身的“临时”二字误判
+    expect(wrapper.find('.signup-group').text()).toContain('外援')
+    expect(wrapper.find('.signup-group .dnf-badge').text()).toContain('临时')
   })
 })

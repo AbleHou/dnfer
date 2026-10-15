@@ -17,6 +17,7 @@ import { buildPlacementMap } from '../lib/placement'
 import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
+import GuestCreateModal from '../components/GuestCreateModal.vue'
 import { NDatePicker, NInput, NModal } from 'naive-ui'
 import { computeSlack, slackCountByUser } from '../lib/slack'
 import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User, Wave } from '../types'
@@ -241,6 +242,20 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
     await load()  // WS 断连时兜底刷新（正常时 WS 已 patch slack_rules）
   } catch (e: any) { notifyError(e.message) }
 }
+const guestOpen = ref(false)
+async function onGuestCreated(u: User, charCount: number) {
+  guestOpen.value = false
+  if (!store.raid) return
+  if (charCount === 0) {
+    notifyWarning('已创建临时用户，但未填角色，请先在角色管理添加角色后再代报名')
+    return
+  }
+  try {
+    await api.post(`/api/raids/${store.raid.id}/signups`, { user_id: u.id })
+    notifySuccess('已代报名')
+    await load()
+  } catch (e: any) { notifyError(e.message) }
+}
 </script>
 
 <template>
@@ -273,6 +288,8 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
                   data-test="signup" @click="openSignupModal">报名</button>
           <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
                   data-test="signup-plus" @click="showMemberPicker = true">＋</button>
+          <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+                  data-test="add-guest" @click="guestOpen = true">添加临时选手</button>
         </span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
@@ -289,6 +306,7 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
             <button class="avatar-btn signup-user" @click="memberModalUser = s.user">
               <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
               <span class="signup-nick">{{ s.user.nickname }}</span>
+              <span v-if="s.user.is_guest" class="dnf-badge" style="margin-left:4px">临时</span>
               <span class="signup-count">{{ placedCount(s) }}/{{ s.characters.length }}<template v-if="(slackCounts[s.user.id] ?? 0) > 0"> · 划水 {{ slackCounts[s.user.id] }}</template></span>
             </button>
             <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
@@ -355,6 +373,9 @@ async function onSlackRulesSubmit(rules: SlackRuleSet) {
 
     <SignupMemberPicker :open="showMemberPicker" :rid="rid" :exclude-user-ids="signupUserIds"
                         @close="showMemberPicker = false" @signedUp="load" />
+
+    <GuestCreateModal v-if="guestOpen" :open="guestOpen" :require-character="true"
+                      @close="guestOpen = false" @created="onGuestCreated" />
 
     <SignupModal :open="showSignupModal" :mode="signupMode" :selected-ids="signupSelected"
                  @close="showSignupModal = false"
