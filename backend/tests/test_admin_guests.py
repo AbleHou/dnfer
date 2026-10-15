@@ -170,6 +170,14 @@ def test_delete_non_guest_rejected(client, admin_headers):
     assert r.status_code == 400 and r.json()["detail"] == "仅可删除临时用户"
 
 
+def test_reset_password_guest_rejected(client, admin_headers):
+    g = client.post("/api/admin/users", headers=admin_headers,
+                    json={"nickname": "改密外援"}).json()["user"]
+    r = client.post(f"/api/admin/users/{g['id']}/password", headers=admin_headers,
+                    json={"password": "newpass99"})
+    assert r.status_code == 400 and r.json()["detail"] == "临时用户请使用转正功能"
+
+
 def test_guest_e2e_create_signup_place(client, admin_headers):
     g = client.post("/api/admin/users", headers=admin_headers, json={
         "nickname": "外援", "characters": [_char()]}).json()

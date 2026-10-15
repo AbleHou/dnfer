@@ -212,7 +212,7 @@ onMounted(() => {
             <td style="white-space:nowrap">
               <div style="display:flex;gap:8px">
                 <button class="dnf-btn dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</button>
-                <button class="dnf-btn dnf-btn-sm" :data-act="'reset-pw-' + u.id" @click="openResetPw(u)">改密</button>
+                <button v-if="!u.is_guest" class="dnf-btn dnf-btn-sm" :data-act="'reset-pw-' + u.id" @click="openResetPw(u)">改密</button>
                 <template v-if="u.is_guest">
                   <button class="dnf-btn dnf-btn-sm" :data-act="'convert-' + u.id" @click="openConvert(u)">转正</button>
                   <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'delete-guest-' + u.id"

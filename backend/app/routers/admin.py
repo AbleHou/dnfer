@@ -243,6 +243,8 @@ def unban_user(uid: int, admin: User = Depends(require_admin), db: Session = Dep
 def reset_user_password(uid: int, body: PasswordResetIn,
                         admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     target = _user_or_404(db, uid)
+    if target.is_guest:
+        raise HTTPException(400, "临时用户请使用转正功能")
     target.password_hash = hash_password(body.password)
     db.commit()
     db.refresh(target)
