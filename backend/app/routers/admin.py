@@ -67,22 +67,22 @@ def create_guest_user(body: GuestCreate, admin: User = Depends(require_admin),
     user = User(username=username,
                 password_hash=hash_password(secrets.token_urlsafe(24)),
                 nickname=body.nickname, is_admin=False, is_guest=True)
-    db.add(user)
-    db.flush()
-    party = AdventureParty(user_id=user.id, name=f"{body.nickname}的冒险团")
-    db.add(party)
-    db.flush()
     chars: list[Character] = []
-    for item in (body.characters or []):
-        validate_job(item.job_name)
-        c = Character(user_id=user.id)
-        apply_character_payload(c, item)
-        c.adventure_party_id = party.id
-        db.add(c)
-        chars.append(c)
     try:
+        db.add(user)
+        db.flush()
+        party = AdventureParty(user_id=user.id, name=f"{body.nickname}的冒险团")
+        db.add(party)
+        db.flush()
+        for item in (body.characters or []):
+            validate_job(item.job_name)
+            c = Character(user_id=user.id)
+            apply_character_payload(c, item)
+            c.adventure_party_id = party.id
+            db.add(c)
+            chars.append(c)
         db.commit()
-    except IntegrityError:  # 并发唯一约束兜底（username/nickname）
+    except IntegrityError:  # 并发唯一约束兜底（username）
         db.rollback()
         raise HTTPException(400, "用户名已存在")
     for c in chars:

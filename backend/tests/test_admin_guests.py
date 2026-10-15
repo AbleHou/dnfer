@@ -21,9 +21,11 @@ def test_create_guest_user(client, admin_headers, db):
     assert data["default_party_name"] == "来客甲的冒险团"
     # 角色挂默认团
     assert data["characters"][0]["adventure_party_id"] == data["default_party_id"]
-    # 随机密码不可知（断言非明文）
+    # 随机密码不可知（断言非明文 + 用猜测密码无法登录）
     row = db.query(User).filter(User.id == u["id"]).one()
     assert row.password_hash != "hunter2"
+    assert client.post("/api/auth/login",
+                       json={"username": u["username"], "password": "guess123"}).status_code == 401
     assert row.is_guest is True
 
 
