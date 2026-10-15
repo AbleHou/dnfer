@@ -140,6 +140,30 @@ def test_delete_guest_cleans_all(client, admin_headers, db):
     assert detail["waves"][0]["slots"][0]["character_id"] is None
 
 
+def test_delete_guest_from_locked_raid(client, admin_headers, db):
+    g = client.post("/api/admin/users", headers=admin_headers, json={
+        "nickname": "锁定外援", "characters": [_char()]}).json()
+    uid, cid = g["user"]["id"], g["characters"][0]["id"]
+    raid = make_raid(client, admin_headers)
+    rid = raid["id"]
+    assert client.post(f"/api/raids/{rid}/signups", headers=admin_headers,
+                       json={"user_id": uid}).status_code == 200
+    slot_id = raid["waves"][0]["slots"][0]["id"]
+    assert client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=admin_headers,
+                       json={"character_id": cid}).status_code == 200
+    # 锁定攻坚后仍可删除临时用户（_remove_signup 不校验锁定）
+    assert client.post(f"/api/raids/{rid}/lock", headers=admin_headers).status_code == 200
+    r = client.delete(f"/api/admin/users/{uid}", headers=admin_headers)
+    assert r.status_code == 200
+    assert db.get(User, uid) is None
+    detail = client.get(f"/api/raids/{rid}", headers=admin_headers).json()
+    assert detail["waves"][0]["slots"][0]["character_id"] is None
+
+
+def test_delete_guest_404(client, admin_headers):
+    assert client.delete("/api/admin/users/99999", headers=admin_headers).status_code == 404
+
+
 def test_delete_non_guest_rejected(client, admin_headers):
     _, u = register_user(client, "normal2", "普通乙")
     r = client.delete(f"/api/admin/users/{u['id']}", headers=admin_headers)
