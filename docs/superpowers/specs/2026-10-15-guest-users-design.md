@@ -55,6 +55,7 @@
 **`POST /api/admin/users` — 创建临时用户**
 - nickname 已存在 → 400「昵称已存在」；指定 username 已存在 → 400「用户名已存在」。
 - 流程：建 User(is_guest=True, is_admin=False, username, 随机密码 hash) → flush → 建默认冒险团 → 逐角色 `validate_job` + `apply_character_payload` + 挂默认团。
+- commit 包 `except IntegrityError → rollback → 400「用户名已存在」`（对齐 cast_vote/admin_signup 的并发唯一约束兜底，防用户名并发碰撞 500）。
 - 返回 `AdminCreateUserOut`。
 - 守卫：admin.is_banned → 403「你已被封禁，无法创建用户」（对齐 create_raid 的封禁拦截）。
 
@@ -83,12 +84,12 @@
 ## 4. 前端
 
 - `types.ts`：`User` 加必填 `is_guest: boolean` → **连带更新所有 User 字面量 fixture**（RaidList/RaidDetail/stores/raid/MemberCharactersModal 等 spec，以 `npm run build` 的 vue-tsc 为准）。`AdminUser` 继承 User 自动携带。
-- **`GuestCreateModal`**（新组件，n-modal）：昵称 + 可选用户名 + 角色列表（**轻量多行角色编辑器**——每行复用 CharacterForm 的职业/名望/伤害·增益字段集，不整体嵌入 CharacterForm；可加行/删行）→ `POST /api/admin/users`；成功 emit('created', user)。
+- **`GuestCreateModal`**（新组件，n-modal）：昵称 + 可选用户名 + 角色列表（**轻量多行角色编辑器**——每行编辑字段：`name/job_name/fame/simulated_damage/sustained_dps/buff_amount/sun_buff`，不整体嵌入 CharacterForm；可加行/删行）→ `POST /api/admin/users`；成功 emit('created', user)。
   - **角色数量策略**：攻坚详情页/编队页的「添加临时选手」**要求至少一个角色**（无角色时提交按钮禁用）——因为代报名要求至少一个角色（`_signup_user` 400「至少选择一个角色」），且该入口意图就是"可立即排表"；AdminUsersView 的「添加临时用户」允许 0 角色（后续经角色管理补）。
   - **防御**：无论哪种入口，创建成功后前端若发现返回的 `characters` 为空，则**跳过代报名**并提示「已创建临时用户，请先在角色管理添加角色后再代报名」，避免 `admin_signup` 报「至少选择一个角色」。
 - **`GuestConvertModal`**（新组件）：用户名 + 密码（含确认）→ `POST /users/{uid}/convert`。
-- **攻坚详情页（RaidDetailView）**：管理员区「添加临时选手」按钮 → `GuestCreateModal` → 成功后调 `admin_signup`（代报名本场）→ 报名面板出现该 guest，立即可排表。
-- **编队页（RosterView）**：RosterPool 工具栏「添加临时选手」按钮 → 同一 `GuestCreateModal` + 代报名。
+- **攻坚详情页（RaidDetailView）**：管理员区「添加临时选手」按钮 → `GuestCreateModal` → 成功后调 `admin_signup`（代报名本场，返回 `{"ok": true}` 而非 RaidDetail）→ **前端随后重新加载攻坚详情**（`load()`），报名面板出现该 guest，立即可排表。
+- **编队页（RosterView）**：RosterPool 工具栏「添加临时选手」按钮 → 同一 `GuestCreateModal` + 代报名 → **重新加载编队数据**。
 - **锁定攻坚**：攻坚详情页与编队页的入口按钮在 `raid.locked` 时**禁用**（代报名对锁定攻坚会 400「攻坚已锁定，无法报名」，与现有报名面板语义一致）。
 - **AdminUsersView**：用户列表 guest 行标「临时」徽章（`v-if="u.is_guest"`）；「添加临时用户」按钮（GuestCreateModal）；guest 行操作「转正」（GuestConvertModal）、「删除」（confirmDialog → DELETE）。
 - **临时徽章**（低成本）：攻坚详情报名面板与编队池的 guest 头像旁标「临时」。
