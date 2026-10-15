@@ -49,10 +49,10 @@ async function submit() {
           const job = jobOf(r.job_name)!
           return {
             name: r.name.trim(), job_name: job.name, fame: Number(r.fame) || 0,
-            simulated_damage: job.class_type === '输出' ? r.damage : null,
-            sustained_dps: job.class_type === '输出' ? r.dps : null,
-            buff_amount: job.class_type === '辅助' ? r.buff : null,
-            sun_buff: job.class_type === '辅助' ? r.sun : null,
+            simulated_damage: job.class_type === '输出' ? (r.damage || null) : null,
+            sustained_dps: job.class_type === '输出' ? (r.dps || null) : null,
+            buff_amount: job.class_type === '辅助' ? (r.buff || null) : null,
+            sun_buff: job.class_type === '辅助' ? (r.sun || null) : null,
           }
         }),
       })

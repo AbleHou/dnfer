@@ -75,4 +75,25 @@ describe('GuestCreateModal', () => {
     await flushPromises()
     expect(notifyMock.notifyError).toHaveBeenCalledWith('昵称已存在')
   })
+  it('辅助职业提交 buff/sun 且输出字段为 null', async () => {
+    apiMock.getJobs.mockResolvedValue([{ id: 8, name: 'priest_male', title: '圣职者(男)', children: [
+      { id: 81, name: 'crusader_male', title: '神启·圣骑士', class_type: '辅助' as const }] }])
+    apiMock.post.mockResolvedValue({ user: { id: 6, username: 'guest_x', nickname: '奶', is_admin: false, avatar: null, is_banned: false, is_guest: true }, characters: [{}] })
+    const w = mountModal()
+    await flushPromises()
+    await w.find('[data-field="nickname"]').setValue('奶')
+    await w.find('[data-act="add-row"]').trigger('click')
+    const row = w.find('[data-test="guest-row-0"]')
+    await row.find('[data-field="char-name"]').setValue('奶')
+    await row.find('[data-field="job"]').setValue('crusader_male')
+    await flushPromises()
+    await row.find('[data-field="buff"]').setValue('46000')
+    await row.find('[data-field="sun"]').setValue('3000')
+    await w.find('[data-act="submit"]').trigger('click')
+    await flushPromises()
+    const body = apiMock.post.mock.calls[0][1] as any
+    expect(body.characters[0]).toMatchObject({
+      simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 3000,
+    })
+  })
 })
