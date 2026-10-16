@@ -231,6 +231,30 @@ def test_admin_signup_no_character_target_rejected(client):
     assert r.json()["detail"] == "至少选择一个角色"
 
 
+def test_admin_signup_with_character_subset(client):
+    """admin 代报名可指定勾选角色子集（不传仍默认全选）。"""
+    ah = _admin(client)
+    h, u = register_user(client, "sc20", "亥")
+    c1 = _mkchar(client, h, "C1")
+    c2 = _mkchar(client, h, "C2")
+    rid = make_raid(client, ah)["id"]
+    assert client.post(f"/api/raids/{rid}/signups", headers=ah,
+                       json={"user_id": u["id"], "character_ids": [c1]}).status_code == 200
+    assert _char_ids_of(client, rid, u["id"], ah) == [c1]
+
+
+def test_admin_signup_empty_character_ids_rejected(client):
+    """显式传空列表 → 400 至少选择一个角色（须有角色才可区分：旧代码忽略该字段）。"""
+    ah = _admin(client)
+    h, u = register_user(client, "sc21", "戌")
+    _mkchar(client, h, "C1")
+    rid = make_raid(client, ah)["id"]
+    r = client.post(f"/api/raids/{rid}/signups", headers=ah,
+                    json={"user_id": u["id"], "character_ids": []})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "至少选择一个角色"
+
+
 def test_bot_signup_defaults_all(client):
     ah = _admin(client)
     h, u = register_user(client, "sc18", "申")

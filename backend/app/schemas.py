@@ -141,6 +141,7 @@ class RaidSignupOut(BaseModel):
 
 class SignupUserIn(BaseModel):
     user_id: int
+    character_ids: list[int] | None = None  # None=默认全部角色
 
 class GuestCreate(BaseModel):
     nickname: str = Field(min_length=1, max_length=64,

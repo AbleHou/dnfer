@@ -721,7 +721,7 @@ async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(requi
     if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
                                    RaidSignup.user_id == target.id).first():
         raise HTTPException(400, "该用户已报名")
-    rs = _signup_user(db, raid, target, None)  # 代报名默认全部角色
+    rs = _signup_user(db, raid, target, body.character_ids)  # 代报名默认全部角色（None）
     try:
         db.commit()
     except IntegrityError:  # 并发重复报名兜底
