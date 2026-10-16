@@ -309,7 +309,7 @@ def test_all_write_endpoints_rejected_when_closed(client):
         assert r.json()["detail"] == "攻坚已关闭，无法操作"
 ```
 
-（`move_slot` 是 admin 独占且需两个格子，单独一个用例：关闭后 `POST /{rid}/slots/{s}/move` 400；bot 报名/取消也各断言 400。若 `put /api/raids/{rid}` 需要 body 里有 starts_at 之类必填，用最小合法体，或该断言只检查 400 状态码即可。）
+（`move_slot` 是 admin 独占且需两个格子，单独一个用例：关闭后 `POST /{rid}/slots/{s}/move`（body `{"target_slot_id": 另一格 id}`）断言 400「攻坚已关闭，无法操作」；`bot_signup` / `bot_cancel_signup`（`/api/public/raids/{rid}/signup` / `.../signup/cancel`，body `{"account": ...}`，bot token 头）也各断言 400。若 `put /api/raids/{rid}` 需要 body 里 starts_at 之类必填，用最小合法体，或该断言只检查 400 状态码即可。）
 
 - [ ] **Step 2: 运行确认失败**
 
@@ -439,7 +439,7 @@ Expected: FAIL（当前 `get_raid`/`list_raids`/public 都走 live，closed 后 
 ```
 
 `backend/app/routers/public.py`：
-- `public_raid`：`return _read_detail(db, raid)`（改 import `_read_detail`）。
+- `public_raid`：`return _read_detail(db, raid)`（import 加 `_read_detail`；**closed 分支 `WaveOut(**w)` 需把 `WaveOut` 也加入 `from ..schemas import ...`**，当前该文件只 import 了 `RaidDetail, RaidListItem`）。
 - `public_wave`：closed 时由快照重建：
 
 ```python
@@ -577,7 +577,14 @@ it('closed 攻坚显示已关闭徽章并隐藏编辑入口', async () => {
 })
 
 it('关闭按钮走强确认后调 close 并刷新', async () => {
-  // 未关闭 raid，管理员可见 [data-test="close-raid"]；点击 → confirmDialog → POST /close → load
+  const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid(...))  // 未关闭
+  await flushPromises()
+  expect(wrapper.find('[data-test="close-raid"]').exists()).toBe(true)
+  await wrapper.find('[data-test="close-raid"]').trigger('click')
+  await flushPromises()
+  expect(confirmDialog).toHaveBeenCalled()
+  expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/close')
+  // confirmDialog 返回 false → 不调 close
 })
 ```
 
@@ -588,11 +595,11 @@ it('传入 characters prop 时免 fetch，直接渲染快照角色', async () =>
   const wrapper = mount(MemberCharactersModal, {
     props: { open: true, rid: 1, user: member, placed: {},
              characters: chars },   // chars 为既有 fixture
-    global: { stubs: { teleport: true, CharacterCard: true } },
+    global: { stubs: { teleport: true } },   // CharacterCard 不 stub 或用带模板的 stub，别用 true
   })
   await flushPromises()
   expect(apiMock.get).not.toHaveBeenCalled()
-  expect(wrapper.text()).toContain(...)  // 渲染了传入角色（按既有断言风格）
+  expect(wrapper.text()).toContain('剑魂')  // 渲染了传入角色（按既有断言风格）
 })
 ```
 
@@ -600,14 +607,14 @@ it('传入 characters prop 时免 fetch，直接渲染快照角色', async () =>
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/views/RaidDetailView.spec.ts`
-Expected: 新用例 FAIL。
+Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/views/RaidDetailView.spec.ts src/components/MemberCharactersModal.spec.ts`
+Expected: 新用例 FAIL（RaidDetailView 徽章/关闭按钮 + MemberCharactersModal characters-prop 用例）。
 
 - [ ] **Step 3: 实现**
 
 `RaidDetailView.vue`（`const closed = computed(() => store.raid?.closed ?? false)`）：
 - **顶部徽章**：头部区 `v-if="closed"` 显示「已关闭」。
-- **隐藏编辑入口**：给现有各编辑按钮/入口的 `v-if` 条件追加 `&& !closed`——报名（signup）、`＋`（signup-plus）、添加临时选手（add-guest）、管理角色/取消报名（signup-group 内按钮）、锁定/解锁、修改、添加一波（add-wave）、划水规则、编队（roster-link）、选人面板（memberPicker）、并行操作。最简：在这些条件的公共处统一 `&& !closed`。**另需给 `editable` computed（RaidDetailView.vue:36 `!store.raid?.locked || auth.isAdmin`）追加 `&& !closed`**——否则未锁定的 closed 攻坚管理员仍可点格进入编辑态（后端 400 兜底，但 UI 不是「只读」）。
+- **隐藏编辑入口**：给现有各编辑按钮/入口的 `v-if` 条件追加 `&& !closed`——报名（signup）、`＋`（signup-plus）、添加临时选手（add-guest）、管理角色/取消报名（signup-group 内按钮）、锁定/解锁、修改、添加一波（add-wave）、划水规则、编队（roster-link）、选人面板（memberPicker）、并行操作。最简：在这些条件的公共处统一 `&& !closed`。**另需给 `editable` computed（RaidDetailView.vue:36 `!store.raid?.locked || auth.isAdmin`）追加 `&& !closed`**，并给 WaveSection 的 `:can-delete` prop（约 342 行 `auth.isAdmin`）也追加 `&& !closed`——否则未锁定的 closed 攻坚管理员仍可点格/删波进入编辑态（后端 400 兜底，但 UI 不是「只读」）。
 - **不连 WS（关键）**：`onMounted` 时 `store.raid` 还是 null（`load()` 未 resolve），**不能**在 mount 里用 `store.raid?.closed` 判——直链进入已关闭攻坚仍会连上 WS。改为两处兜底：
   1. `load()` 里 `await store.load(rid)` 之后：`if (store.raid?.closed) disconnect?.()`（连上后立即断，覆盖直链进入场景）；
   2. `onEvent` 加 `if (ev.type === 'raid:closed') { disconnect?.(); void load() }`（覆盖「已在开放页时被关闭」场景；disconnect 闭包幂等，重复调用无副作用）。
@@ -616,7 +623,7 @@ Expected: 新用例 FAIL。
 
 - [ ] **Step 4: 运行确认通过 + 构建**
 
-Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/views/RaidDetailView.spec.ts && npm run build`
+Run: `cd /Users/able/toys/dnfer/frontend && npx vitest run src/views/RaidDetailView.spec.ts src/components/MemberCharactersModal.spec.ts && npm run build`
 Expected: PASS + 构建绿。
 
 - [ ] **Step 5: 提交**
