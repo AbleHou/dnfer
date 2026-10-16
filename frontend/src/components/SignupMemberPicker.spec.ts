@@ -95,6 +95,35 @@ describe('SignupMemberPicker', () => {
     expect(wrapper.text()).toContain('加载失败，请重试')
   })
 
+  it('报名失败提示错误、不 emit、弹框保持打开', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/admin/users') return users
+      if (url === '/api/admin/users/2/characters') return chars
+      return []
+    })
+    apiMock.post.mockRejectedValueOnce(new Error('网络错误'))
+    const wrapper = mount(SignupMemberPicker, {
+      props: { open: true, rid: 1, excludeUserIds: [1, 3] },
+      global: { stubs: { teleport: true, UserAvatar: true } },
+    })
+    await flushPromises()
+    await wrapper.findAll('.member-row')[0].trigger('click')
+    await flushPromises()
+    await wrapper.find('[data-act="submit"]').trigger('click')
+    await flushPromises()
+    // 失败：仍只 POST 一次，携带正确参数
+    expect(apiMock.post).toHaveBeenCalledTimes(1)
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/signups',
+      { user_id: 2, character_ids: [1, 2] })
+    // 提示错误、不 emit
+    expect(notifyMock.error).toHaveBeenCalledWith('网络错误')
+    expect(notifyMock.success).not.toHaveBeenCalled()
+    expect(wrapper.emitted('signedUp')).toBeUndefined()
+    expect(wrapper.emitted('close')).toBeUndefined()
+    // 弹框保持打开：仍显示角色选择（submit 按钮仍在）
+    expect(wrapper.find('[data-act="submit"]').exists()).toBe(true)
+  })
+
   it('成功报名 emit signedUp/close 并提示', async () => {
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/admin/users') return users

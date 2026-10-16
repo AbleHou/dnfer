@@ -32,7 +32,7 @@ watch(() => props.open, async (open) => {
   }
 }, { immediate: true })
 
-async function onPick(u: User) {
+function onPick(u: User) {
   if (busy.value) return
   pickUser.value = u   // 打开选角色弹框，不再直接报名
 }
@@ -40,10 +40,10 @@ async function onPick(u: User) {
 async function onSubmit(ids: number[]) {
   if (!pickUser.value || busy.value) return
   const uid = pickUser.value.id
-  pickUser.value = null
   busy.value = true
   try {
     await api.post(`/api/raids/${props.rid}/signups`, { user_id: uid, character_ids: ids })
+    pickUser.value = null   // 仅成功后关闭，失败保留勾选可重试
     notifySuccess('报名成功')
     emit('signedUp')
     emit('close')
