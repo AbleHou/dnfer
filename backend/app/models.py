@@ -74,6 +74,8 @@ class Raid(Base):
     dungeon_id: Mapped[int] = mapped_column(ForeignKey("dungeons.id"), index=True)
     size: Mapped[int] = mapped_column(Integer, default=12)
     locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    closed: Mapped[bool] = mapped_column(Boolean, default=False)   # 已关闭（终态）
+    snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # 关闭时冻结的详情快照
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

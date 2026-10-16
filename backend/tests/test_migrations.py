@@ -25,6 +25,9 @@ def test_migrate_legacy_db():
         names = [r[0] for r in conn.execute(text("SELECT name FROM dungeons")).all()]
         assert "巴卡尔" in names and "未指定" in names
     migrate_dungeons(engine)  # 幂等
+    # 模型新增 closed/snapshot 列，先补列否则 ORM 插入报 no column
+    from app.migrations import migrate_raid_close
+    migrate_raid_close(engine)
     # 迁移后 ORM 插入新攻坚应成功：遗留 dungeon NOT NULL 列已移除
     Session = sessionmaker(bind=engine)
     with Session() as s:
@@ -164,3 +167,18 @@ def test_migrate_users_guest_adds_column():
         cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).all()}
         assert "is_guest" in cols
     migrate_users_guest(engine)  # 幂等：再次运行不报错
+
+def test_migrate_raid_close_adds_columns():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE raids (
+            id INTEGER PRIMARY KEY, name VARCHAR(128), dungeon_id INTEGER,
+            size INTEGER, locked BOOLEAN, created_by INTEGER,
+            starts_at DATETIME, created_at DATETIME)"""))
+    from app.migrations import migrate_raid_close
+    migrate_raid_close(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(raids)")).all()}
+        assert "closed" in cols
+        assert "snapshot" in cols
+    migrate_raid_close(engine)  # 幂等：再次运行不报错

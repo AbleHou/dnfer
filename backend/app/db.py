@@ -34,7 +34,8 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     from .migrations import (migrate_adventure_parties, migrate_avatars,
                              migrate_characters_sun_buff, migrate_dungeons, migrate_jobs,
-                             migrate_users_ban, migrate_users_guest, migrate_waves_group)
+                             migrate_raid_close, migrate_users_ban, migrate_users_guest,
+                             migrate_waves_group)
     migrate_dungeons(engine)
     migrate_jobs(engine)
     migrate_avatars(engine)
@@ -43,3 +44,4 @@ def init_db() -> None:
     migrate_characters_sun_buff(engine)
     migrate_waves_group(engine)
     migrate_adventure_parties(engine)
+    migrate_raid_close(engine)

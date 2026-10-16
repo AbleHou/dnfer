@@ -127,6 +127,20 @@ def migrate_waves_group(engine: Engine) -> None:
             conn.execute(text("CREATE INDEX ix_waves_group_id ON waves (group_id)"))
 
 
+def migrate_raid_close(engine: Engine) -> None:
+    """为存量库补建 raids.closed / raids.snapshot 列（幂等）。"""
+    from . import models  # noqa: F401  确保模型注册
+    from .db import Base
+
+    Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(raids)")).all()}
+        if "closed" not in cols:
+            conn.execute(text("ALTER TABLE raids ADD COLUMN closed BOOLEAN NOT NULL DEFAULT 0"))
+        if "snapshot" not in cols:
+            conn.execute(text("ALTER TABLE raids ADD COLUMN snapshot JSON"))
+
+
 def migrate_adventure_parties(engine: Engine) -> None:
     """为存量库补建冒险团：characters.adventure_party_id 列 + 每用户初始团回填（幂等）。"""
     from . import models  # noqa: F401  确保模型注册
