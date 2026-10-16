@@ -36,7 +36,9 @@
 
 ### 2.3 快照内容
 
-`snapshot = _detail(db, raid).model_dump()`——自包含的冻结 `RaidDetail`：
+`snapshot = _detail(db, raid).model_dump(mode="json")`——自包含的冻结 `RaidDetail`。
+
+> **必须 `mode="json"`**：`_detail(...).model_dump()` 会产出 `datetime` 对象（`starts_at`、各报名行 `created_at`），SQLAlchemy `JSON` 列在 SQLite 上无法序列化 datetime，会 `TypeError: Object of type datetime is not JSON serializable`——每次关闭都 500。`mode="json"` 序列化为 ISO 字符串；读取重建时由 pydantic 反序列化回 datetime。
 
 - `waves`：每波 `index/group_id/round_index/group_index/slots`；每格 `squad_index/row_index/duty/version` + **占位角色的全部展示属性**（`character_id/character_name/character_class/job_name/job_title/owner_nickname/owner_avatar/fame 等战力/duty/adventure_party_id/adventure_party_name`）；
 - `signups`：每报名行 `user`（UserOut）+ `created_at` + **该用户勾选角色的全部属性**（CharacterOut）；
@@ -55,7 +57,7 @@
 
 流程：
 1. 守卫：`raid.closed` 已 True → 400「攻坚已关闭」；`admin.is_banned` → 403（对齐 create_raid 封禁拦截）。
-2. **先**取快照：`raid.snapshot = _detail(db, raid).model_dump()`（含团长固定行与全部占位，此刻为最新）。
+2. **先**取快照：`raid.snapshot = _detail(db, raid).model_dump(mode="json")`（含团长固定行与全部占位，此刻为最新）。
 3. `raid.closed = True`。
 4. 清理 live 行（bulk delete，`synchronize_session=False`）：
    - 该 raid 全部 `Slot`（`Slot.wave.has(raid_id=raid.id)`）；
@@ -69,7 +71,10 @@
 
 - 新增共享助手 `_read_detail(db, raid) -> RaidDetail`：`raid.closed` → `RaidDetail.model_validate({**raid.snapshot, "id": raid.id, "closed": True})`；否则 `_detail(db, raid)`。
 - `get_raid`（raids.py:204）改用 `_read_detail`。
-- `public.py` 复用的公开详情端点改走 `_read_detail`（关闭攻坚公开详情同样返回快照）。
+- `public.py` 三个读取端点统一改走快照分支——
+  - `public_raid`（public.py:37）改走 `_read_detail`（关闭攻坚公开详情同样返回快照）；
+  - `public_wave`（public.py:23）：closed → 由快照中对应 `index` 的波重建 `WaveOut`（关闭后 live `Wave` 行已删，不能查库）；
+  - `public_raids`（public.py:13）：closed → `wave_count`/`signup_count` 从快照推导（同 `list_raids`），且 `RaidListItem.closed` 显式置 True（该处手工构造 item，别依赖默认值漏设）。
 - `list_raids`（raids.py:175）：closed 攻坚的 `wave_count`/`signup_count`/`my_signed_up` 从快照推导——
   - `wave_count = len(snapshot["waves"])`；
   - `signup_count = 非团长报名行数 = sum(1 for s in snapshot["signups"] if s["created_at"] is not None)`；
@@ -81,7 +86,7 @@
 
 新增 `_reject_if_closed(raid)` → `HTTPException(400, "攻坚已关闭，无法操作")`。插入以下端点（都在解析 raid 后、业务逻辑前）：
 
-- `raids.py`：`fill_slot / remove_slot / change_duty / add_wave / delete_wave / parallelize_wave / unparallelize_wave / lock_raid / unlock_raid / set_slack_rules / signup / add_signup_character / remove_signup_character / cancel_self / cancel_other / admin_signup`；
+- `raids.py`：`fill_slot / remove_slot / move_slot / change_duty / add_wave / delete_wave / parallelize_wave / unparallelize_wave / lock_raid / unlock_raid / set_slack_rules / signup / add_signup_character / remove_signup_character / cancel_self / cancel_other / admin_signup / update_raid`——`update_raid`（PUT `/{rid}`）尤其必须拦：它改 live 的 `name/starts_at` 且返回 `_detail`（closed 后 live 波为空），会让列表与详情不一致；
 - `bot.py`：`bot_signup / bot_cancel_signup`（对齐 raid 冻结语义）；
 - 其余 admin 端点（创建/删除 raid、`GET` 类）不受影响；`DELETE /{rid}`（删除攻坚）对已关闭攻坚**仍允许**（含快照一并删除）。
 
@@ -93,13 +98,14 @@
 ## 4. 前端
 
 - `types.ts`：`Raid` 与 `RaidListItem` 加必填 `closed: boolean` → **连带修所有字面量 fixture**（RaidList/RaidDetail/各 spec，以 `npm run build` 的 vue-tsc 为准）。
+- **WS `applyEvent`（stores/raid.ts）**：事件类型联合与 `applyEvent` 增加 `raid:closed` 分支——已打开的详情/编队页收到后触发 reload（或直接置 `closed` 只读态），避免已订阅标签页停留在「开放」UI。
 - **详情页（RaidDetailView）**：`raid.closed` 为真时——
   - 顶部显示「已关闭」徽章；
-  - 隐藏全部编辑入口：报名/管理角色/取消报名/「＋」选人面板/临时选手/锁定·解锁/编队按钮/波次操作/并行；
+  - 隐藏全部编辑入口：报名/管理角色/取消报名/「＋」选人面板/临时选手/锁定·解锁/编队按钮/波次操作/并行/修改攻坚；
   - 网格只读展示快照（复用现有 WaveSection 展示，`canEdit` 相关控制隐去）；
   - 不连接 WS（`connectRaidWs` 跳过）。
 - **列表页（RaidListView）**：`closed` → 灰显「已关闭」徽章；报名按钮不显示（已关闭不可报名）；管理员「删除」仍显示（可清理历史攻坚）。
-- **编队页（RosterView）**：closed → 详情页不提供入口；若直链进入，显示只读提示（后端已拒绝全部写操作兜底）。
+- **编队页（RosterView）**：`canEdit` 由 `auth.isAdmin` 改为 `auth.isAdmin && !raid.closed`，且 closed 时不连接 WS；详情页对 closed 不提供编队入口；直链进入显示只读提示（后端 400 兜底）。
 - **关闭按钮**：详情页管理员区「关闭攻坚」，强 confirmDialog（内容强调不可逆，如「关闭后攻坚将永久冻结为快照且无法再打开，确认？」）。
 - 其余页面（AdminUsersView 等）不受影响。
 
@@ -120,7 +126,7 @@
 - **关闭生成快照**：关闭 → 返回 `closed: True` 且 waves/signups 完整；随后改角色属性（改名/改战力）→ GET 详情仍显示关闭时快照值。
 - **不可逆**：重复关闭 400「攻坚已关闭」；关闭后无 reopen 端点。
 - **live 清理**：关闭后 GET 详情正常（走快照）；`RaidSignup`/`Slot` 行已删；**该角色可被删除**（`delete_character_if_free` 不拦截）——验证无死锁。
-- **冻结**：关闭后对每个写端点（fill/remove/duty/waves/parallel/lock/unlock/slack/signup/cancel/admin_signup/bot_signup）逐一断言 400「攻坚已关闭，无法操作」。
+- **冻结**：关闭后对每个写端点（fill/remove/move/duty/update_raid/waves/parallel/lock/unlock/slack/signup/cancel/admin_signup/bot_signup）逐一断言 400「攻坚已关闭，无法操作」。
 - **列表推导**：关闭后列表 `wave_count`/`signup_count`/`my_signed_up` 来自快照；非参与者视角 `my_signed_up` 为 false。
 - **迁移**：`migrate_raid_close` 幂等（老库 ALTER + 二次空转）。
 - **广播**：关闭广播 `raid:closed`。
@@ -130,6 +136,8 @@
 - `types` fixture 补 `closed`（vue-tsc 为准）。
 - 详情页：closed 显示「已关闭」徽章、隐藏编辑入口、不连 WS。
 - 列表页：closed 灰显「已关闭」徽章、无报名按钮、管理员仍可删除。
+- 编队页：closed 时 `canEdit` 为 false、不连 WS。
+- `applyEvent`：`raid:closed` 事件触发 reload。
 - 关闭按钮：确认流（confirmDialog → `POST /close` → 刷新）。
 
 ## 7. 非目标 / 后续
