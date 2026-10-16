@@ -372,3 +372,48 @@ def test_fill_slot_serializes_adventure_party(client):
     filled = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
     assert filled["adventure_party_id"] == pid
     assert filled["adventure_party_name"] == "阿伟的冒险团"
+
+def test_same_character_can_fill_across_raids(client):
+    """去掉全局唯一后：同一角色可在两个攻坚同时占位（互不撤格）。"""
+    ah = _admin(client)
+    h, _ = register_user(client, "px1", "元")
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
+    did = make_dungeon(client, ah)["id"]
+    r1 = make_raid(client, ah, dungeon_id=did)
+    r2 = make_raid(client, ah, dungeon_id=did)
+    signup(client, r1["id"], h)
+    signup(client, r2["id"], h)
+    s1 = client.get(f"/api/raids/{r1['id']}", headers=h).json()["waves"][0]["slots"][0]
+    s2 = client.get(f"/api/raids/{r2['id']}", headers=h).json()["waves"][0]["slots"][0]
+    assert client.post(f"/api/raids/{r1['id']}/slots/{s1['id']}/fill", headers=h,
+                       json={"character_id": cid}).status_code == 200
+    # 在 r2 以 replace 填同一角色：不应撤下 r1 的占位
+    r = client.post(f"/api/raids/{r2['id']}/slots/{s2['id']}/fill", headers=h,
+                    json={"character_id": cid, "replace": True})
+    assert r.status_code == 200
+    assert r.json()["removed_slots"] == []
+    d1 = client.get(f"/api/raids/{r1['id']}", headers=h).json()["waves"][0]["slots"][0]
+    d2 = client.get(f"/api/raids/{r2['id']}", headers=h).json()["waves"][0]["slots"][0]
+    assert d1["character_id"] == cid
+    assert d2["character_id"] == cid
+
+
+def test_non_replace_same_character_across_raids_ok(client):
+    """非 replace 跨攻坚填同一角色：不再 400（「该角色已在其他格子中」仅限本 raid）。"""
+    ah = _admin(client)
+    h, _ = register_user(client, "px2", "元")
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
+    did = make_dungeon(client, ah)["id"]
+    r1 = make_raid(client, ah, dungeon_id=did)
+    r2 = make_raid(client, ah, dungeon_id=did)
+    signup(client, r1["id"], h)
+    signup(client, r2["id"], h)
+    s1 = client.get(f"/api/raids/{r1['id']}", headers=h).json()["waves"][0]["slots"][0]
+    s2 = client.get(f"/api/raids/{r2['id']}", headers=h).json()["waves"][0]["slots"][0]
+    assert client.post(f"/api/raids/{r1['id']}/slots/{s1['id']}/fill", headers=h,
+                       json={"character_id": cid}).status_code == 200
+    r = client.post(f"/api/raids/{r2['id']}/slots/{s2['id']}/fill", headers=h,
+                    json={"character_id": cid})
+    assert r.status_code == 200

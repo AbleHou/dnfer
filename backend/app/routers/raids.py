@@ -380,7 +380,8 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
     if body.replace:
         # 冲突即替换：同一角色已在其他格（任意波）或同玩家同轮已有角色时，
         # 自动撤下冲突格子再放入新角色（不报错）
-        char_dup = db.query(Slot).filter(Slot.character_id == char.id,
+        char_dup = db.query(Slot).filter(Slot.wave.has(raid_id=raid.id),
+                                         Slot.character_id == char.id,
                                          Slot.id != slot.id).all()
         same_owner = db.query(Slot).filter(
             Slot.wave_id.in_(_round_wave_ids(db, slot.wave)),
@@ -393,7 +394,8 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
                 seen.add(s.id)
                 removed.append(s)
     else:
-        dup = db.query(Slot).filter(Slot.character_id == char.id,
+        dup = db.query(Slot).filter(Slot.wave.has(raid_id=raid.id),
+                                    Slot.character_id == char.id,
                                     Slot.id != slot.id).first()
         if dup:
             raise HTTPException(400, "该角色已在其他格子中")
