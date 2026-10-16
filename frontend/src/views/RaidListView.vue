@@ -60,16 +60,19 @@ async function onDelete(r: RaidListItem) {
 }
 
 const signupTarget = ref<RaidListItem | null>(null)
+const submitting = ref(false)
 function onSignup(r: RaidListItem) { signupTarget.value = r }
 async function onSignupSubmit(ids: number[]) {
-  if (!signupTarget.value) return
+  if (!signupTarget.value || submitting.value) return
   const rid = signupTarget.value.id
-  signupTarget.value = null
+  submitting.value = true
   try {
     await api.post(`/api/raids/${rid}/signup`, { character_ids: ids })
+    signupTarget.value = null // 仅成功后关闭
     notifySuccess('报名成功')
     await load()
   } catch (e: any) { notifyError(e.message) }
+  finally { submitting.value = false }
 }
 </script>
 
