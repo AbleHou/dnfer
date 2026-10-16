@@ -111,11 +111,12 @@ async function onSignupSubmit(ids: number[]) {
         <span class="dnf-badge" :class="r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
           {{ r.locked ? '已锁定' : '未锁定' }}
         </span>
+        <span v-if="r.closed" class="dnf-badge dnf-badge-danger">已关闭</span>
         <span class="raid-meta" style="color:var(--dnf-text-faint)">
           已报名 {{ r.signup_count + 1 }} 人
         </span>
       </router-link>
-      <button v-if="!r.locked && !r.my_signed_up" class="dnf-btn dnf-btn-sm dnf-btn-primary"
+      <button v-if="!r.locked && !r.my_signed_up && !r.closed" class="dnf-btn dnf-btn-sm dnf-btn-primary"
               data-test="signup" @click="onSignup(r)">报名</button>
       <span v-else-if="!r.locked && r.my_signed_up" class="dnf-badge dnf-badge-ok">已报名</span>
       <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" @click="onDelete(r)">删除</button>

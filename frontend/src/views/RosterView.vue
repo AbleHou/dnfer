@@ -25,7 +25,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const store = useRaidStore()
 const rid = Number(route.params.id)
-const canEdit = computed(() => auth.isAdmin)
+const canEdit = computed(() => auth.isAdmin && !store.raid?.closed)
 
 const currentIndex = ref(1)
 const holding = ref<Character | null>(null)
@@ -162,7 +162,11 @@ function onSaveTarget(t: SquadTarget) {
   targetModal.value.open = false
 }
 
-async function load() { await store.load(rid) }
+async function load() {
+  await store.load(rid)
+  // 已关闭攻坚为只读快照：拉取后立即断开 WS（覆盖直链进入已关闭页面的场景）
+  if (store.raid?.closed) disconnect?.()
+}
 async function onGuestCreated(u: User, charCount: number) {
   guestOpen.value = false
   if (!store.raid) return
@@ -179,7 +183,11 @@ async function onGuestCreated(u: User, charCount: number) {
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
   disconnect = connectRaidWs(rid, {
-    onEvent: (ev) => applyEvent(store, ev),
+    onEvent: (ev) => {
+      // 已被他人关闭 → 断开 WS 并全量刷新为只读快照（覆盖「停留在开放页时被关闭」场景）
+      if (ev.type === 'raid:closed') { disconnect?.(); void load() }
+      else applyEvent(store, ev)                  // slot/锁定事件增量合并
+    },
     onRefresh: async () => { await load() },
     onReconnect: async () => { await load() },
   })
@@ -196,6 +204,7 @@ onBeforeUnmount(() => {
     <div class="page-head" style="flex-wrap:wrap;gap:10px">
       <router-link :to="`/raids/${rid}`" class="dnf-btn dnf-btn-sm" style="text-decoration:none">← 返回</router-link>
       <h2 style="margin:0">{{ store.raid.name }} · 编队</h2>
+      <span v-if="store.raid?.closed" class="dnf-badge dnf-badge-danger">攻坚已关闭，仅查看</span>
       <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
         <span v-if="canEdit" style="display:flex;align-items:center;gap:6px">
           推荐 <n-switch data-test="recommend-switch" :value="recommendOn"

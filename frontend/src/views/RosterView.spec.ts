@@ -227,4 +227,14 @@ describe('RosterView', () => {
     await flushPromises()
     expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
   })
+
+  it('已关闭攻坚：管理员也进不了编辑态（无推荐开关/无＋临时），显示只读提示', async () => {
+    const snapshot = makeRaid([])
+    snapshot.closed = true
+    const { wrapper } = await mountView([], admin, snapshot)
+    await flushPromises()
+    expect(wrapper.find('[data-test="recommend-switch"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('攻坚已关闭，仅查看')
+  })
 })

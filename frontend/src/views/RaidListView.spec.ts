@@ -220,6 +220,24 @@ describe('RaidListView create form', () => {
     expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
   })
 
+  it('closed raid: 显示「已关闭」徽章、无报名按钮、管理员删除按钮仍在', async () => {
+    const pinia = createPinia(); setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false, is_guest: false }
+    const closedRaid: RaidListItem = { ...raid, closed: true }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [closedRaid] as RaidListItem[]
+      if (url === '/api/dungeons') return dungeons
+      return []
+    })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('已关闭')
+    expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
+    const delBtn = wrapper.findAll('button').find(b => b.text().includes('删除'))
+    expect(delBtn).toBeTruthy()
+  })
+
   it('info area links to detail (covers meta/status/signup, not just the name)', async () => {
     const pinia = createPinia(); setActivePinia(pinia)
     const auth = useAuthStore()
