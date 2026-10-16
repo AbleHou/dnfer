@@ -88,6 +88,22 @@ function makeRaidWithPlacement(signups: Raid['signups']): Raid {
   return raid
 }
 
+// 含一个空格（character_id null）的 raid，供真实 WaveSection 渲染 .pick-btn
+function makeRaidWithEmptySlot(signups: Raid['signups']): Raid {
+  const raid = makeRaid(signups)
+  raid.waves = [{
+    id: 1, index: 1, group_id: null, round_index: 1, group_index: 1,
+    slots: [{
+      id: 1, squad_index: 0, row_index: 0, character_id: null, character_name: null,
+      character_class: null, job_name: null, job_title: null,
+      fame: null, simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+      owner_id: null, owner_nickname: null, owner_avatar: null, duty: null, version: 1,
+      adventure_party_id: null, adventure_party_name: null,
+    }],
+  }]
+  return raid
+}
+
 async function mountView(signups: Raid['signups'], user: User = admin,
                          snapshot: Raid = makeRaid(signups)) {
   const pinia = createPinia()
@@ -483,5 +499,74 @@ describe('RaidDetailView 添加临时选手', () => {
     // 徽章断言收窄到报名行内，避免被「添加临时选手」按钮自身的“临时”二字误判
     expect(wrapper.find('.signup-group').text()).toContain('外援')
     expect(wrapper.find('.signup-group .dnf-badge').text()).toContain('临时')
+  })
+})
+
+describe('RaidDetailView 未报名成员点空格快速报名', () => {
+  // 真实 WaveSection（不 stub）以渲染 .pick-btn；SignupModal 仍 stub 以便 emit('submit')
+  async function mountRealWave(signups: Raid['signups'], user: User, snapshot: Raid) {
+    const pinia = createPinia(); setActivePinia(pinia)
+    const auth = useAuthStore(); auth.user = user
+    const store = useRaidStore()
+    store.raid = makeRaid(signups)
+    apiMock.get.mockImplementation(async (url: string) => url === '/api/raids/1' ? snapshot : [])
+    const router = createRouter({ history: createMemoryHistory(),
+      routes: [{ path: '/raids/:id', component: RaidDetailView }] })
+    await router.push('/raids/1'); await router.isReady()
+    return { wrapper: mount(RaidDetailView, { global: {
+      plugins: [pinia, router],
+      stubs: { 'router-link': true, 'router-view': true, CharacterPickerModal: true,
+        SlotActionModal: true, UserAvatar: true, MemberCharactersModal: true,
+        SignupMemberPicker: true, SignupModal: true, SlackRulesModal: true, teleport: true,
+        GuestCreateModal: { name: 'GuestCreateModal', template: '<div />' } } } }), auth, store }
+  }
+
+  const newbie: User = { id: 99, username: 'newbie', nickname: '新人', is_admin: false,
+    avatar: null, is_banned: false, is_guest: false }
+
+  it('点空格确认后打开 SignupModal（不立即 POST），提交后才带 character_ids 报名并继续占位', async () => {
+    const signups = [adminRow]
+    const { wrapper } = await mountRealWave(signups, newbie, makeRaidWithEmptySlot(signups))
+    await flushPromises()
+    expect(wrapper.find('.pick-btn').exists()).toBe(true)
+    await wrapper.find('.pick-btn').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    const modal = wrapper.findComponent({ name: 'SignupModal' })
+    expect(modal.exists()).toBe(true)
+    expect(modal.props('open')).toBe(true)
+    expect(apiMock.post).not.toHaveBeenCalledWith(expect.stringContaining('/signup'))
+    // 弹窗确认报名 → POST 带 character_ids，随后打开选角占位
+    modal.vm.$emit('submit', [10])
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/signup', { character_ids: [10] })
+    expect(wrapper.findComponent({ name: 'SignupModal' }).props('open')).toBe(false)
+    expect(wrapper.findComponent(CharacterPickerModal).props('open')).toBe(true)
+  })
+
+  it('点空格后取消弹窗：不报名也不占位', async () => {
+    const signups = [adminRow]
+    const { wrapper } = await mountRealWave(signups, newbie, makeRaidWithEmptySlot(signups))
+    await flushPromises()
+    await wrapper.find('.pick-btn').trigger('click')
+    await flushPromises()
+    const modal = wrapper.findComponent({ name: 'SignupModal' })
+    expect(modal.props('open')).toBe(true)
+    modal.vm.$emit('close')
+    await flushPromises()
+    expect(apiMock.post).not.toHaveBeenCalledWith(expect.stringContaining('/signup'))
+    expect(wrapper.findComponent({ name: 'SignupModal' }).props('open')).toBe(false)
+    expect(wrapper.findComponent(CharacterPickerModal).props('open')).toBe(false)
+  })
+
+  it('确认框取消：不弹 SignupModal 也不报名', async () => {
+    vi.mocked(confirmDialog).mockResolvedValueOnce(false)
+    const signups = [adminRow]
+    const { wrapper } = await mountRealWave(signups, newbie, makeRaidWithEmptySlot(signups))
+    await flushPromises()
+    await wrapper.find('.pick-btn').trigger('click')
+    await flushPromises()
+    expect(apiMock.post).not.toHaveBeenCalledWith(expect.stringContaining('/signup'))
+    expect(wrapper.findComponent({ name: 'SignupModal' }).props('open')).toBe(false)
   })
 })

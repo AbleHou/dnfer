@@ -28,6 +28,7 @@ const store = useRaidStore()
 const rid = Number(route.params.id)
 
 const pickSlot = ref<Slot | null>(null)
+const pendingPickSlot = ref<Slot | null>(null)
 const manageSlot = ref<Slot | null>(null)
 const { movingSlot, pickUp, cancel, moveTo } = useSlotMove(rid, load)
 let disconnect: (() => void) | null = null
@@ -94,7 +95,16 @@ async function onSignupSubmit(ids: number[]) {
     notifySuccess('报名成功')
     showSignupModal.value = false
     await load()
+    if (pendingPickSlot.value) {
+      const target = pendingPickSlot.value
+      pendingPickSlot.value = null
+      pickSlot.value = target
+    }
   } catch (e: any) { notifyError(e.message) }
+}
+function onSignupClose() {
+  showSignupModal.value = false
+  pendingPickSlot.value = null
 }
 function openManageSignup() {
   if (!myRow.value) return
@@ -140,8 +150,9 @@ async function onPick(slot: Slot) {
   if (!auth.isAdmin && !mySignedUp.value && !store.raid.locked) {
     const ok = await confirmDialog({ content: '你还没有报名本次攻坚，是否先报名？' })
     if (!ok) return
-    try { await api.post(`/api/raids/${store.raid.id}/signup`); await load() }
-    catch (e: any) { notifyError(e.message); return }
+    pendingPickSlot.value = slot
+    openSignupModal()   // 强制选角色（默认全选），成功后继续选角色占位
+    return
   }
   pickSlot.value = slot
 }
@@ -378,7 +389,7 @@ async function onGuestCreated(u: User, charCount: number) {
                       @close="guestOpen = false" @created="onGuestCreated" />
 
     <SignupModal :open="showSignupModal" :mode="signupMode" :selected-ids="signupSelected"
-                 @close="showSignupModal = false"
+                 @close="onSignupClose"
                  @submit="onSignupSubmit" @toggle="onToggleSignupChar" />
 
     <SlackRulesModal :open="showSlackRules" :rules="store.raid.slack_rules"
