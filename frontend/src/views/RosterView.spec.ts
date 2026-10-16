@@ -8,6 +8,7 @@ import RosterView from './RosterView.vue'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore } from '../stores/raid'
 import { confirmDialog } from '../lib/notify'
+import { connectRaidWs } from '../api/ws'
 import type { Character, Raid, Slot, User } from '../types'
 
 const { apiMock, notifyMock } = vi.hoisted(() => ({
@@ -16,7 +17,7 @@ const { apiMock, notifyMock } = vi.hoisted(() => ({
 }))
 vi.mock('../api/client', () => ({ api: apiMock, getToken: vi.fn(() => 'tok'),
   setToken: vi.fn(), clearToken: vi.fn() }))
-vi.mock('../api/ws', () => ({ connectRaidWs: vi.fn(() => () => {}) }))
+vi.mock('../api/ws', () => ({ connectRaidWs: vi.fn(() => vi.fn()) }))
 vi.mock('../lib/notify', () => ({ confirmDialog: vi.fn(async () => true),
   notifyError: notifyMock.error, notifyWarning: notifyMock.warning, notifySuccess: notifyMock.success }))
 
@@ -236,5 +237,29 @@ describe('RosterView', () => {
     expect(wrapper.find('[data-test="recommend-switch"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('攻坚已关闭，仅查看')
+  })
+
+  it('直链进入已关闭攻坚：load 后立即断开 WS（不再增量合并）', async () => {
+    const snapshot = makeRaid([])
+    snapshot.closed = true
+    const { wrapper } = await mountView([], admin, snapshot)
+    await flushPromises()
+    const disconnect = vi.mocked(connectRaidWs).mock.results[0].value
+    expect(disconnect).toHaveBeenCalled()
+  })
+
+  it('收到 raid:closed 事件断开 WS 并刷新为只读快照', async () => {
+    const { wrapper } = await mountView([], admin, makeRaid([]))
+    await flushPromises()
+    const cb = vi.mocked(connectRaidWs).mock.calls[0][1]
+    const disconnect = vi.mocked(connectRaidWs).mock.results[0].value
+    // 模拟他人关闭：事件触发后全量刷新为 closed:true 快照（含清 stale holding）
+    apiMock.get.mockResolvedValueOnce({ ...makeRaid([]), closed: true })
+    cb.onEvent({ type: 'raid:closed' })
+    await flushPromises()
+    expect(disconnect).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('攻坚已关闭，仅查看')
+    expect(wrapper.find('[data-test="recommend-switch"]').exists()).toBe(false)
+    expect(wrapper.find('.move-hint').exists()).toBe(false)
   })
 })
