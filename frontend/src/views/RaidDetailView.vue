@@ -33,7 +33,8 @@ const manageSlot = ref<Slot | null>(null)
 const { movingSlot, pickUp, cancel, moveTo } = useSlotMove(rid, load)
 let disconnect: (() => void) | null = null
 
-const editable = computed(() => !store.raid?.locked || auth.isAdmin)
+const closed = computed(() => store.raid?.closed ?? false)
+const editable = computed(() => (!store.raid?.locked || auth.isAdmin) && !closed.value)
 const mySignedUp = computed(() =>
   store.raid?.signups.some(s => s.user.id === auth.user?.id) ?? false)
 const signupUserIds = computed(() => store.raid?.signups.map(s => s.user.id) ?? [])
@@ -69,12 +70,20 @@ const grayCharIds = computed(() => new Set(Object.values(grayByUser.value).flat(
 const slackCounts = computed(() =>
   slackCountByUser(store.raid?.slack_rules ?? { criteria: [], exchange: [] }, charsByUser.value))
 
-async function load() { await store.load(rid) }
+async function load() {
+  await store.load(rid)
+  // 已关闭攻坚为只读快照：拉取后立即断开 WS（覆盖直链进入已关闭页面的场景）
+  if (store.raid?.closed) disconnect?.()
+}
 
 onMounted(() => {
   // 先建 WS 订阅，再拉快照（快照为最终一致性基准）；断线重连后再拉一次
   disconnect = connectRaidWs(rid, {
-    onEvent: (ev) => applyEvent(store, ev),       // slot/锁定事件增量合并
+    onEvent: (ev) => {
+      // 已被他人关闭 → 断开 WS 并全量刷新为只读快照（覆盖「停留在开放页时被关闭」场景）
+      if (ev.type === 'raid:closed') { disconnect?.(); void load() }
+      else applyEvent(store, ev)                  // slot/锁定事件增量合并
+    },
     onRefresh: async () => { await load() },      // wave 增删触发全量刷新
     onReconnect: async () => { await load() },    // 重连后快照兜底
   })
@@ -200,6 +209,16 @@ async function onToggleLock() {
   try { await api.post(`/api/raids/${rid}/${act}`) } catch (e: any) { notifyError(e.message) }
   await load()
 }
+async function onCloseRaid() {
+  if (!store.raid) return
+  const ok = await confirmDialog({ content: '关闭后攻坚将永久冻结为快照且无法再打开，确认？' })
+  if (!ok) return
+  try {
+    await api.post(`/api/raids/${store.raid.id}/close`)
+    notifySuccess('已关闭攻坚')
+    await load()
+  } catch (e: any) { notifyError(e.message) }
+}
 async function onDeleteWave(index: number) {
   const ok = await confirmDialog({ content: `确认删除第 ${index} 波？` })
   if (!ok) return
@@ -278,15 +297,20 @@ async function onGuestCreated(u: User, charCount: number) {
       <span class="dnf-badge" :class="store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
         {{ store.raid.locked ? '已锁定' : '未锁定' }}
       </span>
+      <span v-if="closed" class="dnf-badge dnf-badge-danger">已关闭</span>
       <span style="margin-left:auto;display:flex;gap:8px">
-        <router-link v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="roster-link"
+        <router-link v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-sm" data-test="roster-link"
                      style="text-decoration:none"
                      :to="`/raids/${store.raid.id}/roster`">编队</router-link>
-        <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="slack-rules"
+        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-sm" data-test="slack-rules"
                 @click="showSlackRules = true">划水规则设置</button>
-        <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</button>
-        <button v-if="auth.isAdmin" class="dnf-btn" @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
-        <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-primary" data-test="add-wave" @click="onAddWave">＋ 添加一波</button>
+        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</button>
+        <button v-if="auth.isAdmin && !closed" class="dnf-btn" data-test="lock-toggle"
+                @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
+        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-primary" data-test="add-wave"
+                @click="onAddWave">＋ 添加一波</button>
+        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-danger" data-test="close-raid"
+                @click="onCloseRaid">关闭攻坚</button>
       </span>
     </div>
 
@@ -295,11 +319,11 @@ async function onGuestCreated(u: User, charCount: number) {
         <b>已报名</b>
         <span style="color:var(--dnf-text-faint)">{{ store.raid.signups.length }} 人（含团长）</span>
         <span style="margin-left:auto;display:flex;gap:8px">
-          <button v-if="!store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
+          <button v-if="!closed && !store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
                   data-test="signup" @click="openSignupModal">报名</button>
-          <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+          <button v-if="auth.isAdmin && !closed && !store.raid.locked" class="dnf-btn dnf-btn-sm"
                   data-test="signup-plus" @click="showMemberPicker = true">＋</button>
-          <button v-if="auth.isAdmin && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+          <button v-if="auth.isAdmin && !closed && !store.raid.locked" class="dnf-btn dnf-btn-sm"
                   data-test="add-guest" @click="guestOpen = true">添加临时选手</button>
         </span>
       </div>
@@ -320,12 +344,12 @@ async function onGuestCreated(u: User, charCount: number) {
               <span v-if="s.user.is_guest" class="dnf-badge" style="margin-left:4px">临时</span>
               <span class="signup-count">{{ placedCount(s) }}/{{ s.characters.length }}<template v-if="(slackCounts[s.user.id] ?? 0) > 0"> · 划水 {{ slackCounts[s.user.id] }}</template></span>
             </button>
-            <button v-if="s.user.id === auth.user?.id && !store.raid.locked"
+            <button v-if="!closed && s.user.id === auth.user?.id && !store.raid.locked"
                     class="dnf-btn dnf-btn-sm" data-act="manage-chars"
                     @click="openManageSignup">角色变更</button>
-            <button v-if="auth.isAdmin && s.created_at !== null"
+            <button v-if="auth.isAdmin && !closed && s.created_at !== null"
                     class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="onCancelUser(s)">取消报名</button>
-            <button v-else-if="s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
+            <button v-else-if="!closed && s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
                     class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="onCancelSelf">取消报名</button>
           </div>
         </template>
@@ -338,8 +362,8 @@ async function onGuestCreated(u: User, charCount: number) {
     </div>
 
     <WaveSection v-for="w in store.raid.waves" :key="w.id"
-                 :wave="w" :editable="editable" :is-admin="auth.isAdmin"
-                 :can-delete="auth.isAdmin"
+                 :wave="w" :editable="editable" :is-admin="auth.isAdmin && !closed"
+                 :can-delete="auth.isAdmin && !closed"
                  :current-user-id="auth.user?.id ?? null"
                  :move-mode="movingSlot != null" :moving-slot-id="movingSlot?.id ?? null"
                  :slack-char-ids="grayCharIds"
@@ -380,6 +404,7 @@ async function onGuestCreated(u: User, charCount: number) {
     <MemberCharactersModal :open="memberModalUser != null" :rid="rid" :user="memberModalUser"
                            :placed="placed" :gray-ids="memberModalUser ? (grayByUser[memberModalUser.id] ?? []) : []"
                            :slack-count="memberModalUser ? (slackCounts[memberModalUser.id] ?? 0) : 0"
+                           :characters="closed ? (store.raid.signups.find(s => s.user.id === memberModalUser?.id)?.characters ?? []) : undefined"
                            @close="memberModalUser = null" />
 
     <SignupMemberPicker :open="showMemberPicker" :rid="rid" :exclude-user-ids="signupUserIds"

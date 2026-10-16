@@ -10,13 +10,19 @@ const props = defineProps<{
   placed: Record<number, CharacterPlacement>
   grayIds?: number[]
   slackCount?: number
+  characters?: Character[]   // 传入则免 fetch（已关闭攻坚只读快照直接渲染）
 }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const characters = ref<Character[]>([])
 const loading = ref(false)
 
-watch(() => [props.open, props.user?.id] as const, async ([open]) => {
+watch(() => [props.open, props.user?.id, props.characters] as const, async ([open]) => {
   if (!open || !props.user) return
+  if (props.characters) {
+    characters.value = props.characters
+    loading.value = false
+    return
+  }
   loading.value = true
   characters.value = []
   try {

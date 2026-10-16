@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import MemberCharactersModal from './MemberCharactersModal.vue'
+import type { Character } from '../types'
 
 const { apiMock } = vi.hoisted(() => ({ apiMock: { get: vi.fn() } }))
 vi.mock('../api/client', () => ({ api: apiMock, getToken: vi.fn(() => 'tok') }))
@@ -96,6 +97,22 @@ describe('MemberCharactersModal', () => {
     })
     await flushPromises()
     expect(wrapper.text()).toContain('划水 2')
+  })
+
+  it('传入 characters prop 时免 fetch，直接渲染快照角色', async () => {
+    const snapshotChars: Character[] = [
+      { id: 11, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+        parent_name: 'swordman_male', class_type: '输出', fame: 52000,
+        simulated_damage: 5, sustained_dps: 2, buff_amount: null, sun_buff: null,
+        adventure_party_id: null, adventure_party_name: null },
+    ]
+    const wrapper = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {}, characters: snapshotChars },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(apiMock.get).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('剑魂')
   })
 
   it('slackCount 缺省/0 不显示', async () => {

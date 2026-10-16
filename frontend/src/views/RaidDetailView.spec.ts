@@ -10,6 +10,7 @@ import CharacterPickerModal from '../components/CharacterPickerModal.vue'
 import WaveSection from '../components/WaveSection.vue'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore } from '../stores/raid'
+import { connectRaidWs } from '../api/ws'
 import type { Character, Raid, RaidSignup, User } from '../types'
 import { confirmDialog } from '../lib/notify'
 
@@ -464,6 +465,72 @@ describe('RosterView 入口', () => {
   it('非管理员看不到「编队」按钮', async () => {
     const { wrapper } = await mountView([adminRow, memberRow], member)
     expect(wrapper.find('[data-test="roster-link"]').exists()).toBe(false)
+  })
+})
+
+describe('RaidDetailView 关闭攻坚', () => {
+  it('closed 攻坚显示已关闭徽章并隐藏编辑入口', async () => {
+    const closedRaid = { ...makeRaid([]), closed: true }
+    const { wrapper } = await mountView([], admin, closedRaid)
+    await flushPromises()
+    expect(wrapper.text()).toContain('已关闭')
+    expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="signup-plus"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="edit-raid"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="slack-rules"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="lock-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="add-wave"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="roster-link"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="close-raid"]').exists()).toBe(false) // 已关闭不显示关闭按钮
+  })
+
+  it('管理员可见关闭按钮，走强确认后调 close 并刷新', async () => {
+    apiMock.post.mockResolvedValueOnce({})
+    const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid([adminRow, memberRow]))
+    await flushPromises()
+    expect(wrapper.find('[data-test="close-raid"]').exists()).toBe(true)
+    await wrapper.find('[data-test="close-raid"]').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/close')
+    expect(apiMock.get).toHaveBeenCalled()   // 成功后 load 刷新
+  })
+
+  it('关闭按钮确认框取消则不调用 close', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid([adminRow, memberRow]))
+    await flushPromises()
+    vi.mocked(confirmDialog).mockResolvedValueOnce(false)
+    await wrapper.find('[data-test="close-raid"]').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.post).not.toHaveBeenCalledWith('/api/raids/1/close')
+  })
+
+  it('非管理员看不到关闭按钮', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], member)
+    await flushPromises()
+    expect(wrapper.find('[data-test="close-raid"]').exists()).toBe(false)
+  })
+
+  it('收到 raid:closed 事件断开 WS 并刷新为只读快照', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid([adminRow, memberRow]))
+    await flushPromises()
+    const cb = vi.mocked(connectRaidWs).mock.calls[0][1]
+    // 模拟他人关闭：事件触发后全量刷新为 closed:true 快照
+    apiMock.get.mockResolvedValueOnce({ ...makeRaid([adminRow, memberRow]), closed: true })
+    cb.onEvent({ type: 'raid:closed' })
+    await flushPromises()
+    expect(wrapper.text()).toContain('已关闭')
+    expect(wrapper.find('[data-test="close-raid"]').exists()).toBe(false)
+  })
+
+  it('closed 攻坚管理角色/取消报名按钮隐藏', async () => {
+    const closedRaid = { ...makeRaid([adminRow, memberRow]), closed: true }
+    const { wrapper } = await mountView([adminRow, memberRow], admin, closedRaid)
+    await flushPromises()
+    expect(wrapper.find('[data-act="manage-chars"]').exists()).toBe(false)
+    expect(wrapper.find('.signup-group .dnf-btn-danger').exists()).toBe(false)
   })
 })
 
