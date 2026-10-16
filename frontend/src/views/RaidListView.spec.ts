@@ -181,6 +181,30 @@ describe('RaidListView create form', () => {
     expect(apiMock.post).toHaveBeenCalledWith('/api/raids/3/signup', { character_ids: [1, 2] })
   })
 
+  it('non-admin 报名失败提示错误且弹框保持打开', async () => {
+    const pinia = createPinia(); setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null, is_banned: false, is_guest: false }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [raid] as RaidListItem[]
+      if (url === '/api/me/characters') return chars
+      return []
+    })
+    apiMock.post.mockRejectedValueOnce(new Error('网络错误'))
+    const wrapper = mount(RaidListView, {
+      global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub, teleport: true } },
+    })
+    await flushPromises()
+    await wrapper.find('[data-test="signup"]').trigger('click')
+    await flushPromises()
+    await wrapper.find('[data-act="submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/3/signup', { character_ids: [1, 2] })
+    expect(notifyErrorMock).toHaveBeenCalledWith('网络错误')
+    // 失败不关闭：signupTarget 未清 → SignupModal 仍 open，提交按钮仍在
+    expect(wrapper.find('[data-act="submit"]').exists()).toBe(true)
+  })
+
   it('shows 已报名 badge instead of button when signed up', async () => {
     const pinia = createPinia(); setActivePinia(pinia)
     const auth = useAuthStore()

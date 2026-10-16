@@ -33,6 +33,7 @@ watch(() => props.open, async (open) => {
     }
   } catch {
     characters.value = []
+    localSelected.value = []  // 拉取失败清掉残留勾选，避免旧角色 id 随提交带出
   } finally {
     loading.value = false
   }
