@@ -96,29 +96,41 @@ async function onSignup(r: RaidListItem) {
     </div>
 
     <div v-for="r in raids" :key="r.id" class="dnf-panel raid-card">
-      <router-link :to="`/raids/${r.id}`" class="raid-name">{{ r.name }}</router-link>
-      <span class="raid-meta">{{ r.dungeon_name }} · {{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
-      <span class="dnf-badge" :class="r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
-        {{ r.locked ? '已锁定' : '未锁定' }}
-      </span>
-      <span class="raid-meta" style="color:var(--dnf-text-faint)">
-        已报名 {{ r.signup_count + 1 }} 人
-      </span>
+      <router-link :to="`/raids/${r.id}`" class="raid-link">
+        <span class="raid-name">{{ r.name }}</span>
+        <span class="raid-meta">{{ r.dungeon_name }} · {{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
+        <span class="dnf-badge" :class="r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
+          {{ r.locked ? '已锁定' : '未锁定' }}
+        </span>
+        <span class="raid-meta" style="color:var(--dnf-text-faint)">
+          已报名 {{ r.signup_count + 1 }} 人
+        </span>
+      </router-link>
       <button v-if="!r.locked && !r.my_signed_up" class="dnf-btn dnf-btn-sm dnf-btn-primary"
-              data-test="signup" style="margin-left:auto"
-              @click="onSignup(r)">报名</button>
-      <span v-else-if="!r.locked && r.my_signed_up" class="dnf-badge dnf-badge-ok"
-            style="margin-left:auto">已报名</span>
-      <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" style="margin-left:auto" @click="onDelete(r)">删除</button>
+              data-test="signup" @click="onSignup(r)">报名</button>
+      <span v-else-if="!r.locked && r.my_signed_up" class="dnf-badge dnf-badge-ok">已报名</span>
+      <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" @click="onDelete(r)">删除</button>
     </div>
     <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
   </div>
 </template>
 
 <style scoped>
+/* 整卡可点：.raid-link 拉伸占满卡片主体（排除 报名/删除 按钮），点击任意信息区进入详情 */
+.raid-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  text-decoration: none;
+  cursor: pointer;
+}
 /* 悬浮「选中」：默认 .dnf-panel 边框已是金色，hover 提亮 + 外发光以区分 */
 .raid-card:hover {
   border-color: var(--dnf-gold-hi);
   box-shadow: inset 0 0 0 1px var(--dnf-gold-deep), 0 0 14px rgba(255,213,74,.55), 0 4px 12px rgba(0,0,0,.5);
 }
+.raid-card:hover .raid-name { text-decoration: underline; }
 </style>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import RaidListView from './RaidListView.vue'
 import { useAuthStore } from '../stores/auth'
@@ -47,7 +47,7 @@ describe('RaidListView create form', () => {
     const auth = useAuthStore()
     auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false, is_guest: false }
 
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     await wrapper.find('[data-test="create-toggle"]').trigger('click')
     await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', 7)
@@ -65,7 +65,7 @@ describe('RaidListView create form', () => {
     const auth = useAuthStore()
     auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false, is_guest: false }
 
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     await wrapper.find('[data-test="create-toggle"]').trigger('click')
 
@@ -86,7 +86,7 @@ describe('RaidListView create form', () => {
     const auth = useAuthStore()
     auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null, is_banned: false, is_guest: false }
 
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     expect(apiMock.get).not.toHaveBeenCalledWith('/api/dungeons')
   })
@@ -102,7 +102,7 @@ describe('RaidListView create form', () => {
       return []
     })
 
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     const delBtn = wrapper.findAll('button').find(b => b.text().includes('删除'))
     expect(delBtn).toBeTruthy()
@@ -124,7 +124,7 @@ describe('RaidListView create form', () => {
       return []
     })
 
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     await wrapper.findAll('button').find(b => b.text().includes('删除'))!.trigger('click')
     await flushPromises()
@@ -141,7 +141,7 @@ describe('RaidListView create form', () => {
       return []
     })
 
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     expect(wrapper.text()).not.toContain('删除')
   })
@@ -154,7 +154,7 @@ describe('RaidListView create form', () => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
       return []
     })
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     expect(wrapper.text()).toContain('已报名 1 人') // 报名人数含团长（与详情一致）
     await wrapper.find('[data-test="signup"]').trigger('click')
@@ -171,9 +171,31 @@ describe('RaidListView create form', () => {
       if (url === '/api/raids') return [signed] as RaidListItem[]
       return []
     })
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: ['router-link'] } })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     expect(wrapper.text()).toContain('已报名 4 人') // 含团长
     expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
+  })
+
+  it('info area links to detail (covers meta/status/signup, not just the name)', async () => {
+    const pinia = createPinia(); setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false, is_guest: false }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [raid] as RaidListItem[]
+      if (url === '/api/dungeons') return dungeons
+      return []
+    })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    const link = wrapper.findAllComponents(RouterLinkStub)[0]
+    expect(link.props('to')).toBe('/raids/3')
+    // 可点击区域覆盖副本/规模/状态/报名人数，而非仅名称
+    expect(link.text()).toContain('巴卡尔')
+    expect(link.text()).toContain('16 人')
+    expect(link.text()).toContain('未锁定')
+    expect(link.text()).toContain('已报名 1 人')
+    // 操作按钮留在链接之外，不参与整卡跳转
+    expect(wrapper.find('[data-test="signup"]').exists()).toBe(true)
   })
 })
