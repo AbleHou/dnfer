@@ -5,6 +5,7 @@ import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
+import SignupModal from '../components/SignupModal.vue'
 import type { Dungeon, RaidListItem } from '../types'
 
 const auth = useAuthStore()
@@ -58,9 +59,14 @@ async function onDelete(r: RaidListItem) {
   catch (e: any) { notifyError(e.message) }
 }
 
-async function onSignup(r: RaidListItem) {
+const signupTarget = ref<RaidListItem | null>(null)
+function onSignup(r: RaidListItem) { signupTarget.value = r }
+async function onSignupSubmit(ids: number[]) {
+  if (!signupTarget.value) return
+  const rid = signupTarget.value.id
+  signupTarget.value = null
   try {
-    await api.post(`/api/raids/${r.id}/signup`)
+    await api.post(`/api/raids/${rid}/signup`, { character_ids: ids })
     notifySuccess('报名成功')
     await load()
   } catch (e: any) { notifyError(e.message) }
@@ -112,6 +118,8 @@ async function onSignup(r: RaidListItem) {
       <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" @click="onDelete(r)">删除</button>
     </div>
     <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
+    <SignupModal :open="!!signupTarget" mode="signup" :selected-ids="[]"
+                 @close="signupTarget = null" @submit="onSignupSubmit" />
   </div>
 </template>
 

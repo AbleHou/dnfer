@@ -5,7 +5,7 @@ import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import RaidListView from './RaidListView.vue'
 import { useAuthStore } from '../stores/auth'
-import type { Dungeon, RaidListItem } from '../types'
+import type { Dungeon, RaidListItem, Character } from '../types'
 
 const { apiMock, confirmDialogMock, notifyErrorMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn() },
@@ -29,6 +29,16 @@ const dungeons: Dungeon[] = [{ id: 7, name: '巴卡尔', size: 16, description: 
 const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
   size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1,
   signup_count: 0, my_signed_up: false }
+const chars: Character[] = [
+  { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+    parent_name: 'swordman_male', class_type: '输出', fame: 1, simulated_damage: 5,
+    sustained_dps: 2, buff_amount: null, sun_buff: null,
+    adventure_party_id: null, adventure_party_name: null },
+  { id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+    parent_name: 'priest_male', class_type: '辅助', fame: 2, simulated_damage: null,
+    sustained_dps: null, buff_amount: 9000, sun_buff: null,
+    adventure_party_id: null, adventure_party_name: null },
+]
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -36,6 +46,7 @@ beforeEach(() => {
   apiMock.get.mockImplementation(async (url: string) => {
     if (url === '/api/raids') return [] as RaidListItem[]
     if (url === '/api/dungeons') return dungeons
+    if (url === '/api/me/characters') return chars
     return []
   })
 })
@@ -146,20 +157,28 @@ describe('RaidListView create form', () => {
     expect(wrapper.text()).not.toContain('删除')
   })
 
-  it('non-admin sees 报名 button and signs up', async () => {
+  it('non-admin 点报名弹角色选择框，确认后带 character_ids 报名', async () => {
     const pinia = createPinia(); setActivePinia(pinia)
     const auth = useAuthStore()
     auth.user = { id: 2, username: 'm', nickname: 'M', is_admin: false, avatar: null, is_banned: false, is_guest: false }
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/raids') return [raid] as RaidListItem[]
+      if (url === '/api/me/characters') return chars
       return []
     })
-    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
+    const wrapper = mount(RaidListView, {
+      global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub, teleport: true } },
+    })
     await flushPromises()
     expect(wrapper.text()).toContain('已报名 1 人') // 报名人数含团长（与详情一致）
+    // 点报名：打开弹框（默认全选），不立即 POST
     await wrapper.find('[data-test="signup"]').trigger('click')
     await flushPromises()
-    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/3/signup')
+    expect(apiMock.post).not.toHaveBeenCalledWith(expect.stringContaining('/signup'))
+    // 确认报名 → 带 character_ids
+    await wrapper.find('[data-act="submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids/3/signup', { character_ids: [1, 2] })
   })
 
   it('shows 已报名 badge instead of button when signed up', async () => {
