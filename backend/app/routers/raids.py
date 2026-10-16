@@ -33,6 +33,10 @@ def _raid_or_404(db: Session, rid: int) -> Raid:
         raise HTTPException(404, "攻坚不存在")
     return r
 
+def _reject_if_closed(raid: Raid) -> None:
+    if raid.closed:
+        raise HTTPException(400, "攻坚已关闭，无法操作")
+
 def _clear_slot(slot: Slot) -> None:
     slot.character_id = None
     slot.duty = None
@@ -215,6 +219,7 @@ def get_raid(rid: int, user: User = Depends(get_current_user), db: Session = Dep
 async def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_admin),
                       db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if body.name is not None:
         raid.name = body.name
     if body.starts_at is not None:
@@ -257,6 +262,7 @@ def delete_raid(rid: int, admin: User = Depends(require_admin),
 async def set_slack_rules(rid: int, body: SlackRuleSet, admin: User = Depends(require_admin),
                           db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     row = db.query(RaidSlackRule).filter(RaidSlackRule.raid_id == rid).first()
     if row is None:
         row = RaidSlackRule(raid_id=rid)
@@ -282,6 +288,7 @@ async def set_slack_rules(rid: int, body: SlackRuleSet, admin: User = Depends(re
 @router.post("/{rid}/lock")
 async def lock_raid(rid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     raid.locked = True
     db.commit()
     await manager.broadcast(rid, {"type": "raid:locked"})
@@ -290,6 +297,7 @@ async def lock_raid(rid: int, admin: User = Depends(require_admin), db: Session 
 @router.post("/{rid}/unlock")
 async def unlock_raid(rid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     raid.locked = False
     db.commit()
     await manager.broadcast(rid, {"type": "raid:unlocked"})
@@ -301,6 +309,7 @@ def _can_edit(user: User, raid: Raid) -> bool:
 @router.post("/{rid}/waves")
 async def add_wave(rid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     wave = create_wave(db, raid)
     db.commit()
     await manager.broadcast(rid, {"type": "wave:added", "index": wave.index})
@@ -310,6 +319,7 @@ async def add_wave(rid: int, admin: User = Depends(require_admin), db: Session =
 async def delete_wave(rid: int, index: int, admin: User = Depends(require_admin),
                       db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     wave = db.query(Wave).filter(Wave.raid_id == rid, Wave.index == index).first()
     if wave is None:
         raise HTTPException(404, "波次不存在")
@@ -328,6 +338,7 @@ async def delete_wave(rid: int, index: int, admin: User = Depends(require_admin)
 async def parallelize_wave(rid: int, index: int, body: ParallelIn,
                            admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     wave = db.query(Wave).filter(Wave.raid_id == rid, Wave.index == index).first()
     if wave is None:
         raise HTTPException(404, "波次不存在")
@@ -362,6 +373,7 @@ async def parallelize_wave(rid: int, index: int, body: ParallelIn,
 async def unparallelize_wave(rid: int, index: int, admin: User = Depends(require_admin),
                              db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     wave = db.query(Wave).filter(Wave.raid_id == rid, Wave.index == index).first()
     if wave is None:
         raise HTTPException(404, "波次不存在")
@@ -379,6 +391,7 @@ async def unparallelize_wave(rid: int, index: int, admin: User = Depends(require
 async def fill_slot(rid: int, slot_id: int, body: FillIn,
                     user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if not _can_edit(user, raid):
         raise HTTPException(403, "攻坚已锁定，仅管理员可编辑")
     slot = db.get(Slot, slot_id)
@@ -462,6 +475,7 @@ async def fill_slot(rid: int, slot_id: int, body: FillIn,
 async def remove_slot(rid: int, slot_id: int, user: User = Depends(get_current_user),
                       db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     slot = db.get(Slot, slot_id)
     if slot is None or slot.wave.raid_id != rid:
         raise HTTPException(404, "格子不存在")
@@ -482,6 +496,7 @@ async def remove_slot(rid: int, slot_id: int, user: User = Depends(get_current_u
 async def change_duty(rid: int, slot_id: int, body: DutyIn,
                       user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     slot = db.get(Slot, slot_id)
     if slot is None or slot.wave.raid_id != rid:
         raise HTTPException(404, "格子不存在")
@@ -539,6 +554,7 @@ def _prune_round(db: Session, group_id: int) -> None:
 async def move_slot(rid: int, slot_id: int, body: MoveIn,
                     admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     source = db.get(Slot, slot_id)
     if source is None or source.wave.raid_id != rid:
         raise HTTPException(404, "格子不存在")
@@ -600,6 +616,7 @@ async def move_slot(rid: int, slot_id: int, body: MoveIn,
 async def signup(rid: int, body: SignupIn | None = None,
                  user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if user.is_banned:
         raise HTTPException(403, "你已被封禁，无法报名")
     if user.id == raid.created_by:
@@ -628,6 +645,7 @@ async def add_signup_character(rid: int, cid: int,
                                user: User = Depends(get_current_user),
                                db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if user.is_banned:
         raise HTTPException(403, "你已被封禁，无法报名")
     if user.id == raid.created_by:
@@ -657,6 +675,7 @@ async def remove_signup_character(rid: int, cid: int,
                                   user: User = Depends(get_current_user),
                                   db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if user.is_banned:
         raise HTTPException(403, "你已被封禁，无法报名")
     if user.id == raid.created_by:
@@ -713,6 +732,7 @@ async def _remove_signup(db: Session, raid: Raid, user_id: int) -> dict:
 @router.delete("/{rid}/signup")
 async def cancel_self(rid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if raid.locked:
         raise HTTPException(403, "攻坚已锁定，无法取消报名")
     if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
@@ -725,6 +745,7 @@ async def cancel_self(rid: int, user: User = Depends(get_current_user), db: Sess
 async def cancel_other(rid: int, user_id: int, admin: User = Depends(require_admin),
                        db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if db.query(RaidSignup).filter(RaidSignup.raid_id == rid,
                                    RaidSignup.user_id == user_id).first() is None:
         raise HTTPException(400, "该用户尚未报名")
@@ -735,6 +756,7 @@ async def cancel_other(rid: int, user_id: int, admin: User = Depends(require_adm
 async def admin_signup(rid: int, body: SignupUserIn, admin: User = Depends(require_admin),
                        db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     if raid.locked:
         raise HTTPException(400, "攻坚已锁定，无法报名")
     target = db.get(User, body.user_id)

@@ -12,7 +12,8 @@ from ..models import AdventureParty, Character, RaidSignup, User
 from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
                        BotCharactersOut, BotRegisterIn, BotSignupIn, PublicVoteBallotIn,
                        UserOut, VoteDetail, VoteListItem)
-from ..routers.raids import _raid_or_404, _remove_signup, _signup_characters, _signup_user
+from ..routers.raids import (_raid_or_404, _reject_if_closed, _remove_signup,
+                             _signup_characters, _signup_user)
 from ..services.characters import character_out
 from ..services.parties import ensure_default_party
 from ..services.votes import _vote_or_404, cast_vote, list_votes, vote_detail
@@ -127,6 +128,7 @@ def register(body: BotRegisterIn, db: Session = Depends(get_db)):
 @router.post("/raids/{rid}/signup")
 async def bot_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     user = _get_user(db, body.account, body.nickname)
     if user.is_banned:
         raise HTTPException(403, "该用户已被封禁")
@@ -156,6 +158,7 @@ async def bot_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db))
 @router.post("/raids/{rid}/signup/cancel")
 async def bot_cancel_signup(rid: int, body: BotSignupIn, db: Session = Depends(get_db)):
     raid = _raid_or_404(db, rid)
+    _reject_if_closed(raid)
     user = _get_user(db, body.account, body.nickname)
     if raid.locked:
         raise HTTPException(403, "攻坚已锁定，无法取消报名")
