@@ -190,12 +190,22 @@ def list_raids(user: User = Depends(get_current_user), db: Session = Depends(get
               .filter(RaidSignup.user_id == user.id).all()}
     items = []
     for r in db.query(Raid).options(selectinload(Raid.dungeon)).order_by(Raid.created_at.desc()).all():
+        if r.closed:
+            snap = r.snapshot or {}
+            wave_count = len(snap.get("waves") or [])
+            signup_count = sum(1 for s in (snap.get("signups") or [])
+                               if s.get("created_at") is not None)
+            my_signed_up = (r.created_by == user.id) or any(
+                s.get("user", {}).get("id") == user.id for s in (snap.get("signups") or []))
+        else:
+            wave_count = len(r.waves)
+            signup_count = counts.get(r.id, 0)
+            my_signed_up = (r.created_by == user.id) or r.id in my_ids
         items.append(RaidListItem(id=r.id, name=r.name, dungeon_id=r.dungeon_id,
                                   dungeon_name=r.dungeon.name, size=r.size,
-                                  locked=r.locked, starts_at=r.starts_at,
-                                  wave_count=len(r.waves),
-                                  signup_count=counts.get(r.id, 0),
-                                  my_signed_up=(r.created_by == user.id) or r.id in my_ids))
+                                  locked=r.locked, closed=r.closed, starts_at=r.starts_at,
+                                  wave_count=wave_count, signup_count=signup_count,
+                                  my_signed_up=my_signed_up))
     return items
 
 @router.post("")

@@ -152,3 +152,40 @@ def test_banned_admin_cannot_close(client, admin_headers, db):
     r = client.post(f"/api/raids/{rid}/close", headers=admin_headers)
     assert r.status_code == 403
     assert r.json()["detail"] == "你已被封禁，无法操作"
+
+
+def test_closed_raid_list_counts_from_snapshot(client):
+    """列表页对 closed 攻坚的 wave/signup/my_signed_up 从快照推导。"""
+    ah = _admin(client)
+    h, u = register_user(client, "rc5", "戊")
+    _mkchar(client, h)
+    rid = make_raid(client, ah)["id"]
+    signup(client, rid, h)
+    assert client.post(f"/api/raids/{rid}/close", headers=ah).status_code == 200
+    item = next(r for r in client.get("/api/raids", headers=ah).json() if r["id"] == rid)
+    assert item["closed"] is True
+    assert item["wave_count"] >= 1        # 来自快照（live 波已删）
+    assert item["signup_count"] >= 1      # 非团长报名行数（来自快照）
+    # 已报名用户视角 my_signed_up
+    item_mine = next(r for r in client.get("/api/raids", headers=h).json() if r["id"] == rid)
+    assert item_mine["my_signed_up"] is True
+
+
+def test_closed_raid_still_deletable(client):
+    """closed 攻坚仍可删除。"""
+    ah = _admin(client)
+    rid = _closed_raid(client, ah)
+    assert client.delete(f"/api/raids/{rid}", headers=ah).status_code == 200
+
+
+def test_create_raid_unaffected_by_closed(client):
+    """存在 closed 攻坚时，创建攻坚不受影响。"""
+    from .helpers import make_dungeon
+    ah = _admin(client)
+    _closed_raid(client, ah)
+    did = make_dungeon(client, ah, name="副本2", size=8)["id"]
+    r = client.post("/api/raids", headers=ah,
+                    json={"name": "新团", "dungeon_id": did,
+                          "starts_at": "2026-10-01T12:00:00"})
+    assert r.status_code == 200
+    assert r.json()["closed"] is False

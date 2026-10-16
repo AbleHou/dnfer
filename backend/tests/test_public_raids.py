@@ -48,3 +48,28 @@ def test_public_raid_detail_404(client):
     r = client.get("/api/public/raids/999999", headers=TOKEN)
     assert r.status_code == 404
     assert r.json()["detail"] == "攻坚不存在"
+
+
+def test_public_closed_raid_serves_snapshot(client):
+    """closed 攻坚的公开详情/列表/波次均由快照提供。"""
+    ah = _admin(client)
+    h, _ = register_user(client, "prc1", "甲")
+    cid = client.post("/api/me/characters", headers=h, json={
+        "name": "C", "job_name": "weapon_master", "fame": 1}).json()["id"]
+    rid = make_raid(client, ah)["id"]
+    signup(client, rid, h)
+    s = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]
+    assert client.post(f"/api/raids/{rid}/slots/{s['id']}/fill", headers=h,
+                       json={"character_id": cid}).status_code == 200
+    assert client.post(f"/api/raids/{rid}/close", headers=ah).status_code == 200
+    # 公开详情 → closed=True 且含波/报名（快照）
+    d = client.get(f"/api/public/raids/{rid}", headers=TOKEN).json()
+    assert d["closed"] is True and len(d["waves"]) >= 1 and len(d["signups"]) >= 1
+    # 公开列表 → closed=True、wave_count 来自快照
+    item = next(r for r in client.get("/api/public/raids", headers=TOKEN).json()
+                if r["id"] == rid)
+    assert item["closed"] is True and item["wave_count"] >= 1
+    # 公开波次 → 由快照重建，不 404
+    r = client.get(f"/api/public/raids/{rid}/waves/{d['waves'][0]['index']}",
+                   headers=TOKEN)
+    assert r.status_code == 200
