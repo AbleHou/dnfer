@@ -5,7 +5,7 @@ from ..auth import require_api_token
 from ..db import get_db
 from ..models import Raid, Wave
 from ..schemas import RaidDetail, RaidListItem, WaveOut
-from ..routers.raids import _detail, _read_detail
+from ..routers.raids import _read_detail
 
 router = APIRouter(prefix="/api/public", tags=["public"],
                    dependencies=[Depends(require_api_token)])
@@ -15,10 +15,14 @@ def public_raids(db: Session = Depends(get_db)):
     items = []
     for r in db.query(Raid).options(selectinload(Raid.dungeon)) \
             .order_by(Raid.created_at.desc()).all():
-        snap = r.snapshot if r.closed else None
-        wave_count = len(snap.get("waves") or []) if snap else len(r.waves)
-        signup_count = sum(1 for s in (snap.get("signups") or [])
-                           if s.get("created_at") is not None) if snap else 0
+        if r.closed:
+            snap = r.snapshot or {}
+            wave_count = len(snap.get("waves") or [])
+            signup_count = sum(1 for s in (snap.get("signups") or [])
+                               if s.get("created_at") is not None)
+        else:
+            wave_count = len(r.waves)
+            signup_count = 0
         items.append(RaidListItem(id=r.id, name=r.name, dungeon_id=r.dungeon_id,
                                   dungeon_name=r.dungeon.name, size=r.size,
                                   locked=r.locked, closed=r.closed, starts_at=r.starts_at,

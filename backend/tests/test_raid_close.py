@@ -169,6 +169,10 @@ def test_closed_raid_list_counts_from_snapshot(client):
     # 已报名用户视角 my_signed_up
     item_mine = next(r for r in client.get("/api/raids", headers=h).json() if r["id"] == rid)
     assert item_mine["my_signed_up"] is True
+    # 非参与者视角
+    h3, _ = register_user(client, "rc6", "己")
+    item_other = next(r for r in client.get("/api/raids", headers=h3).json() if r["id"] == rid)
+    assert item_other["my_signed_up"] is False
 
 
 def test_closed_raid_still_deletable(client):

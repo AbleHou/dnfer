@@ -73,3 +73,4 @@ def test_public_closed_raid_serves_snapshot(client):
     r = client.get(f"/api/public/raids/{rid}/waves/{d['waves'][0]['index']}",
                    headers=TOKEN)
     assert r.status_code == 200
+    assert r.json() == d["waves"][0]   # round_index/group_index/slots 完整回传
