@@ -145,6 +145,12 @@ def _detail(db: Session, raid: Raid) -> RaidDetail:
                       locked=raid.locked, starts_at=raid.starts_at, waves=waves,
                       signups=signups, slack_rules=_load_slack_rules(db, raid))
 
+def _read_detail(db: Session, raid: Raid) -> RaidDetail:
+    """closed 攻坚由快照重建详情；否则走 live _detail。"""
+    if raid.closed and raid.snapshot:
+        return RaidDetail.model_validate({**raid.snapshot, "id": raid.id, "closed": True})
+    return _detail(db, raid)
+
 def _squad_occupied(db: Session, wave: Wave, squad_index: int) -> list[tuple[str, str]]:
     return [(s.duty, s.character.class_type) for s in wave.slots
             if s.squad_index == squad_index and s.character_id is not None]
@@ -203,7 +209,7 @@ def create_raid(body: RaidCreate, admin: User = Depends(require_admin),
 
 @router.get("/{rid}", response_model=RaidDetail)
 def get_raid(rid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return _detail(db, _raid_or_404(db, rid))
+    return _read_detail(db, _raid_or_404(db, rid))
 
 @router.put("/{rid}")
 async def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_admin),
@@ -218,6 +224,26 @@ async def update_raid(rid: int, body: RaidUpdate, admin: User = Depends(require_
                                   "name": raid.name,
                                   "starts_at": raid.starts_at.isoformat()})
     return _detail(db, raid)
+
+@router.post("/{rid}/close", response_model=RaidDetail)
+async def close_raid(rid: int, admin: User = Depends(require_admin),
+                     db: Session = Depends(get_db)):
+    raid = _raid_or_404(db, rid)
+    if admin.is_banned:
+        raise HTTPException(403, "你已被封禁，无法操作")
+    if raid.closed:
+        raise HTTPException(400, "攻坚已关闭")
+    raid.snapshot = _detail(db, raid).model_dump(mode="json")  # 先取快照（datetime→ISO）
+    raid.closed = True
+    # 清理 live 行：Slot → Wave → RaidSignupCharacter → RaidSignup（释放角色引用）
+    db.query(Slot).filter(Slot.wave.has(raid_id=raid.id)).delete(synchronize_session=False)
+    db.query(Wave).filter(Wave.raid_id == raid.id).delete(synchronize_session=False)
+    db.query(RaidSignupCharacter).filter(RaidSignupCharacter.signup_id.in_(
+        select(RaidSignup.id).where(RaidSignup.raid_id == raid.id))).delete(synchronize_session=False)
+    db.query(RaidSignup).filter(RaidSignup.raid_id == raid.id).delete(synchronize_session=False)
+    db.commit()
+    await manager.broadcast(rid, {"type": "raid:closed"})
+    return _read_detail(db, raid)
 
 @router.delete("/{rid}")
 def delete_raid(rid: int, admin: User = Depends(require_admin),

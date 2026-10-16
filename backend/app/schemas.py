@@ -163,6 +163,7 @@ class RaidListItem(BaseModel):
     dungeon_name: str
     size: int
     locked: bool
+    closed: bool = False
     starts_at: datetime
     wave_count: int
     signup_count: int = 0
@@ -208,6 +209,7 @@ class RaidDetail(BaseModel):
     dungeon_name: str
     size: int
     locked: bool
+    closed: bool = False
     starts_at: datetime
     waves: list[WaveOut]
     signups: list[RaidSignupOut] = []
