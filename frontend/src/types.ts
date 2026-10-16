@@ -31,9 +31,9 @@ export interface JobCategory { id: number; name: string; title: string; children
 export interface Wave { id: number; index: number; group_id: number | null; round_index: number; group_index: number; slots: Slot[] }
 export interface Dungeon { id: number; name: string; size: number; description: string; created_at: string }
 export interface Raid { id: number; name: string; dungeon_id: number; dungeon_name: string;
-  size: number; locked: boolean; starts_at: string; waves: Wave[]; signups: RaidSignup[]; slack_rules: SlackRuleSet }
+  size: number; locked: boolean; closed: boolean; starts_at: string; waves: Wave[]; signups: RaidSignup[]; slack_rules: SlackRuleSet }
 export interface RaidListItem { id: number; name: string; dungeon_id: number; dungeon_name: string;
-  size: number; locked: boolean; starts_at: string; wave_count: number; signup_count: number; my_signed_up: boolean }
+  size: number; locked: boolean; closed: boolean; starts_at: string; wave_count: number; signup_count: number; my_signed_up: boolean }
 export interface CodeItem { id: number; code: string; used_by: number | null; used_at: string | null;
   expires_at: string | null; single_use: boolean }
 export interface VoteOptionItem { id: number; text: string; count: number; voters: string[] }

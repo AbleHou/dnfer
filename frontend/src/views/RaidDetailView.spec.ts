@@ -58,7 +58,7 @@ const memberRow = { user: member, created_at: '2026-09-22T10:00:00', characters:
 function makeRaid(signups: Raid['signups']): Raid {
   return {
     id: 1, name: 'x', dungeon_id: 1, dungeon_name: '副本', starts_at: '2026-09-20T14:00:00',
-    size: 12, locked: false, signups, slack_rules: { criteria: [], exchange: [] },
+    size: 12, locked: false, closed: false, signups, slack_rules: { criteria: [], exchange: [] },
     waves: [{ id: 1, index: 1, group_id: null, round_index: 1, group_index: 1, slots: [] }],
   }
 }

@@ -12,6 +12,7 @@ export type WsEvent =
   | { type: 'wave:parallel_removed'; index: number }
   | { type: 'raid:locked' }
   | { type: 'raid:unlocked' }
+  | { type: 'raid:closed' }
   | { type: 'raid:signup'; user: User; created_at: string | null; characters: Character[] }
   | { type: 'raid:signup_chars_changed'; user_id: number; characters: Character[] }
   | { type: 'raid:signup_removed'; user_id: number }
@@ -55,6 +56,7 @@ export function applyEvent(store: ReturnType<typeof useRaidStore>, ev: WsEvent) 
     }
     case 'raid:locked': raid.locked = true; break
     case 'raid:unlocked': raid.locked = false; break
+    case 'raid:closed': raid.closed = true; store.needRefresh = true; break
     case 'wave:added':
     case 'wave:removed':
       store.needRefresh = true; break

@@ -27,7 +27,7 @@ vi.mock('../lib/notify', () => ({
 
 const dungeons: Dungeon[] = [{ id: 7, name: '巴卡尔', size: 16, description: '', created_at: '' }]
 const raid: RaidListItem = { id: 3, name: '巴卡尔', dungeon_id: 7, dungeon_name: '巴卡尔',
-  size: 16, locked: false, starts_at: '2026-09-20T14:00:00', wave_count: 1,
+  size: 16, locked: false, closed: false, starts_at: '2026-09-20T14:00:00', wave_count: 1,
   signup_count: 0, my_signed_up: false }
 const chars: Character[] = [
   { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
