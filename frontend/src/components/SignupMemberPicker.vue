@@ -3,7 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import { api } from '../api/client'
 import UserAvatar from './UserAvatar.vue'
-import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
+import SignupModal from './SignupModal.vue'
+import { notifyError, notifySuccess } from '../lib/notify'
 import type { User } from '../types'
 
 const props = defineProps<{ open: boolean; rid: number; excludeUserIds: number[] }>()
@@ -12,6 +13,7 @@ const users = ref<User[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
 const busy = ref(false)
+const pickUser = ref<User | null>(null)
 
 const candidates = computed(() =>
   users.value.filter(u => !props.excludeUserIds.includes(u.id)))
@@ -32,11 +34,16 @@ watch(() => props.open, async (open) => {
 
 async function onPick(u: User) {
   if (busy.value) return
+  pickUser.value = u   // 打开选角色弹框，不再直接报名
+}
+
+async function onSubmit(ids: number[]) {
+  if (!pickUser.value || busy.value) return
+  const uid = pickUser.value.id
+  pickUser.value = null
   busy.value = true
   try {
-    const ok = await confirmDialog({ content: `确认帮「${u.nickname}」报名？` })
-    if (!ok) return
-    await api.post(`/api/raids/${props.rid}/signups`, { user_id: u.id })
+    await api.post(`/api/raids/${props.rid}/signups`, { user_id: uid, character_ids: ids })
     notifySuccess('报名成功')
     emit('signedUp')
     emit('close')
@@ -57,6 +64,9 @@ async function onPick(u: User) {
         <span>{{ u.nickname }}</span>
       </div>
     </div>
+    <SignupModal :open="!!pickUser" mode="signup" :selected-ids="[]"
+                 :characters-url="pickUser ? `/api/admin/users/${pickUser.id}/characters` : '/api/me/characters'"
+                 @close="pickUser = null" @submit="onSubmit" />
   </n-modal>
 </template>
 
