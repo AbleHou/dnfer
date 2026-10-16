@@ -14,9 +14,13 @@ import { connectRaidWs } from '../api/ws'
 import type { Character, Raid, RaidSignup, User } from '../types'
 import { confirmDialog } from '../lib/notify'
 
-const { apiMock, notifyMock } = vi.hoisted(() => ({
+const { apiMock, notifyMock, slotMoveMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn() },
   notifyMock: { error: vi.fn(), warning: vi.fn(), success: vi.fn() },
+  slotMoveMock: {
+    movingSlot: null, pickUp: vi.fn(), cancel: vi.fn(),
+    moveTo: vi.fn(async () => ({ warnings: [] })),
+  },
 }))
 vi.mock('../api/client', () => ({
   api: apiMock,
@@ -26,9 +30,7 @@ vi.mock('../api/client', () => ({
 }))
 vi.mock('../api/ws', () => ({ connectRaidWs: vi.fn(() => () => {}) }))
 vi.mock('../composables/useSlotMove', () => ({
-  useSlotMove: vi.fn(() => ({
-    movingSlot: null, pickUp: vi.fn(), cancel: vi.fn(), moveTo: vi.fn(async () => ({ warnings: [] })),
-  })),
+  useSlotMove: vi.fn(() => slotMoveMock),
 }))
 vi.mock('../lib/notify', () => ({
   confirmDialog: vi.fn(async () => true),
@@ -523,6 +525,8 @@ describe('RaidDetailView 关闭攻坚', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('已关闭')
     expect(wrapper.find('[data-test="close-raid"]').exists()).toBe(false)
+    // 关闭时清移动态（对齐编队页 holding 清理），防止残留「移动中」提示无法放下
+    expect(slotMoveMock.cancel).toHaveBeenCalled()
   })
 
   it('closed 攻坚管理角色/取消报名按钮隐藏', async () => {

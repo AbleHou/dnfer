@@ -81,7 +81,7 @@ onMounted(() => {
   disconnect = connectRaidWs(rid, {
     onEvent: (ev) => {
       // 已被他人关闭 → 断开 WS 并全量刷新为只读快照（覆盖「停留在开放页时被关闭」场景）
-      if (ev.type === 'raid:closed') { disconnect?.(); void load() }
+      if (ev.type === 'raid:closed') { disconnect?.(); cancel(); void load() }
       else applyEvent(store, ev)                  // slot/锁定事件增量合并
     },
     onRefresh: async () => { await load() },      // wave 增删触发全量刷新
