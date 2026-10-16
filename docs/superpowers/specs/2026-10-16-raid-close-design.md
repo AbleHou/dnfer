@@ -99,8 +99,8 @@
 ## 4. 前端
 
 - `types.ts`：`Raid` 与 `RaidListItem` 加必填 `closed: boolean` → **连带修所有字面量 fixture**（RaidList/RaidDetail/各 spec，以 `npm run build` 的 vue-tsc 为准）。
-- **WS `applyEvent`（stores/raid.ts）**：事件类型联合与 `applyEvent` 增加 `raid:closed` 分支——已打开的详情/编队页收到后触发 reload（或直接置 `closed` 只读态）并 `disconnect()` 断开已订阅 socket（关闭后无事件，别留悬挂连接），避免停留在「开放」UI。
-- **成员角色弹框**：关闭攻坚详情页的成员头像点击（`MemberCharactersModal`，fetch `/api/raids/{rid}/signups/{user_id}/characters`）对 live 报名行已删的 closed 攻坚会 404（且团长短路正常→不一致）。**closed 时隐藏头像点击/不打开成员弹框**——成员及其勾选角色已直接展示在快照报名面板里，无需再弹框。
+- **WS `applyEvent`（stores/raid.ts）**：事件类型联合与 `applyEvent` 增加 `raid:closed` 分支——收到后触发 reload / 置 `closed` 只读态。**`disconnect()` 在视图层接线**（`applyEvent` 是纯 store 函数拿不到视图的 disconnect 闭包）：详情/编队页在 `onEvent` 里判 `ev.type === 'raid:closed'` 或 `watch(store.raid.closed)` 调用 `disconnect()`（关闭后无事件，别留悬挂连接）。
+- **成员角色弹框**：`MemberCharactersModal` 对 live 报名行已删的 closed 攻坚 fetch `/api/raids/{rid}/signups/{user_id}/characters` 会 404（且团长短路正常→不一致）。**closed 时不走 fetch**——改为从 `store.raid.signups`（快照数据）取该用户角色渲染，保留查看能力且无 404。
 - **详情页（RaidDetailView）**：`raid.closed` 为真时——
   - 顶部显示「已关闭」徽章；
   - 隐藏全部编辑入口：报名/管理角色/取消报名/「＋」选人面板/临时选手/锁定·解锁/编队按钮/波次操作/并行/修改攻坚；
@@ -136,10 +136,10 @@
 ### 前端
 
 - `types` fixture 补 `closed`（vue-tsc 为准）。
-- 详情页：closed 显示「已关闭」徽章、隐藏编辑入口、不连 WS。
+- 详情页：closed 显示「已关闭」徽章、隐藏编辑入口、不连 WS；成员头像点击时 `MemberCharactersModal` **不走 fetch、从快照渲染**。
 - 列表页：closed 灰显「已关闭」徽章、无报名按钮、管理员仍可删除。
 - 编队页：closed 时 `canEdit` 为 false、不连 WS。
-- `applyEvent`：`raid:closed` 事件触发 reload。
+- `applyEvent`：`raid:closed` 事件触发 reload；视图层 `disconnect()`。
 - 关闭按钮：确认流（confirmDialog → `POST /close` → 刷新）。
 
 ## 7. 非目标 / 后续
