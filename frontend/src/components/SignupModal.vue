@@ -9,7 +9,8 @@ const props = withDefaults(defineProps<{
   open: boolean
   mode: 'signup' | 'manage'
   selectedIds: number[]
-}>(), { selectedIds: () => [] })
+  charactersUrl?: string
+}>(), { selectedIds: () => [], charactersUrl: '/api/me/characters' })
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'submit', ids: number[]): void
@@ -26,7 +27,7 @@ watch(() => props.open, async (open) => {
   loading.value = true
   error.value = ''
   try {
-    characters.value = await api.get<Character[]>('/api/me/characters')
+    characters.value = await api.get<Character[]>(props.charactersUrl)
     if (props.mode === 'signup') {
       localSelected.value = characters.value.map(c => c.id)  // 默认全部勾选
     }

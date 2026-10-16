@@ -105,4 +105,10 @@ describe('SignupModal', () => {
     const row2 = wrapper.find('[data-act="char-2"]').element.closest('.signup-char') as HTMLElement
     expect(row2.querySelector('.c-power')?.textContent).toContain('9000/3000')
   })
+
+  it('charactersUrl prop 覆盖拉取地址（默认 /api/me/characters）', async () => {
+    const wrapper = mountModal({ charactersUrl: '/api/admin/users/5/characters' })
+    await flushPromises()
+    expect(apiMock.get).toHaveBeenCalledWith('/api/admin/users/5/characters')
+  })
 })
