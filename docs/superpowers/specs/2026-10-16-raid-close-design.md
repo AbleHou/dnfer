@@ -71,6 +71,7 @@
 
 - 新增共享助手 `_read_detail(db, raid) -> RaidDetail`：`raid.closed` → `RaidDetail.model_validate({**raid.snapshot, "id": raid.id, "closed": True})`；否则 `_detail(db, raid)`。
 - `get_raid`（raids.py:204）改用 `_read_detail`。
+- `_read_detail` 实现注意：`_detail` 构造的 `RaidDetail` **不含 `closed`**，故快照里存的 `"closed": false` 是自然结果——**不要在 `_detail` 里加 `closed`**（否则快照会存误导性的旧值），统一由 `_read_detail` 读取时覆盖 `closed: True`；可加防御 `raid.snapshot is None → 回退 _detail`（正常不触发）。
 - `public.py` 三个读取端点统一改走快照分支——
   - `public_raid`（public.py:37）改走 `_read_detail`（关闭攻坚公开详情同样返回快照）；
   - `public_wave`（public.py:23）：closed → 由快照中对应 `index` 的波重建 `WaveOut`（关闭后 live `Wave` 行已删，不能查库）；
@@ -98,7 +99,8 @@
 ## 4. 前端
 
 - `types.ts`：`Raid` 与 `RaidListItem` 加必填 `closed: boolean` → **连带修所有字面量 fixture**（RaidList/RaidDetail/各 spec，以 `npm run build` 的 vue-tsc 为准）。
-- **WS `applyEvent`（stores/raid.ts）**：事件类型联合与 `applyEvent` 增加 `raid:closed` 分支——已打开的详情/编队页收到后触发 reload（或直接置 `closed` 只读态），避免已订阅标签页停留在「开放」UI。
+- **WS `applyEvent`（stores/raid.ts）**：事件类型联合与 `applyEvent` 增加 `raid:closed` 分支——已打开的详情/编队页收到后触发 reload（或直接置 `closed` 只读态）并 `disconnect()` 断开已订阅 socket（关闭后无事件，别留悬挂连接），避免停留在「开放」UI。
+- **成员角色弹框**：关闭攻坚详情页的成员头像点击（`MemberCharactersModal`，fetch `/api/raids/{rid}/signups/{user_id}/characters`）对 live 报名行已删的 closed 攻坚会 404（且团长短路正常→不一致）。**closed 时隐藏头像点击/不打开成员弹框**——成员及其勾选角色已直接展示在快照报名面板里，无需再弹框。
 - **详情页（RaidDetailView）**：`raid.closed` 为真时——
   - 顶部显示「已关闭」徽章；
   - 隐藏全部编辑入口：报名/管理角色/取消报名/「＋」选人面板/临时选手/锁定·解锁/编队按钮/波次操作/并行/修改攻坚；
