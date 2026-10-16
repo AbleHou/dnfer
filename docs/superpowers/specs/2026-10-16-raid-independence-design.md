@@ -7,7 +7,7 @@
 已确认的决策：
 - **去掉「一个角色全局只能占一个格子」**，改为 **raid 内唯一**（`fill_slot` 的 `char_dup` 查询限定本 raid）——跨攻坚占位共存，攻坚之间互不影响；
 - **raid 内保留「一场一格」**：同一攻坚内一个角色仍只能占一个格子（跨波也不行，wave1 放、wave2 再放会撤 wave1），RosterView 置灰/推荐/计数逻辑零改动；
-- **报名强制选角色**覆盖 web 全部自助/代报名入口：RaidListView、RaidDetailView（已有弹框）、admin 代报名（SignupMemberPicker 选人后加选角色步骤）；**仅机器人 skill 与编队页 guest 代报名默认全选**；
+- **报名强制选角色**覆盖 web 全部自助/代报名入口：RaidListView、RaidDetailView（已有弹框）、admin 代报名（SignupMemberPicker 选人后加选角色步骤）；**仅以下三条默认全选**：机器人 skill、编队页「添加临时选手」guest 代报名、详情页「添加临时选手」guest 代报名；
 - **锁定语义**：跨攻坚不再撤格后，锁定攻坚的排表不会被任何其他攻坚的操作改动，天然满足「锁定=保护管理员编队成果」；
 - WS 广播方向 bug 被顺带消除（`removed` 格子从此只可能属于本 raid，广播到 `rid` 即正确，无需单独改代码）。
 
@@ -60,21 +60,22 @@
 ### 3.1 RaidListView — 报名改为强制弹框
 
 - 新增 `signupTarget = ref<RaidListItem | null>(null)`，`onSignup(r)` 改为 `signupTarget.value = r`（打开弹框），不再直接 POST。
-- 模板引入复用 `SignupModal`（mode='signup'，内部 `GET /api/me/characters` + 默认全选，本组件已有）；`:open` 绑定 `!!signupTarget`、`:selected-ids="[]"`，`@close` 清 `signupTarget`，`@submit` → `POST /api/raids/{signupTarget.id}/signup { character_ids: ids }` → `notifySuccess('报名成功')` → `load()`。
+- 模板引入复用 `SignupModal`（该组件自身在 signup 模式默认全选、内部 `GET /api/me/characters`；RaidListView **需新增引入该组件**）；`:open` 绑定 `!!signupTarget`、`:selected-ids="[]"`，`@close` 清 `signupTarget`，`@submit` → `POST /api/raids/{signupTarget.id}/signup { character_ids: ids }` → `notifySuccess('报名成功')` → `load()`。
 - 角色数为 0 时 SignupModal 显示「还没有角色」空态，无法提交（与详情页一致）。
 
 ### 3.2 SignupMemberPicker — 选人后加选角色步骤
 
 - `onPick(u)` 不再直接 confirm+POST，改为记录 `pickUser = u` 并打开一个选角色弹框。
 - 选角色弹框：复用 `SignupModal` 的样式/交互但改为 admin 模式——`fetch GET /api/admin/users/{uid}/characters`（admin.py:176 `list_user_characters`，返回 `list[CharacterOut]`，对未报名用户也有效），默认全选；提交 `POST /api/raids/{rid}/signups { user_id, character_ids }`。
-- 实现取舍：`SignupModal` 内部固定请求 `/api/me/characters`，admin 代报名需按目标用户拉角色——方案为给 `SignupModal` 增加可选 `charactersUrl` prop（默认 `/api/me/characters`），SignupMemberPicker 传 `/api/admin/users/{uid}/characters`，选中态默认全选逻辑复用；不新增组件。
+- 实现取舍：`SignupModal` 内部固定请求 `/api/me/characters`，admin 代报名需按目标用户拉角色——方案为给 `SignupModal` 增加可选 `charactersUrl` prop（默认 `/api/me/characters`），SignupMemberPicker 传 `/api/admin/users/{uid}/characters`。**`mode` 保持 'signup' 不变，仅换拉取 URL**，选中态默认全选逻辑复用；不新增组件、不加「admin 模式」。
 - 移除原有的「确认帮 XX 报名？」confirmDialog（选角色弹框即确认动作）。
 
 ### 3.3 保持默认全选（零改动）
 
-- RosterView guest 代报名（`onGuestCreated` → `POST /signups { user_id }`）：guest 刚在创建弹窗填好角色，代报名全部角色，不弹框。
+- RosterView 编队页 guest 代报名（`onGuestCreated` → `POST /signups { user_id }`）：guest 刚在创建弹窗填好角色，代报名全部角色，不弹框。
+- RaidDetailView「添加临时选手」guest 代报名（`GuestCreateModal` → `POST /signups { user_id }`）：同上，不弹框。
 - 机器人 skill `bot_signup`：保持现行为（skill 传 character_ids 或默认全部），本次不动。
-- RaidDetailView：SignupModal 已有（mode='signup' 默认全选），`onSignupSubmit` 已传 character_ids，不动。
+- RaidDetailView 自助报名：SignupModal 已有（mode='signup' 默认全选），`onSignupSubmit` 已传 character_ids，不动。
 
 ## 4. 约束与边界
 
@@ -90,7 +91,8 @@
 
 - **跨攻坚共存（新）**：raid a 填 role1 → 建 raid b、填同一 role1 → 两场 detail 均显示 role1 占位，a 的格子不被撤（回归「全局唯一」旧行为的反例）。
 - **非 replace 跨攻坚（新）**：raid a 已占 role1，raid b 非 replace 填 role1 → 200（不再 400「该角色已在其他格子中」）。
-- **raid 内回归（现有用例不回归）**：`test_fill_replace_moves_conflicting_slot`（同波同玩家换角色）、`test_fill_replace_moves_same_character`（同 raid 跨波移动同一角色）、非 replace「该角色已在其他格子中」400（同一 raid 内）。
+- **raid 内回归（现有用例不回归）**：`test_fill_replace_moves_conflicting_slot`（同波同玩家换角色）、`test_fill_replace_moves_same_character`（同 raid 跨波移动同一角色）、`test_fill_replace_across_parallel_waves`（test_raid_parallel.py:168，并行波间 replace）。
+- **raid 内非 replace（新）**：同一 raid 内同角色已在其他格 → 仍 400「该角色已在其他格子中」（现无此断言用例，需新写）。
 - **admin_signup 带 character_ids（新）**：传子集 → 报名行只含这些角色；传空列表 → 400「至少选择一个角色」；不传 → 全部角色（回归）。
 
 ### 前端
