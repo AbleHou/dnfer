@@ -51,49 +51,69 @@ async function closeVote() {
     emit('refresh')
   } catch (e: any) { notifyError(e.message) }
 }
+
+const collapsed = ref(!props.vote.open)   // 关闭默认收起、进行中默认展开
+watch(() => props.vote.open, (nowOpen, prev) => {
+  if (!nowOpen && prev) collapsed.value = true  // 由开→关时自动收起
+})
+
+async function deleteVote() {
+  const ok = await confirmDialog({ content: `确认删除投票「${props.vote.title}」？删除后不可恢复（包含全部投票）！` })
+  if (!ok) return
+  try {
+    await api.del(`/api/admin/votes/${props.vote.id}`)
+    notifySuccess('投票已删除')
+    emit('refresh')
+  } catch (e: any) { notifyError(e.message) }
+}
 </script>
 
 <template>
   <div class="dnf-panel vote-card">
-    <div class="vote-head">
+    <div class="vote-head" @click="collapsed = !collapsed">
+      <span class="vote-caret">{{ collapsed ? '▸' : '▾' }}</span>
       <strong class="vote-title">{{ vote.title }}</strong>
       <span class="dnf-badge" :class="isOpen ? 'dnf-badge-ok' : 'dnf-badge-danger'">
         {{ isOpen ? '进行中' : '已结束' }}</span>
       <span v-if="isMulti" class="dnf-badge">多选</span>
       <span class="vote-voters">{{ vote.total_voters }} 人已投</span>
-      <button v-if="isAdmin && isOpen" class="dnf-btn dnf-btn-sm" data-act="close" @click="closeVote">关闭投票</button>
+      <button v-if="isAdmin && isOpen" class="dnf-btn dnf-btn-sm" data-act="close" @click.stop="closeVote">关闭投票</button>
+      <button v-if="isAdmin" class="dnf-btn dnf-btn-sm" data-act="delete" @click.stop="deleteVote">删除投票</button>
     </div>
-    <p v-if="vote.description" class="vote-desc">{{ vote.description }}</p>
-    <div v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-mask">
-      <button class="dnf-btn dnf-btn-sm" data-act="mask" @click="maskUp = !maskUp">
-        {{ maskUp ? '取消匿名' : '匿名投票' }}</button>
-      <span v-if="maskUp" class="vote-note">匿名已开启：本次投票将记作匿名</span>
+    <div v-if="!collapsed" class="vote-body">
+      <p v-if="vote.description" class="vote-desc">{{ vote.description }}</p>
+      <div v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-mask">
+        <button class="dnf-btn dnf-btn-sm" data-act="mask" @click="maskUp = !maskUp">
+          {{ maskUp ? '取消匿名' : '匿名投票' }}</button>
+        <span v-if="maskUp" class="vote-note">匿名已开启：本次投票将记作匿名</span>
+      </div>
+      <ul class="vote-options">
+        <li v-for="o in vote.options" :key="o.id" class="vote-option"
+            :class="{ selected: isSelected(o.id) }">
+          <button v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-option-row" :data-act="'opt-' + o.id"
+                  @click="toggleOption(o.id)">
+            <span class="vote-opt-text">{{ o.text }}</span>
+            <span class="vote-opt-count">{{ o.count }} 票</span>
+          </button>
+          <div v-else class="vote-option-row">
+            <span class="vote-opt-text">{{ o.text }}</span>
+            <span class="vote-opt-count">{{ o.count }} 票</span>
+          </div>
+          <span v-if="o.voters.length" class="vote-voters">{{ o.voters.join('、') }}</span>
+        </li>
+      </ul>
+      <p v-if="votedAnon" class="vote-note">你已匿名投票，本会话内无法修改或撤销</p>
+      <p v-else-if="isOpen && vote.my_voted" class="vote-note">你已投票</p>
+      <button v-if="isOpen && !votedAnon && !vote.my_voted" class="dnf-btn dnf-btn-primary dnf-btn-sm vote-submit"
+              data-act="vote" @click="submitVote">投票</button>
     </div>
-    <ul class="vote-options">
-      <li v-for="o in vote.options" :key="o.id" class="vote-option"
-          :class="{ selected: isSelected(o.id) }">
-        <button v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-option-row" :data-act="'opt-' + o.id"
-                @click="toggleOption(o.id)">
-          <span class="vote-opt-text">{{ o.text }}</span>
-          <span class="vote-opt-count">{{ o.count }} 票</span>
-        </button>
-        <div v-else class="vote-option-row">
-          <span class="vote-opt-text">{{ o.text }}</span>
-          <span class="vote-opt-count">{{ o.count }} 票</span>
-        </div>
-        <span v-if="o.voters.length" class="vote-voters">{{ o.voters.join('、') }}</span>
-      </li>
-    </ul>
-    <p v-if="votedAnon" class="vote-note">你已匿名投票，本会话内无法修改或撤销</p>
-    <p v-else-if="isOpen && vote.my_voted" class="vote-note">你已投票</p>
-    <button v-if="isOpen && !votedAnon && !vote.my_voted" class="dnf-btn dnf-btn-primary dnf-btn-sm vote-submit"
-            data-act="vote" @click="submitVote">投票</button>
   </div>
 </template>
 
 <style scoped>
 .vote-card { padding:16px }
-.vote-head { display:flex; align-items:center; gap:8px; margin-bottom:8px }
+.vote-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer }
+.vote-caret { color:var(--dnf-text-faint,#7a8291); font-size:12px }
 .vote-submit { margin-top:12px }
 .vote-title { font-size:15px; color:var(--dnf-text,#e6e9ef) }
 .vote-voters { font-size:12px; color:var(--dnf-text-muted,#9aa3b2); margin-left:auto }

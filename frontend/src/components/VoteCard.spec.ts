@@ -18,6 +18,8 @@ const openVote = {
   total_voters: 0, my_option_ids: [], my_voted: false,
 }
 
+const closedVote = { ...openVote, open: false, closed_at: '2026-09-29T00:00:00' }
+
 describe('VoteCard', () => {
   beforeEach(() => { vi.clearAllMocks() })
   it('实名投票提交并触发 refresh', async () => {
@@ -87,5 +89,52 @@ describe('VoteCard', () => {
     const lis = wrapper.findAll('.vote-option')
     expect(lis[0].classes()).not.toContain('selected')  // 旧残留 [1] 被覆盖
     expect(lis[1].classes()).toContain('selected')      // 由 my_option_ids=[2] 回填
+  })
+  it('关闭投票默认收起，点击头部可展开/收起', async () => {
+    const wrapper = mount(VoteCard, { props: { vote: closedVote } })
+    expect(wrapper.find('.vote-options').exists()).toBe(false) // 默认收起
+    await wrapper.find('.vote-head').trigger('click')
+    expect(wrapper.find('.vote-options').exists()).toBe(true)
+    await wrapper.find('.vote-head').trigger('click')
+    expect(wrapper.find('.vote-options').exists()).toBe(false)
+  })
+  it('进行中投票默认展开', async () => {
+    const wrapper = mount(VoteCard, { props: { vote: openVote } })
+    expect(wrapper.find('.vote-options').exists()).toBe(true)
+  })
+  it('非管理员不显示删除按钮', async () => {
+    const wrapper = mount(VoteCard, { props: { vote: openVote } })
+    expect(wrapper.find('[data-act="delete"]').exists()).toBe(false)
+  })
+  it('管理员可删除投票并触发 refresh', async () => {
+    apiMock.del.mockResolvedValue({ ok: true })
+    const wrapper = mount(VoteCard, { props: { vote: openVote, isAdmin: true } })
+    expect(wrapper.find('[data-act="delete"]').exists()).toBe(true)
+    await wrapper.find('[data-act="delete"]').trigger('click')
+    await flushPromises()
+    expect(confirmDialog).toHaveBeenCalled()
+    expect(apiMock.del).toHaveBeenCalledWith('/api/admin/votes/1')
+    expect(wrapper.emitted('refresh')).toHaveLength(1)
+  })
+  it('点击删除/关闭按钮不触发折叠切换（@click.stop）', async () => {
+    apiMock.post.mockResolvedValue(openVote)
+    apiMock.del.mockResolvedValue({ ok: true })
+    const wrapper = mount(VoteCard, { props: { vote: openVote, isAdmin: true } })
+    await wrapper.find('[data-act="close"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.vote-options').exists()).toBe(true) // 仍展开
+    await wrapper.find('[data-act="delete"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.vote-options').exists()).toBe(true) // 仍展开
+  })
+  it('投票由进行中变为已关闭时自动收起；手动展开后不重收起', async () => {
+    const wrapper = mount(VoteCard, { props: { vote: openVote } })
+    expect(wrapper.find('.vote-options').exists()).toBe(true)
+    await wrapper.setProps({ vote: closedVote })
+    expect(wrapper.find('.vote-options').exists()).toBe(false) // 开→关自动收起
+    await wrapper.find('.vote-head').trigger('click')
+    expect(wrapper.find('.vote-options').exists()).toBe(true)  // 手动展开
+    await wrapper.setProps({ vote: { ...closedVote, total_voters: 1 } })
+    expect(wrapper.find('.vote-options').exists()).toBe(true)  // prop 刷新不重收起
   })
 })
