@@ -1,8 +1,16 @@
-import { createDiscreteApi, darkTheme } from 'naive-ui'
-import { themeOverrides } from '../styles/theme'
+import { computed } from 'vue'
+import { createDiscreteApi } from 'naive-ui'
+import { useTheme } from '../composables/useTheme'
+
+const { naiveTheme, naiveOverrides } = useTheme()
+
+const configProviderProps = computed(() => ({
+  theme: naiveTheme.value,
+  themeOverrides: naiveOverrides.value,
+}))
 
 const { message, dialog } = createDiscreteApi(['message', 'dialog'], {
-  configProviderProps: { theme: darkTheme, themeOverrides },
+  configProviderProps,
 })
 
 export function notifyError(content: string): void { message.error(content) }
