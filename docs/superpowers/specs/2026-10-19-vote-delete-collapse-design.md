@@ -51,7 +51,7 @@ def delete_vote_endpoint(vid: int, admin: User = Depends(require_admin),
 
 ### 3.1 删除按钮
 
-- 头部 admin 操作区（现「关闭投票」旁）加「删除投票」按钮，仅 `isAdmin` 显示。
+- 头部 admin 操作区（现「关闭投票」旁）加「删除投票」按钮，仅 `isAdmin` 显示；**开放/关闭状态均显示**（已关闭的投票也可删除）。
 - 点击走 `confirmDialog`（内容强调不可逆，如「确认删除投票「{title}」？删除后不可恢复（包含全部投票）！」）→ `api.del('/api/admin/votes/{id}')`（**注意前端 API client 约定是 `api.del`，非 `api.delete`**）→ `notifySuccess('投票已删除')` → `emit('refresh')`。
 - 异常 `notifyError(e.message)`，对齐现有 `closeVote` 写法。
 
