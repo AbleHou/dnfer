@@ -158,3 +158,46 @@ def test_cast_vote_concurrent_race_fallback(client, admin_headers, db):
     # 回滚后未产生重复计票
     detail = client.get(f"/api/votes/{vid}", headers=h).json()
     assert detail["options"][0]["count"] == 0
+
+
+def test_delete_vote_admin_only(client, admin_headers, db):
+    vid = _create_vote(client, admin_headers).json()["id"]
+    h, _ = register_user(client, "d1", "删票观察员")
+    assert client.delete(f"/api/admin/votes/{vid}", headers=h).status_code == 403  # 非管理员
+    r = client.delete(f"/api/admin/votes/{vid}", headers=admin_headers)
+    assert r.status_code == 200 and r.json() == {"ok": True}
+    assert client.get("/api/votes", headers=admin_headers).json() == []  # 列表不再含
+    assert client.get(f"/api/votes/{vid}", headers=admin_headers).status_code == 404
+
+
+def test_delete_vote_cascades_ballots(client, admin_headers, db):
+    from app.models import Vote, VoteBallot, VoteOption
+    vid = _create_vote(client, admin_headers).json()["id"]
+    h1, _ = register_user(client, "d2", "实名甲")
+    client.post(f"/api/votes/{vid}/ballots", headers=h1, json={"option_ids": [1]})
+    h2, _ = register_user(client, "d3", "匿名乙")
+    client.post(f"/api/votes/{vid}/ballots", headers=h2,
+                json={"option_ids": [2], "anonymous": True})
+    assert client.delete(f"/api/admin/votes/{vid}", headers=admin_headers).status_code == 200
+    # 级联：votes / vote_options / vote_ballots 全部清除
+    assert db.query(Vote).filter(Vote.id == vid).count() == 0
+    assert db.query(VoteOption).filter(VoteOption.vote_id == vid).count() == 0
+    assert db.query(VoteBallot).filter(VoteBallot.vote_id == vid).count() == 0
+
+
+def test_delete_vote_404(client, admin_headers, db):
+    assert client.delete("/api/admin/votes/999", headers=admin_headers).status_code == 404
+
+
+def test_delete_open_vote_frees_open_slot(client, admin_headers, db):
+    vid = _create_vote(client, admin_headers).json()["id"]
+    assert client.delete(f"/api/admin/votes/{vid}", headers=admin_headers).status_code == 200
+    # 删除开放中的投票后，「同时仅一个打开」名额释放
+    assert _create_vote(client, admin_headers, title="重建").status_code == 200
+
+
+def test_delete_closed_vote(client, admin_headers, db):
+    vid = _create_vote(client, admin_headers).json()["id"]
+    client.post(f"/api/admin/votes/{vid}/close", headers=admin_headers)
+    assert client.delete(f"/api/admin/votes/{vid}", headers=admin_headers).status_code == 200
+    assert client.get("/api/votes", headers=admin_headers).json() == []

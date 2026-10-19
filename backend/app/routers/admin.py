@@ -17,7 +17,7 @@ from ..routers.raids import _remove_signup
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
 from ..services.parties import parties_out, resolve_party
-from ..services.votes import _vote_or_404, close_vote, create_vote, vote_detail
+from ..services.votes import _vote_or_404, close_vote, create_vote, delete_vote, vote_detail
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -305,3 +305,10 @@ def close_vote_endpoint(vid: int, admin: User = Depends(require_admin),
     if not vote.open:
         raise HTTPException(400, "投票已是关闭状态")
     return vote_detail(db, close_vote(db, vote))
+
+
+@router.delete("/votes/{vid}")
+def delete_vote_endpoint(vid: int, admin: User = Depends(require_admin),
+                         db: Session = Depends(get_db)):
+    delete_vote(db, _vote_or_404(db, vid))
+    return {"ok": True}

@@ -120,3 +120,9 @@ def cast_vote(db: Session, vote: Vote, user_id: int | None,
     except IntegrityError:  # 并发重复投票兜底：唯一约束命中 → 视为已投
         db.rollback()
         raise HTTPException(400, "你已投票")
+
+
+def delete_vote(db: Session, vote: Vote) -> None:
+    """删除投票：级联删除全部选项与票（Vote.options/ballots 已配 cascade）。"""
+    db.delete(vote)
+    db.commit()
