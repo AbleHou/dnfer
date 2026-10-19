@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NConfigProvider, NDropdown, darkTheme } from 'naive-ui'
+import { NConfigProvider, NDropdown } from 'naive-ui'
 import { useAuthStore } from './stores/auth'
-import { themeOverrides } from './styles/theme'
+import { useTheme } from './composables/useTheme'
 import UserAvatar from './components/UserAvatar.vue'
 import ProfilePanel from './components/ProfilePanel.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const profileOpen = ref(false)
+const { theme, naiveTheme, naiveOverrides, toggleTheme } = useTheme()
 
 // naive-ui 2.45 未在包根导出 DropdownMixedOption，回退为 any[]（唯一一处）
 const menuOptions = computed<any[]>(() => [
@@ -33,7 +34,7 @@ function onMenuSelect(key: string) {
 </script>
 
 <template>
-  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+  <n-config-provider :theme="naiveTheme" :theme-overrides="naiveOverrides">
     <nav v-if="auth.user" class="dnf-nav">
       <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
       <router-link to="/" class="nav-link">攻坚列表</router-link>
@@ -41,6 +42,10 @@ function onMenuSelect(key: string) {
       <router-link to="/votes" class="nav-link">群会议</router-link>
       <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">管理</router-link>
       <span class="nav-right">
+        <button class="nav-user" :title="theme === 'dark' ? '切换到亮色' : '切换到暗色'"
+                data-act="theme-toggle" @click="toggleTheme">
+          <span style="font-size:18px;line-height:1">{{ theme === 'dark' ? '☀' : '☾' }}</span>
+        </button>
         <button class="nav-user" title="个人信息" @click="profileOpen = true">
           <UserAvatar v-if="auth.user" :nickname="auth.user.nickname"
                       :avatar="auth.user.avatar" :size="26" />

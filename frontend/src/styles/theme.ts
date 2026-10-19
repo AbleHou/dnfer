@@ -63,7 +63,4 @@ export const lightOverrides: GlobalThemeOverrides = {
   Card: { borderRadius: '10px' },
 }
 
-// 过渡别名：App.vue/notify.ts 迁移到 useTheme 之前保持可编译，Task 4 完成后删除
-export const themeOverrides = darkOverrides
-
 export { darkTheme, lightTheme }
