@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **投票可删除**：管理员可删除任意投票（进行中或已关闭均可），删除时连同全部选项与实名/匿名票一并清除、不可恢复；删除进行中的投票会立即释放「同时仅一个打开」的名额
+
+### 变更
+
+- **已关闭的投票默认收起**：投票卡片改为可折叠——已关闭的投票默认收起为一行（标题 / 状态徽章 / 投票人数），点击头部即可展开查看结果；进行中的投票默认展开、也可手动收起；管理员关闭投票的瞬间该卡片自动收起
+
+### 工程
+
+- 后端 `services/votes.py` 新增 `delete_vote`（`db.delete` + commit，依赖 `Vote.options/ballots`、`VoteOption.ballots` 既有 `cascade="all, delete-orphan"` 级联清票，零迁移）+ 管理端点 `DELETE /api/admin/votes/{vid}`（仅管理员，`_vote_or_404` + `require_admin`）
+- 前端 `VoteCard` 新增管理员「删除投票」按钮（`dnf-btn-danger` 危险样式 + confirmDialog 强确认）；`collapsed = ref(!vote.open)` 折叠态（头部整块点击 toggle + `▸/▾` 指示符、操作按钮 `@click.stop` 防冒泡、`watch(vote.open)` 开→关自动收起、5s 轮询刷新不重置）
+
 ## [v1.16] - 2026-10-16
 
 ### 新增
