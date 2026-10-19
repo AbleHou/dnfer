@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DNfer 攻坚排表</title>
+    <script>
+      try {
+        if (localStorage.getItem('dnfer-theme') === 'light') {
+          document.documentElement.dataset.theme = 'light'
+        }
+      } catch (e) {
+        /* 隐私模式等取不到存储时保持暗色默认 */
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
