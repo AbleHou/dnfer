@@ -78,7 +78,7 @@ async function deleteVote() {
       <span v-if="isMulti" class="dnf-badge">多选</span>
       <span class="vote-voters">{{ vote.total_voters }} 人已投</span>
       <button v-if="isAdmin && isOpen" class="dnf-btn dnf-btn-sm" data-act="close" @click.stop="closeVote">关闭投票</button>
-      <button v-if="isAdmin" class="dnf-btn dnf-btn-sm" data-act="delete" @click.stop="deleteVote">删除投票</button>
+      <button v-if="isAdmin" class="dnf-btn dnf-btn-sm dnf-btn-danger" data-act="delete" @click.stop="deleteVote">删除投票</button>
     </div>
     <div v-if="!collapsed" class="vote-body">
       <p v-if="vote.description" class="vote-desc">{{ vote.description }}</p>
