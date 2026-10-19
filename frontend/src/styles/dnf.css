@@ -10,6 +10,24 @@
   --dnf-text-faint: #8a7a5a;
   --dnf-danger: #c0392b;
   --dnf-ok: #5d8a4e;
+  --dnf-border: #3a3f4b;
+  --dnf-accent: #ffd54a;
+}
+
+[data-theme="light"] {
+  --dnf-bg: #f5f5f7;
+  --dnf-panel: #ffffff;
+  --dnf-panel-inner: #f2f2f7;
+  --dnf-gold: #a8842c;
+  --dnf-gold-deep: #d9c58a;
+  --dnf-gold-hi: #8a6d26;
+  --dnf-text: #1d1d1f;
+  --dnf-text-muted: #6e6e73;
+  --dnf-text-faint: #86868b;
+  --dnf-danger: #e5484d;
+  --dnf-ok: #2f7d32;
+  --dnf-border: #e5e5ea;
+  --dnf-accent: #b8860b;
 }
 
 * { box-sizing: border-box; }
@@ -182,6 +200,33 @@ a { color: var(--dnf-gold-hi); }
 /* 登录/注册 */
 .auth-wrap { max-width: 360px; margin: 64px auto; padding: 0 16px; }
 .auth-card { padding: 28px; }
+
+/* 亮色主题结构覆盖 */
+[data-theme="light"] body {
+  background: radial-gradient(1200px 600px at 70% -10%, #ffffff 0%, var(--dnf-bg) 55%) fixed;
+  background-color: var(--dnf-bg);
+}
+[data-theme="light"] .dnf-panel {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .06);
+}
+/* .dnf-btn 的文字/边框用了 --dnf-gold-hi/--dnf-gold-deep，亮色下变量变深金，
+   若保留深色渐变底会深字配深底不可读，故亮色下改为浅金底 + 深金字。
+   注意用 :not(.dnf-btn-primary):not(.dnf-btn-danger) 排除主/危险按钮——
+   代码里 primary/danger 按钮同时带 .dnf-btn 基类（如 class="dnf-btn dnf-btn-sm dnf-btn-danger"），
+   若直接覆盖 .dnf-btn 会因特异性(0,2,0)高于 .dnf-btn-danger(0,1,0) 把红色按钮盖成浅金，必须排除。 */
+[data-theme="light"] .dnf-btn:not(.dnf-btn-primary):not(.dnf-btn-danger) {
+  background: linear-gradient(#f3e9cf, #e3d6b3);
+  color: var(--dnf-gold-hi);
+  border-color: var(--dnf-gold-deep);
+}
+[data-theme="light"] .form-error { color: #e5484d; }
+[data-theme="light"] .slot-cell.empty { color: var(--dnf-text-faint); }
+/* 5 队 slot-cell 深色底 → 浅色队色底（squad-head 渐变两套通用，不动） */
+[data-theme="light"] .squad-0 .slot-cell { background: #fdf1ef; }
+[data-theme="light"] .squad-1 .slot-cell { background: #fdf8ea; }
+[data-theme="light"] .squad-2 .slot-cell { background: #f0f7ef; }
+[data-theme="light"] .squad-3 .slot-cell { background: #eef4fa; }
+[data-theme="light"] .squad-4 .slot-cell { background: #f5f1f8; }
 
 /* 移动端 */
 @media (max-width: 767px) {
