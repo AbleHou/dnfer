@@ -1,7 +1,7 @@
 import type { GlobalThemeOverrides } from 'naive-ui'
-import { darkTheme } from 'naive-ui'
+import { darkTheme, lightTheme } from 'naive-ui'
 
-export const themeOverrides: GlobalThemeOverrides = {
+export const darkOverrides: GlobalThemeOverrides = {
   common: {
     primaryColor: '#a8842c',
     primaryColorHover: '#c9a34a',
@@ -31,4 +31,39 @@ export const themeOverrides: GlobalThemeOverrides = {
   Button: { borderRadiusMedium: '6px', fontWeight: 'bold' },
   Card: { borderRadius: '10px' },
 }
-export { darkTheme }
+
+export const lightOverrides: GlobalThemeOverrides = {
+  common: {
+    primaryColor: '#a8842c',
+    primaryColorHover: '#c9a34a',
+    primaryColorPressed: '#8a6d26',
+    primaryColorSuppl: '#a8842c',
+    infoColor: '#a8842c',
+    successColor: '#34c759',
+    warningColor: '#ff9500',
+    errorColor: '#ff3b30',
+    bodyColor: '#f5f5f7',
+    cardColor: '#ffffff',
+    modalColor: '#ffffff',
+    popoverColor: '#ffffff',
+    tableColor: '#ffffff',
+    inputColor: '#ffffff',
+    inputColorDisabled: '#f2f2f7',
+    textColorBase: '#1d1d1f',
+    textColor1: '#1d1d1f',
+    textColor2: '#3c3c43',
+    textColor3: '#86868b',
+    textColorDisabled: '#b0b0b8',
+    borderColor: '#e5e5ea',
+    dividerColor: '#e5e5ea',
+    borderRadius: '8px',
+    fontFamily: '"PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
+  },
+  Button: { borderRadiusMedium: '6px', fontWeight: 'bold' },
+  Card: { borderRadius: '10px' },
+}
+
+// 过渡别名：App.vue/notify.ts 迁移到 useTheme 之前保持可编译，Task 4 完成后删除
+export const themeOverrides = darkOverrides
+
+export { darkTheme, lightTheme }
