@@ -52,13 +52,13 @@ def delete_vote_endpoint(vid: int, admin: User = Depends(require_admin),
 ### 3.1 删除按钮
 
 - 头部 admin 操作区（现「关闭投票」旁）加「删除投票」按钮，仅 `isAdmin` 显示。
-- 点击走 `confirmDialog`（内容强调不可逆，如「确认删除投票「{title}」？删除后不可恢复（包含全部投票）！」）→ `api.delete('/api/admin/votes/{id}')` → `notifySuccess('投票已删除')` → `emit('refresh')`。
+- 点击走 `confirmDialog`（内容强调不可逆，如「确认删除投票「{title}」？删除后不可恢复（包含全部投票）！」）→ `api.del('/api/admin/votes/{id}')`（**注意前端 API client 约定是 `api.del`，非 `api.delete`**）→ `notifySuccess('投票已删除')` → `emit('refresh')`。
 - 异常 `notifyError(e.message)`，对齐现有 `closeVote` 写法。
 
 ### 3.2 收起/展开
 
 - `const collapsed = ref(!props.vote.open)`——关闭默认收起、进行中默认展开（`isOpen` 已存在）。
-- 头部整块可点击 toggle（加 `▸/▾` 指示符，点击事件 `@click="collapsed = !collapsed"`）；收起时 `v-if="!collapsed"` 隐藏描述、`vote-mask`、选项 `ul`、投票按钮等全部正文区，仅保留头部。
+- 头部整块可点击 toggle（加 `▸/▾` 指示符，点击事件 `@click="collapsed = !collapsed"`）；**头部内的操作按钮（关闭/删除）须 `@click.stop` 阻止冒泡**，否则点击按钮会连带触发折叠切换；收起时 `v-if="!collapsed"` 隐藏描述、`vote-mask`、选项 `ul`、投票按钮等全部正文区，仅保留头部。
 - 轮询刷新不重置：VotesView 用 `:key="v.id"`，组件实例跨 refresh 存活，`collapsed` ref 不受 `vote` prop 替换影响。
 - 自动收起 watch：
 
@@ -98,7 +98,7 @@ watch(() => props.vote.open, (nowOpen, prev) => {
 ### 前端
 
 - `VoteCard`：关闭投票 `vote.open=false` 渲染时默认收起（不渲染选项 `ul`）；进行中默认展开；点击头部 toggle 展开/收起（正反断言 `exists()`）。
-- 删除按钮：仅 `isAdmin` 显示；点击 → confirmDialog 确认 → `api.delete` 被调用 → 触发 `refresh`。
+- 删除按钮：仅 `isAdmin` 显示；点击 → confirmDialog 确认 → `api.del` 被调用 → 触发 `refresh`；点击删除/关闭按钮**不触发折叠切换**（`@click.stop` 生效）。
 - `vote.open` 由 true→false 时自动收起；手动展开已关闭投票后不因 prop 变化重收起。
 - `types` fixture 无改动（不加字段）。
 
