@@ -665,10 +665,11 @@ function squadsOf(w: Wave): { index: number; slots: Slot[]; overview: SquadOverv
 script 加格式化助手：
 
 ```ts
-function dimText(d: SquadOverview['dims'][number]): string {
+function dimText(d: SquadOverview['dims'][number], slack: boolean): string {
   const tgt = d.min != null && d.max != null ? `${d.min}~${d.max}` : (d.min ?? d.max) != null ? `${d.min ?? d.max}` : ''
   let margin = ''
-  if (d.diff != null && d.diff !== 0 && (d.key === 'simDamage' || d.key === 'mainHealBuff')) {
+  // slack 时 squadOverview 强制 ok=true 但保留原始 diff——不输出 margin，避免「✓(差N)」矛盾
+  if (!slack && d.diff != null && d.diff !== 0 && (d.key === 'simDamage' || d.key === 'mainHealBuff')) {
     margin = d.diff > 0 ? `(+${d.diff})` : `(差${-d.diff})`
   }
   return `${d.label} ${d.actual ?? '—'}/${tgt} ${d.ok ? '✓' : '✗'}${margin}`
@@ -685,7 +686,7 @@ function dimText(d: SquadOverview['dims'][number]): string {
     <span v-if="sq.overview.slack" class="dim-slack">划水豁免</span>
     <span v-if="sq.overview.ok && !sq.overview.slack">达标 ✓ </span>
     <span v-for="d in sq.overview.dims" :key="d.key"
-          :class="d.ok ? 'dim-ok' : 'dim-warn'">{{ dimText(d) }}</span>
+          :class="d.ok ? 'dim-ok' : 'dim-warn'">{{ dimText(d, sq.overview.slack) }}</span>
   </template>
 </div>
 ```
