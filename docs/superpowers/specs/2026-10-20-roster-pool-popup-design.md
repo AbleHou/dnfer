@@ -74,9 +74,11 @@ export function placementByChar(waves: Wave[]): Map<number, CharPlacement>
 遍历所有 wave 的所有 slot，`character_id != null` 即写入 `Map<character_id, CharPlacement>`（后端保证每角色至多一格；若出现重复以最后一次为准，不作防御处理）。
 
 ### 5.2 RosterView 派生
+- `poolOpen = ref(false)` —— NModal 开关。
 - `charPlacement = computed(() => placementByChar(store.raid?.waves ?? []))` —— 全波次，供角色行波次标签。
 - `roundUserPos = computed(() => Map<number, CharPlacement>)` —— 仅 `currentGroups`（当前轮）内有占位的 slot，按 `owner_id` 建 Map（后端保证同轮每用户至多一个，直接 `set` 即可）。
 - `currentRound = computed(() => currentGroups[0]?.round_index ?? 0)` —— 供波次标签高亮。
+- `onPick(c)` 改为：置 `holding` 后**同时置 `poolOpen = false`**（拿起即自动关闭弹框，露出网格落格）。
 
 ### 5.3 RosterPool props（新增，均带安全默认）
 ```ts
@@ -88,7 +90,8 @@ currentRound?: number                        // 默认 0（无高亮）
 
 ## 6. 组件与样式
 
-- `RosterPool.vue`：
+- `RosterView.vue`（改）：移除左侧 `<aside>`，新增 **FAB（右下角固定，`data-test="pool-fab"`）+ 居中 NModal（含 `<RosterPool>`）**；NModal 用 `v-if`/`display-directive` 控制，`poolOpen` 决定开合；`@pick="onPick"`（onPick 内部关弹框）。FAB 对所有人可见。
+- `RosterPool.vue`（改）：
   - `.pool-user-head` 内加胶囊（两个 `<span class="pos-team-N">红队</span><span class="pos-duty-mainc">主C</span>`，N 为 squadIndex，职责 class 见下）。
   - `.pool-char` 角色名后加 `<span class="wave-tag" :class="{current}">第N波[团]</span>`。
 - `dnf.css` 新增全局类（含 `[data-theme="light"]` 覆盖，沿用现有模式）：
@@ -118,11 +121,20 @@ currentRound?: number                        // 默认 0（无高亮）
 - 胶囊/波次标签不响应点击（不 emit pick、不 toggle 折叠）。
 
 ### 7.3 RosterView.spec.ts
-- FAB 存在（`data-test="pool-fab"`）。
-- 点 FAB → 弹框打开（NModal；注意 naive NModal 经 teleport 渲染，spec 需相应 stub/定位方式）。
-- 弹框内点角色 → holding 置起 + 弹框自动关闭。
-- 旧用例「左侧 sticky」删除/改写（该 DOM 已移除）。
-- 现有 pick/fill/duty/撤下/拿起/Esc/临时用户等用例保持通过（RosterPool 默认 props 兜底）。
+- **重要前提**：弹框默认关闭，池内容经 naive NModal（teleport + `display-directive`）渲染；**所有需要与角色池交互的旧用例必须先点 `pool-fab` 打开弹框**，或改写为针对网格的断言。
+- 改写（原先直接点 `.pool-char-*` / `add-guest` 的用例，现在须先开弹框再交互）：
+  - L84 渲染角色池与网格（断言 `[data-test="roster-pool"]` 存在）→ 该 DOM 已移除，改写为断言 FAB 存在 / 开弹框后池可见。
+  - L99 非管理员只读（点 `pool-char-11`）→ 先开弹框。
+  - L107 拿起→点空格（点 `pool-char-11`）→ 先开弹框；且拿起后弹框应自动关闭。
+  - L118 拿起→点已占格（点 `pool-char-11`）→ 先开弹框。
+  - L146 推荐开关（断言 `pool-char-10` 文字）→ 先开弹框。
+  - L196 Esc 取消拿起态（点 `pool-char-11`）→ 先开弹框。
+  - L206 编队池工具栏添加临时选手（点 `add-guest`）→ 先开弹框；L218/L224 的 add-guest 负向用例因弹框默认关闭会**空洞通过**，须改为开弹框后再断言不存在。
+- 新增：FAB 存在；点 FAB 打开弹框；弹框内点角色 → holding 置起 + 弹框自动关闭。
+- 删除/改写：旧用例「左侧 sticky」断言（该 DOM 已移除）。
+- 保持通过（纯网格交互，不涉及池）：撤下（L129）/ 改职责（L137）/ 未排（L157）/ 波标签（L166）/ 编辑目标（L174）/ 拿起已占格后点空格（L184）/ 已关闭（L232 及 WS 关闭用例）。
+  - 注：L232 已关闭用例的 add-guest 缺席断言与 L218/L224 同理会空洞通过，但其核心意图（只读态）已由 recommend-switch 缺席 + 「攻坚已关闭」文案覆盖，无需改写。
+- 弹框定位：参照 RosterTargetModal/GuestCreateModal 的 stub 方式确认 NModal 内容可被断言。
 
 ## 8. 非目标（明确排除）
 - 胶囊不做下拉、不做点击操作（用户明确：所有角色操作留在网格表格）。
