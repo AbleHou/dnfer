@@ -95,10 +95,11 @@ describe('squadOverview 总览（新引擎）', () => {
     const sun = ov.dims.find(d => d.key === 'sunHealCount')!
     expect(sun.ok).toBe(false); expect(sun.actual).toBe(0); expect(ov.issues.join()).toContain('缺太阳奶')
   })
-  it('双界：min+max 同时设时 dim 同时带 min/max', () => {
-    const ov = squadOverview([os(20000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+  it('双界：min+max 同时设时 dim 同时带 min/max（总伤须落在区间内才 ok）', () => {
+    const ov = squadOverview([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
     const sim = ov.dims.find(d => d.key === 'simDamage')!
-    expect(sim.min).toBe(20000); expect(sim.max).toBe(25000); expect(sim.ok).toBe(true)
+    expect(sim.min).toBe(20000); expect(sim.max).toBe(25000)
+    expect(sim.actual).toBe(22000); expect(sim.ok).toBe(true)   // 22000 ∈ [20000, 25000]
   })
   it('划水豁免（成员划水）→ slack、ok、issues 空', () => {
     const ov = squadOverview([os(100, '划水')], target)
@@ -159,12 +160,9 @@ export function squadOverview(slots: Slot[], target: SquadTarget | undefined): S
   const total = slots.length
   const slack = filled.some(s => s.duty === '划水') || target?.slack === true
   const dims: OverviewDim[] = []
-  const issues: string[] = []
-  const push = (d: OverviewDim) => {
-    dims.push(d)
-    if (!d.ok && !slack) issues.push(issueText(d))
-  }
-  if (target && !slack) {
+  const push = (d: OverviewDim) => dims.push(d)
+  // 维度始终照算（spec §4.1 划水豁免也要显示维度）；slack 时强制 ok、不产 issues
+  if (target) {
     if (target.outputs?.count != null) {
       const actual = filled.filter(s => s.character_class === '输出').length
       push({ key: 'outputCount', label: '输出', actual, min: target.outputs.count, max: null,
@@ -201,6 +199,9 @@ export function squadOverview(slots: Slot[], target: SquadTarget | undefined): S
              ok: actual >= target.sunHeal.count, diff: actual - target.sunHeal.count })
     }
   }
+  const issues: string[] = []
+  if (!slack) for (const d of dims) if (!d.ok) issues.push(issueText(d))
+  if (slack) for (const d of dims) d.ok = true
   return { filled, total, dims, slack, ok: slack || dims.every(d => d.ok), issues }
 }
 ```
@@ -230,7 +231,7 @@ EOF
 - Modify: `frontend/src/lib/roster.ts`
 - Test: `frontend/src/lib/roster.spec.ts`
 
-- [ ] **Step 1: 加失败测试**（在 `模板 localStorage 读写` describe 内追加；import 加 `clearTargets`）：
+- [ ] **Step 1: 加失败测试**（在 `模板 localStorage 读写` describe 内追加；import 加 `clearTargets`，并把 vitest import 从 `{ describe, it, expect, beforeEach }` 改为 `{ describe, it, expect, beforeEach, vi }`——本项目未开 vitest globals，必须显式引 `vi`）：
 
 ```ts
 it('clearTargets 清除该 raid 模板', () => {
@@ -301,83 +302,99 @@ EOF
 - Modify: `frontend/src/lib/roster.ts`
 - Test: `frontend/src/lib/roster.spec.ts`
 
-- [ ] **Step 1: 加失败测试** —— import 加 `recommendFillers`；在 `describe('rankCandidates 推荐排序')` **之前**新增 describe：
+- [ ] **Step 1: 加失败测试** —— import 加 `recommendFillers`；在 `describe('rankCandidates 推荐排序')` **之前**新增 describe。
+
+> **fixture 注意（重要）：** 文件里 `os()`/`aux()` 造的 slot `character_id` 非空（`duty ? 1 : null`）——单格波会被新规则 P1（满员）跳过，`recommendFillers` 会误返回 `[]`。故本 describe 用**可控空格**的自定义 fixture `sqSlot(sq, filled, sim?, duty?)`，并断言用 `waveId`/`groupIndex`（不用 `squadIndex`，因并行/多波共用 squad 0 无法区分）。
 
 ```ts
+// sqSlot：可指定 squad_index 与「是否已占」；空格 → character_id null
+const sqSlot = (sq: number, filled: boolean, sim: number | null = null, duty: string | null = '主C'): Slot =>
+  ({ id: 0, squad_index: sq, row_index: 0, character_id: filled ? 1 : null,
+     character_name: filled ? 'x' : null, character_class: filled ? '输出' : null,
+     job_name: null, job_title: null, fame: null, simulated_damage: sim, sustained_dps: null,
+     buff_amount: null, sun_buff: null, owner_id: null, owner_nickname: null, owner_avatar: null,
+     duty: filled ? duty : null, version: 1, adventure_party_id: null, adventure_party_name: null })
+
 describe('recommendFillers 队→候选推荐（新引擎）', () => {
   const tOut = { 0: { outputs: { count: 2, simMin: 20000 } } }
   const tHeal = { 0: { mainHeal: { buffMin: 45000 } } }
   const tSun = { 0: { outputs: { count: 2 }, sunHeal: { count: 1 } } }
-  const wave2 = (id: number, groupIndex: number, slots: Slot[]): Wave =>
-    ({ id, index: id, group_id: groupIndex, round_index: 1, group_index: groupIndex, slots })
+  // 缺输出的队（1 已占输出 + 2 空格）
+  const needyWave = (id: number) => wave(id, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)])
+  const wave2 = (id: number, groupIndex: number): Wave =>
+    ({ id, index: id, group_id: groupIndex, round_index: 1, group_index: groupIndex,
+       slots: [sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)] })
 
   it('P5 无模板 → 空建议', () => {
-    expect(recommendFillers({ candidates: [c1, healer], groups: [wave(10, [os(5000)])], targets: {} })).toEqual([])
+    expect(recommendFillers({ candidates: [c1, healer], groups: [needyWave(10)], targets: {} })).toEqual([])
   })
   it('P1 满员队不进推荐（未达标但有空格才推）', () => {
-    // 红队 4/4 满但总伤不足；蓝队(1) 缺输出
-    const g = [wave(10, [os(5000), os(5000), os(5000), os(5000)]), wave(20, [os(5000)])]
+    // 红队(wave10) 4/4 满、总伤 4000 不足 → 跳过；蓝队(wave20) 有空格 → 推
+    const g = [wave(10, [sqSlot(0, true, 1000, '主C'), sqSlot(0, true, 1000, '主C'),
+                         sqSlot(0, true, 1000, '主C'), sqSlot(0, true, 1000, '主C')]),
+              wave(20, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)])]
     const r = recommendFillers({ candidates: [c1], groups: g, targets: tOut })
     expect(r.length).toBe(1)
-    expect(r[0].squadIndex).toBe(1) // 只推蓝队
+    expect(r[0].waveId).toBe(20) // 只推蓝队
   })
   it('P2 主奶已达标、纯缺输出的队：只推荐输出，不推荐辅助', () => {
-    // 红队已有主奶 46000(达标) + 1 输出，缺输出；辅助候选不该被吸过去
-    const g = [wave(10, [aux('主奶', 46000), os(5000)])]
+    // 队已有主奶 46000(达标) + 1 输出 + 空格；辅助候选不该被吸过去
+    const g = [wave(10, [aux('主奶', 46000), sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)])]
     const r = recommendFillers({ candidates: [c1, healer], groups: g, targets: tOut })
     expect(r.length).toBe(1)
     expect(r[0].character.id).toBe(c1.id) // 输出
   })
   it('缺主奶的队：推荐辅助', () => {
-    const g = [wave(10, [os(5000)])]
+    const g = [needyWave(10)]
     const r = recommendFillers({ candidates: [c1, healer], groups: g, targets: tHeal })
     expect(r.length).toBe(1)
     expect(r[0].character.id).toBe(healer.id)
   })
-  it('P3 跨队去重：每个缺人队都拿到建议，角色不重复、覆盖多队', () => {
-    // 红队(0)缺输出、蓝队(1)缺输出；两个高伤候选 c1(30000)/c2(5000) → 两队各一条
-    const g = [wave(10, [os(5000)]), wave(20, [os(5000)])]
+  it('P3 跨队去重：两个缺人队各拿一条建议、角色不重复', () => {
+    const g = [needyWave(10), needyWave(20)]
     const r = recommendFillers({ candidates: [c1, c2], groups: g, targets: tOut })
     expect(r.length).toBe(2)
     expect(new Set(r.map(x => x.character.id)).size).toBe(2)
-    expect(new Set(r.map(x => x.squadIndex)).size).toBe(2)
+    expect(new Set(r.map(x => x.waveId)).size).toBe(2)
   })
   it('P3 同一角色只落一条（缺口更大的队优先占用）', () => {
-    // 红队(0)缺 2 输出(gap2)、蓝队(1)缺 1 输出(gap1)；只有一个候选 c1
-    const g = [wave(10, [os(5000)]), wave(20, [os(5000)])]
-    const t = { 0: { outputs: { count: 2 } }, 1: { outputs: { count: 2 } } }
-    const r = recommendFillers({ candidates: [c1], groups: g, targets: t })
+    // wave10 有 1 输出(gap2：缺1输出+总伤差)；wave20 全空(gap3：缺2输出+总伤差)；只有一个候选 c1
+    const g = [wave(10, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false)]),
+              wave(20, [sqSlot(0, false), sqSlot(0, false), sqSlot(0, false), sqSlot(0, false)])]
+    const r = recommendFillers({ candidates: [c1], groups: g, targets: tOut })
     expect(r.length).toBe(1)
-    expect(r[0].squadIndex).toBe(0) // 缺口更大的红队
+    expect(r[0].waveId).toBe(20) // 缺口更大的队
   })
   it('P4 并行团：建议带 roundIndex/groupIndex（角标可区分）', () => {
-    const g = [wave2(10, 1, [os(5000)]), wave2(20, 2, [os(5000)])]
-    const r = recommendFillers({ candidates: [c1], groups: g, targets: tOut })
+    const g = [wave2(10, 1), wave2(20, 2)]
+    const r = recommendFillers({ candidates: [c1, c2], groups: g, targets: tOut })
     expect(r.length).toBe(2)
     const g1 = r.find(x => x.groupIndex === 1)!; const g2 = r.find(x => x.groupIndex === 2)!
-    expect(g1.waveId).toBe(10); expect(g1.roundIndex).toBe(1)
-    expect(g2.waveId).toBe(20)
+    expect(g1.waveId).toBe(10); expect(g1.roundIndex).toBe(1); expect(g1.groupIndex).toBe(1)
+    expect(g2.waveId).toBe(20); expect(g2.groupIndex).toBe(2)
   })
   it('混合需求（缺输出+缺太阳奶）：按优先级表推荐输出（输出数 < 目标 优先于 缺太阳奶）', () => {
-    const g = [wave(10, [os(5000)])]
+    const g = [needyWave(10)]
     const r = recommendFillers({ candidates: [c1, healer], groups: g, targets: tSun })
     expect(r.length).toBe(1)
     expect(r[0].character.id).toBe(c1.id) // 输出
   })
-  it('排序：gap 降序（缺 2 输出的队优先被推）', () => {
-    const g = [wave(10, [os(5000)]), wave(20, [os(5000), os(5000)])]
-    const t = { 0: { outputs: { count: 2 } }, 1: { outputs: { count: 3 } } }
-    const r = recommendFillers({ candidates: [c1, c2], groups: g, targets: t })
-    expect(r[0].squadIndex).toBe(1) // 蓝队缺 2，红队缺 1
+  it('排序：gap 降序（缺口更大的队优先被推）', () => {
+    const g = [wave(10, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false)]),   // gap2
+              wave(20, [sqSlot(0, false), sqSlot(0, false), sqSlot(0, false), sqSlot(0, false)])] // gap3
+    const r = recommendFillers({ candidates: [c1, c2], groups: g, targets: tOut })
+    expect(r[0].waveId).toBe(20) // 全空队 gap 更大 → 排最前
   })
-  it('总伤超上限（simMax）：无角色能改善 → 跳过该队', () => {
-    const g = [wave(10, [os(30000), os(30000), os(30000)])]
+  it('总伤超上限（simMax）：无角色能改善 → 跳过该队（即使有空格）', () => {
+    const g = [wave(10, [sqSlot(0, true, 30000, '主C'), sqSlot(0, true, 30000, '主C'), sqSlot(0, false)])]
     const t = { 0: { outputs: { count: 2, simMin: 20000, simMax: 50000 } } }
     const r = recommendFillers({ candidates: [c1], groups: g, targets: t })
-    expect(r).toEqual([]) // 总伤 90000 > 50000，塞谁都超
+    expect(r).toEqual([]) // 输出数已够、总伤 60000 > 50000，塞谁都超 → recommendType 返回 null 跳过
   })
 })
 ```
+
+> 注：`needyWave`/`wave2`/`sqSlot` 只在本 describe 内使用；`wave2` 与 `needyWave` 都自带「1 已占输出 + 2 空格」的 squad 0，保证 `recommendFillers` 不会因 P1 满员而跳过。
 
 - [ ] **Step 2: 跑测试确认失败**
 
@@ -412,6 +429,7 @@ function recommendType(slots: Slot[], ov: SquadOverview): '输出' | '辅助' | 
   const dim = (k: OverviewDimKey) => ov.dims.find(d => d.key === k)
   const out = dim('outputCount'); const sim = dim('simDamage')
   const heal = dim('mainHealBuff'); const sun = dim('sunHealCount')
+  // 注意：超上限判断优先于优先级表——「既超 simMax 又缺输出数」的队也跳过（塞谁都更超，推输出无意义）。这是有意设计，勿改为仍推输出。
   if (sim && !sim.ok && sim.actual != null && sim.max != null && sim.actual > sim.max) return null
   if (heal && heal.actual == null) return '辅助'        // 1. 无主奶槽
   if (!slots.some(s => s.duty === '主C')) return '输出'  // 2. 无主C槽
@@ -623,6 +641,12 @@ it('全达标时各维度显示 ✓ 且带超出量', () => {
   expect(w.text()).toContain('✓')
   expect(w.text()).toContain('(+2000)') // 22000-20000
 })
+it('划水豁免：显示 划水豁免 tag、维度照显但不标 ✗', () => {
+  const slots = [{ ...out(1, 0), duty: '划水' as any, simulated_damage: 100 }]
+  const w = mountGrid({ groups: [wave(1, slots)], targets: { 0: { outputs: { count: 2 } } } })
+  expect(w.text()).toContain('划水豁免')
+  expect(w.text()).not.toContain('✗')
+})
 ```
 
 - [ ] **Step 2: 跑 RosterGrid.spec 确认失败**
@@ -657,9 +681,9 @@ function dimText(d: SquadOverview['dims'][number]): string {
 <div class="roster-squad-status"
      :class="sq.overview.slack || sq.overview.ok ? 'ok' : 'warn'">
   <template v-if="!targets[sq.index] || sq.overview.dims.length === 0">未设目标</template>
-  <template v-else-if="sq.overview.slack">划水豁免</template>
   <template v-else>
-    <span v-if="sq.overview.ok">达标 ✓ </span>
+    <span v-if="sq.overview.slack" class="dim-slack">划水豁免</span>
+    <span v-if="sq.overview.ok && !sq.overview.slack">达标 ✓ </span>
     <span v-for="d in sq.overview.dims" :key="d.key"
           :class="d.ok ? 'dim-ok' : 'dim-warn'">{{ dimText(d) }}</span>
   </template>
@@ -718,7 +742,8 @@ it('进入已关闭攻坚：清除该 raid 模板（localStorage + 内存）', a
   const { wrapper } = await mountView([], admin, snapshot)
   await flushPromises()
   expect(localStorage.getItem('dnfer-roster-targets-1')).toBeNull()
-  expect(wrapper.find('.roster-squad-status').exists()).toBe(false) // 内存 targets 也清空 → 无状态条
+  // 内存 targets 也清空 → 状态条回退「未设目标」（Task 5 起状态条恒渲染）
+  expect(wrapper.find('.roster-squad-status').text()).toContain('未设目标')
 })
 ```
 
