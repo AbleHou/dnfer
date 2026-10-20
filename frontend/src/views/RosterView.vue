@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { NSwitch } from 'naive-ui'
+import { NModal, NSwitch } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -9,10 +9,10 @@ import { connectRaidWs } from '../api/ws'
 import { buildPlacementMap } from '../lib/placement'
 import { computeSlack } from '../lib/slack'
 import {
-  inferFillDuty, loadTargets, rankCandidates, saveTargets, squadSlotsOf,
+  inferFillDuty, loadTargets, placementByChar, rankCandidates, saveTargets, squadSlotsOf,
   RECOMMEND_KEY,
 } from '../lib/roster'
-import type { SquadTarget, SquadTargets } from '../lib/roster'
+import type { CharPlacement, SquadTarget, SquadTargets } from '../lib/roster'
 import RosterPool from '../components/RosterPool.vue'
 import RosterGrid from '../components/RosterGrid.vue'
 import RosterTargetModal from '../components/RosterTargetModal.vue'
@@ -33,6 +33,7 @@ const recommendOn = ref(localStorage.getItem(RECOMMEND_KEY) !== '0')
 const targets = ref<SquadTargets>(loadTargets(rid))
 const targetModal = ref<{ open: boolean; squadIndex: number }>({ open: false, squadIndex: 0 })
 const guestOpen = ref(false)
+const poolOpen = ref(false)
 let disconnect: (() => void) | null = null
 
 const currentWave = computed<Wave | null>(() =>
@@ -46,6 +47,19 @@ const currentGroups = computed<Wave[]>(() => {
   return store.raid.waves.filter(w => w.round_index === cw.round_index)
 })
 const placed = computed(() => store.raid ? buildPlacementMap(store.raid) : {})
+const charPlacement = computed(() => placementByChar(store.raid?.waves ?? []))
+const roundUserPos = computed<Map<number, CharPlacement>>(() => {
+  const m = new Map<number, CharPlacement>()
+  for (const w of currentGroups.value) {
+    for (const s of w.slots) {
+      if (s.character_id == null || s.owner_id == null) continue
+      m.set(s.owner_id, { roundIndex: w.round_index, groupId: w.group_id, groupIndex: w.group_index,
+                          squadIndex: s.squad_index, duty: s.duty, userId: s.owner_id })
+    }
+  }
+  return m
+})
+const currentRound = computed(() => currentGroups.value[0]?.round_index ?? 0)
 
 const charsByUser = computed<Record<number, Character[]>>(() => {
   const m: Record<number, Character[]> = {}
@@ -109,6 +123,7 @@ function toggleRecommend(v: boolean | string | number) {
 // 拿起/放下
 function onPick(c: Character) {
   holding.value = holding.value?.id === c.id ? null : c
+  poolOpen.value = false
 }
 function onPickUp(slot: Slot) {
   const c = allChars.value.find(x => x.id === slot.character_id)
@@ -242,19 +257,6 @@ onBeforeUnmount(() => {
     </div>
 
     <div style="display:flex;gap:16px;align-items:flex-start">
-      <!-- position:sticky;top:60px 依赖全局 .dnf-nav 顶栏高度（约50px）：改顶栏高度需同步调整 top -->
-      <aside style="width:260px;flex-shrink:0;max-height:70vh;overflow:auto;position:sticky;top:60px;padding:10px" data-test="roster-pool"
-             class="dnf-panel" >
-        <RosterPool :signups="store.raid.signups" :blocked-char-ids="blockedCharIds"
-                    :slack-char-ids="slackCharIds" :recommend-top3="recommendTop3"
-                    :recommend-target="recommendTarget" :holding-id="holding?.id ?? null"
-                    :can-edit="canEdit" @pick="onPick">
-          <template #toolbar-extra>
-            <button v-if="canEdit && !store.raid.locked" class="dnf-btn dnf-btn-sm"
-                    data-test="add-guest" @click="guestOpen = true">＋临时</button>
-          </template>
-        </RosterPool>
-      </aside>
       <main style="flex:1;min-width:0" data-test="roster-grid">
         <RosterGrid :groups="currentGroups" :targets="targets" :can-edit="canEdit"
                     :holding="holding" @place="onPlace" @manage="onManage"
@@ -262,6 +264,23 @@ onBeforeUnmount(() => {
                     @editTarget="openTarget" />
       </main>
     </div>
+
+    <button class="roster-fab" data-test="pool-fab" title="打开角色池" @click="poolOpen = true">选人</button>
+
+    <n-modal :show="poolOpen" preset="card" title="角色池" style="width:min(380px,92vw)"
+             @update:show="(s: boolean) => { if (!s) poolOpen = false }">
+      <RosterPool :signups="store.raid.signups" :blocked-char-ids="blockedCharIds"
+                  :slack-char-ids="slackCharIds" :recommend-top3="recommendTop3"
+                  :recommend-target="recommendTarget" :holding-id="holding?.id ?? null"
+                  :can-edit="canEdit" :round-user-pos="roundUserPos"
+                  :char-placement="charPlacement" :current-round="currentRound"
+                  @pick="onPick">
+        <template #toolbar-extra>
+          <button v-if="canEdit && !store.raid.locked" class="dnf-btn dnf-btn-sm"
+                  data-test="add-guest" @click="guestOpen = true">＋临时</button>
+        </template>
+      </RosterPool>
+    </n-modal>
 
     <RosterTargetModal :open="targetModal.open"
                        :squad-label="SQUAD_NAMES[targetModal.squadIndex] ?? `队${targetModal.squadIndex + 1}`"
@@ -276,4 +295,12 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .move-hint { border: 1px dashed var(--dnf-accent,#ffd54a); border-radius: 6px; padding: 8px 10px; }
+.roster-fab {
+  position: fixed; right: 20px; bottom: 20px; z-index: 50;
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 1px solid var(--dnf-gold-deep); background: linear-gradient(180deg, var(--dnf-panel-inner), var(--dnf-panel));
+  color: var(--dnf-gold-hi); font-weight: bold; font-size: 13px; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+}
+.roster-fab:hover { border-color: var(--dnf-gold); }
 </style>

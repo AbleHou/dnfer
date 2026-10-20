@@ -81,25 +81,23 @@ async function mountView(signups: Raid['signups'], user: User = admin,
 beforeEach(() => { vi.clearAllMocks(); localStorage.clear() })
 
 describe('RosterView', () => {
-  it('渲染角色池与网格', async () => {
+  it('渲染 FAB 与网格；点 FAB 打开角色池弹框', async () => {
     const { wrapper } = await mountView([adminRow, memberRow])
     await flushPromises()
-    expect(wrapper.find('[data-test="roster-pool"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="pool-fab"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="roster-grid"]').exists()).toBe(true)
-  })
-
-  it('左侧角色池 sticky 固定跟随（下滚后仍可见，防止回退普通流）', async () => {
-    const { wrapper } = await mountView([adminRow, memberRow])
+    expect(wrapper.find('[data-act="pool-char-11"]').exists()).toBe(false)  // 弹框默认关闭
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
-    const pool = wrapper.find('[data-test="roster-pool"]')
-    expect((pool.element as HTMLElement).style.position).toBe('sticky')
-    expect((pool.element as HTMLElement).style.top).toBe('60px')
+    expect(wrapper.find('[data-act="pool-char-11"]').exists()).toBe(true)   // 打开后池可见
   })
 
   it('非管理员只读：无推荐开关，点角色不进入拿起态', async () => {
     const { wrapper } = await mountView([adminRow, memberRow], member)
     await flushPromises()
     expect(wrapper.find('[data-test="recommend-switch"]').exists()).toBe(false)
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')
     expect(wrapper.find('.move-hint').exists()).toBe(false)
   })
@@ -107,8 +105,11 @@ describe('RosterView', () => {
   it('拿起→点空格：fill 带 replace:true，职责按状态推断（辅助且队无主奶 → 主奶）', async () => {
     const { wrapper } = await mountView([adminRow, memberRow])
     await flushPromises()
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')  // 拿起「奶」
     expect(wrapper.find('.move-hint').text()).toContain('奶')
+    expect(wrapper.find('[data-act="pool-char-11"]').exists()).toBe(false)  // 拿起自动关闭弹框
     await wrapper.find('.roster-slot .pick-btn').trigger('click')     // 放入空位 1
     expect(apiMock.post).toHaveBeenCalledWith('/api/raids/1/slots/1/fill',
       { character_id: 11, duty: '主奶', replace: true })
@@ -118,6 +119,8 @@ describe('RosterView', () => {
   it('拿起→点已占格：confirmDialog 确认后 fill 替换', async () => {
     const { wrapper } = await mountView([adminRow, memberRow], admin,
       makeRaid([adminRow, memberRow], occupiedSlot()))
+    await flushPromises()
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')  // 拿起「奶」
     await wrapper.find('.roster-slot.occupied').trigger('click')      // 点已占格（剑魂 主C）
@@ -146,6 +149,8 @@ describe('RosterView', () => {
   it('推荐开关：有模板时显示推荐角标，关闭后消失', async () => {
     localStorage.setItem('dnfer-roster-targets-1', JSON.stringify({ 0: { outputs: { count: 2 } } }))
     const { wrapper } = await mountView([adminRow, memberRow])
+    await flushPromises()
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-act="pool-char-10"]').text()).toContain('推荐')  // 剑魂缺口>0
     wrapper.findComponent({ name: 'Switch' }).vm.$emit('update:value', false)
@@ -196,6 +201,8 @@ describe('RosterView', () => {
   it('Esc 取消拿起态', async () => {
     const { wrapper } = await mountView([adminRow, memberRow])
     await flushPromises()
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')
     expect(wrapper.find('.move-hint').exists()).toBe(true)
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
@@ -206,6 +213,8 @@ describe('RosterView', () => {
   it('编队池工具栏添加临时选手并代报名', async () => {
     apiMock.post.mockResolvedValue({})
     const { wrapper } = await mountView([], admin)
+    await flushPromises()
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
     await wrapper.find('[data-test="add-guest"]').trigger('click')
     const guest = { id: 66, username: 'guest_y', nickname: '编队外援', is_admin: false,
@@ -218,6 +227,8 @@ describe('RosterView', () => {
   it('非管理员不显示编队添加临时选手入口', async () => {
     const { wrapper } = await mountView([], member)
     await flushPromises()
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
+    await flushPromises()
     expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
   })
 
@@ -225,6 +236,8 @@ describe('RosterView', () => {
     const snapshot = makeRaid([])
     snapshot.locked = true
     const { wrapper } = await mountView([], admin, snapshot)
+    await flushPromises()
+    await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)
   })
