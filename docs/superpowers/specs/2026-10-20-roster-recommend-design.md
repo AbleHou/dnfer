@@ -60,9 +60,9 @@ export interface SquadOverview {
 ### 3.2 替换 `computeSquadStatus` / `SquadStatus`
 
 - 删除 `computeSquadStatus` 与 `SquadStatus` 接口，避免两套并行状态系统。
-- 内部调用点重写为 `squadOverview`：`squadGap`（roster.ts:101）、`candidateFitsSquad`（roster.ts:114）。
+- **一并删除旧的推荐路径**：`rankCandidates`/`RankedCandidate`/`squadGap`/`candidateFitsSquad` 全部废弃（其唯一调用方 `RosterView` 改接 `squadOverview` + `recommendFillers`，见 §3.3/§4.2），不留死代码。
 - 对外调用点：`RosterGrid.vue`（45-47）改接 `squadOverview`。
-- `roster.spec.ts` 现有 computeSquadStatus 约 10 例迁移到 `squadOverview` 断言（`SquadStatus` 字段均能从 overview 推导：filled/total/slack/issues 直取，outputCount=outputCount.actual、outputTotal=simDamage.actual、mainHealBuff=mainHealBuff.actual、sunHealCount=sunHealCount.actual）。
+- `roster.spec.ts` 现有 computeSquadStatus 约 10 例迁移到 `squadOverview` 断言（`SquadStatus` 字段均能从 overview 推导：filled/total/slack/issues 直取，outputCount=outputCount.actual、outputTotal=simDamage.actual、mainHealBuff=mainHealBuff.actual、sunHealCount=sunHealCount.actual）。`sortByPower` 保留（RosterPool 仍在用）。
 
 ### 3.3 推荐逻辑：`recommendFillers(opts): SquadSuggestion[]`（队 → 最佳候选）
 
@@ -70,24 +70,36 @@ export interface SquadOverview {
 export interface SquadSuggestion {
   character: Character
   waveId: number
-  groupIndex: number | null
+  roundIndex: number             // 展示用波数（round_index，并行团角标显示需要）
+  groupIndex: number | null      // 并行团号；null=独立单波
   squadIndex: number
   gap: number                    // 该队缺口分（供排序/展示）
 }
 ```
 
 对当前轮每个（波 × 队）：
-1. 算 `squadOverview(slots, targets[si])`。
+1. 算 `squadOverview(slots, targets[si])`，直接取 `filled/total` 判满员。
 2. 跳过条件：无模板 / slack 豁免 / `ok`（无缺口）/ **`filled >= total`（满员，P1）**。
 3. 判定该队所需角色类型（按**实际需求**，P2）：
    - 输出适合：「输出数 < 目标」或「总伤 < simMin」或「队内无主C」。
    - 辅助适合：「主奶未达标或缺失」或「太阳奶数 < 目标」。
    - 主奶已达标、纯缺输出的队**不会**把辅助吸过去（P2 核心修复）。
-4. 从未占位候选里选「符合所需类型」且战力最高者，生成一条建议（每队至多一条 → **天然分散覆盖各缺人队，P3**）。
+4. **混合需求类型优先级**（队同时适合输出与辅助时，按下列顺序取第一个命中的维度决定推荐类型，保证确定性、避免 sim 与 buff 跨量纲比较）：
+   1. 无主奶槽（队内无 duty==='主奶'）→ 辅助
+   2. 无主C槽 → 输出
+   3. 输出数 < 目标 → 输出
+   4. 太阳奶数 < 目标 → 辅助
+   5. 总伤 < simMin → 输出
+   6. 主奶增益 < buffMin → 辅助
+   类型定后，选该类型战力最高者。
+5. **跨队角色去重**（防同一角色被多队抢占 → §4.2 的 `Record<charId,…>` 会静默折叠，低缺口队丢角标）：
+   - 先按 (gap 降序, 同 gap 按「该队当前类型最强可选候选的战力」降序) 排序各「候选队」，维护 `used: Set<charId>`；
+   - 依次为每队选「该类型中未 used 的战力最高者」，选中即加入 `used`；无可选则跳过该队。
+   - 保证每角色至多一条建议、且落在缺口最大的队上，覆盖尽可能多的缺人队（P3）。
 
-排序：(gap 降序, 战力降序)，返回；设上限（如 6 条）防刷屏。无模板/无缺口 → 空数组（P5）。
+排序：按 (gap 降序, 战力降序) 输出；设上限（如 6 条）防刷屏。无模板/无缺口 → 空数组（P5）。
 
-建议自带 `waveId` + `groupIndex`，供并行团角标区分（P4）。
+建议自带 `waveId`/`roundIndex`/`groupIndex`，供并行团角标区分（P4）。
 
 ### 3.4 模板生命周期 helper
 
@@ -108,9 +120,11 @@ export function clearTargets(raidId: number): void   // localStorage.removeItem�
 
 ### 4.2 RosterPool 角标（props 合并）
 
-- `RosterView` 计算 `suggestions` → 传新 prop `recommend: Record<charId, { waveId, groupIndex, squadIndex }>`，仅对有建议的角色打标。
+- `RosterView` 计算 `suggestions` → 传新 prop `recommend: Record<charId, { roundIndex, groupIndex, squadIndex }>`，仅对有建议的角色打标。`roundIndex` 由 `SquadSuggestion` 携带、自包含，不依赖 RosterPool 的 `currentRound`（避免两处波数来源不一致）。
 - 合并删除旧 prop `recommendTop3` / `recommendTarget`。
-- 角标文案：单波 `推荐→红队`；并行团 `推荐→第1波2团红队`。
+- 角标文案（对齐代码库 `第 N 波 M 团` 的带空格格式，避免 UI 三种格式并存）：
+  - 单波（groupIndex==null）：`推荐→红队`
+  - 并行团：`推荐→第 {roundIndex} 波 {groupIndex} 团红队`
 - 「推荐」开关保留（`recommendOn`，控制是否计算/显示角标）。
 
 ### 4.3 模板生命周期清除（4 处 hook）
@@ -118,14 +132,14 @@ export function clearTargets(raidId: number): void   // localStorage.removeItem�
 1. `RaidDetailView.onCloseRaid` 成功后 `clearTargets(rid)`。
 2. WS `raid:closed` handler（`RaidDetailView` 84 行 + `RosterView` 203 行）→ `clearTargets(rid)`。
 3. `RaidListView` 删除成功（58 行）→ `clearTargets(rid)`。
-4. `RosterView.load()` 发现 `store.raid.closed` → `clearTargets(rid)`（覆盖直链进入已关闭编队页）。
+4. `RosterView.load()` 发现 `store.raid.closed` → `clearTargets(rid)` 且**同步置 `targets.value = {}`**（覆盖直链进入已关闭编队页；只清 localStorage 而内存 ref 不清会导致只读快照页仍显示旧状态条/角标）。
 
 ## 5. 测试
 
 - `roster.spec.ts`：
   - 迁移 computeSquadStatus ~10 例到 `squadOverview`。
   - 新增 `squadOverview`：各维度实际/目标/✓✗/diff、双界（min+max）、主奶无槽（actual null → ✗ + '缺主奶'）、无模板、划水豁免、达标含超出量。
-  - 新增 `recommendFillers`：P1（满员队不进）、P2（主奶达标缺输出的队只推输出不推辅助）、P3（每队至多一条、覆盖多队）、P4（并行团带 groupIndex/waveId）、P5（无模板 → 空）。
+  - 新增 `recommendFillers`：P1（满员队不进）、P2（主奶达标缺输出的队只推输出不推辅助）、P3（覆盖多队、每角色至多一条且落在缺口最大的队——**跨队去重**用例）、P4（并行团带 groupIndex/roundIndex）、P5（无模板 → 空）、**混合需求类型优先级**（既缺输出又缺太阳奶的队按优先级表选类型）。
   - `clearTargets` 往返（存→清→空）。
 - `RosterGrid.spec.ts`：状态条新格式（维度 ✓✗+差值、未设目标、划水豁免）。
 - `RosterPool.spec.ts`：角标文案（单波/并行团）、无建议不打标、props 从 recommendTop3/recommendTarget 换成 recommend。
