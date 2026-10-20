@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import { sortByPower } from '../lib/roster'
-import type { Character, RaidSignup, User } from '../types'
+import type { CharPlacement } from '../lib/roster'
+import type { Character, Duty, RaidSignup, User } from '../types'
 
 const props = withDefaults(defineProps<{
   signups: RaidSignup[]
@@ -13,11 +14,20 @@ const props = withDefaults(defineProps<{
   recommendTarget: Record<number, number | null>
   holdingId: number | null
   canEdit: boolean
-}>(), { recommendTop3: () => new Set(), recommendTarget: () => ({}) })
+  roundUserPos: Map<number, CharPlacement>
+  charPlacement: Map<number, CharPlacement>
+  currentRound: number
+}>(), {
+  recommendTop3: () => new Set(),
+  recommendTarget: () => ({}),
+  roundUserPos: () => new Map(),
+  charPlacement: () => new Map(),
+  currentRound: 0,
+})
 const emit = defineEmits<{ (e: 'pick', c: Character): void }>()
 
 interface PoolParty { id: number | null; name: string; chars: Character[] }
-interface PoolUser { user: User; parties: PoolParty[] }
+interface PoolUser { user: User; parties: PoolParty[]; pos?: CharPlacement }
 
 // 按冒险团分组（未分组归入 null）；组内按战力排序（输出模拟伤害/辅助增益 desc）
 function groupByParty(chars: Character[]): PoolParty[] {
@@ -35,7 +45,8 @@ function groupByParty(chars: Character[]): PoolParty[] {
 // 两层分组：用户 → 冒险团小节
 const groups = computed<PoolUser[]>(() => props.signups
   .filter(s => s.characters.length > 0)
-  .map(s => ({ user: s.user, parties: groupByParty(s.characters) })))
+  .map(s => ({ user: s.user, parties: groupByParty(s.characters),
+               pos: props.roundUserPos.get(s.user.id) })))
 
 // 折叠态（内存态，离开页面重置）：收起 user.id 集合，默认全展开
 const collapsed = ref<Set<number>>(new Set())
@@ -72,6 +83,21 @@ function powerText(c: Character): string {
     : `增益 ${fmt(c.buff_amount, '')} · 太阳 ${fmt(c.sun_buff, '')}`
 }
 function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c.id)) emit('pick', c) }
+
+function squadName(si: number): string { return SQUAD_NAMES[si] ?? `队${si + 1}` }
+function dutyClass(d: Duty | null): string {
+  switch (d) {
+    case '主C': return 'mainc'
+    case '辅C': return 'subc'
+    case '主奶': return 'mainheal'
+    case '太阳奶': return 'sunheal'
+    default: return 'slack'
+  }
+}
+function waveLabel(p: CharPlacement): string {
+  return p.groupId != null ? `第${p.roundIndex}波${p.groupIndex}团` : `第${p.roundIndex}波`
+}
+function cPos(cid: number): CharPlacement | undefined { return props.charPlacement.get(cid) }
 </script>
 
 <template>
@@ -87,7 +113,11 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
       <div class="pool-user-head" :data-user-id="g.user.id" @click="toggleGroup(g.user.id)">
         <span style="color:var(--dnf-text-muted,#9aa3b2);width:12px;display:inline-block">
           {{ collapsed.has(g.user.id) ? '▸' : '▾' }}
-        </span>{{ g.user.nickname }}<span v-if="g.user.is_guest" class="dnf-badge" style="margin-left:6px">临时</span>
+        </span>{{ g.user.nickname }}<span v-if="g.pos" class="pos-capsule" @click.stop>
+          <span v-if="g.pos.groupId != null" class="pos-group">{{ g.pos.groupIndex }}团</span>
+          <span :class="`pos-team-${g.pos.squadIndex}`">{{ squadName(g.pos.squadIndex) }}</span>
+          <span v-if="g.pos.duty" :class="`pos-duty-${dutyClass(g.pos.duty)}`">{{ g.pos.duty }}</span>
+        </span><span v-if="g.user.is_guest" class="dnf-badge" style="margin-left:6px">临时</span>
       </div>
       <div v-if="!collapsed.has(g.user.id)">
         <div v-for="p in g.parties" :key="p.id ?? '__u'" class="pool-party" data-test="pool-party">
@@ -105,6 +135,10 @@ function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c
               <div style="flex:1;min-width:0">
                 <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
                   <b>{{ c.name }}</b>
+                  <span v-if="cPos(c.id)" class="wave-tag"
+                        :class="{ current: cPos(c.id)!.roundIndex === currentRound }">
+                    {{ waveLabel(cPos(c.id)!) }}
+                  </span>
                   <span style="color:var(--dnf-text-muted);font-size:12px">
                     {{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }}
                   </span>

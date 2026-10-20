@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import RosterPool from './RosterPool.vue'
 import type { Character, RaidSignup, User } from '../types'
+import type { CharPlacement } from '../lib/roster'
 
 const u1: User = { id: 1, username: 'a', nickname: '甲', is_admin: false, avatar: null, is_banned: false, is_guest: false }
 const u2: User = { id: 2, username: 'b', nickname: '乙', is_admin: false, avatar: null, is_banned: false, is_guest: false }
@@ -25,6 +26,8 @@ function mountPool(overrides: Record<string, unknown> = {}) {
     props: {
       signups, blockedCharIds: new Set<number>(), slackCharIds: new Set<number>(),
       recommendTop3: new Set<number>(), recommendTarget: {}, holdingId: null, canEdit: true,
+      roundUserPos: new Map<number, CharPlacement>(), charPlacement: new Map<number, CharPlacement>(),
+      currentRound: 0,
       ...overrides,
     },
     global: { stubs: { UserAvatar: true, teleport: true } },
@@ -162,5 +165,61 @@ describe('RosterPool', () => {
     expect(w.find('[data-act="pool-expand-all"]').text()).toContain('▾▾')
     expect(w.find('[data-act="pool-collapse-all"]').text()).toContain('▴▴')
     expect(w.find('[data-act="pool-search"]').classes()).toContain('dnf-input')
+  })
+})
+
+function pos(cid: number, opts: Partial<CharPlacement> = {}): CharPlacement {
+  return { roundIndex: 1, groupId: null, groupIndex: 1, squadIndex: 0, duty: '主C', userId: 1, ...opts }
+}
+
+describe('用户头职责胶囊', () => {
+  it('当前波已排：显示 队伍名+职责', () => {
+    const w = mountPool({ roundUserPos: new Map([[1, pos(10)]]) })
+    const head = w.find('[data-user-id="1"]')
+    expect(head.text()).toContain('红队')
+    expect(head.text()).toContain('主C')
+  })
+  it('当前波未排：不显示胶囊', () => {
+    const w = mountPool()
+    expect(w.find('[data-user-id="1"] .pos-capsule').exists()).toBe(false)
+  })
+  it('并行团：胶囊带团号前缀', () => {
+    const w = mountPool({ roundUserPos: new Map([[1, pos(10, { groupId: 5, groupIndex: 2, duty: '太阳奶' })]]) })
+    // 注意：胶囊内各 span 之间的空白会被 Vue 压缩，故分段断言，勿用带空格的整串
+    expect(w.find('[data-user-id="1"]').text()).toContain('2团')
+    expect(w.find('[data-user-id="1"]').text()).toContain('红队')
+    expect(w.find('[data-user-id="1"]').text()).toContain('太阳奶')
+  })
+  it('职责 tag class 映射：太阳奶 → pos-duty-sunheal', () => {
+    const w = mountPool({ roundUserPos: new Map([[1, pos(10, { duty: '太阳奶' })]]) })
+    expect(w.find('[data-user-id="1"] .pos-duty-sunheal').text()).toBe('太阳奶')
+  })
+  it('点胶囊不触发用户组折叠', async () => {
+    const w = mountPool({ roundUserPos: new Map([[1, pos(10)]]) })
+    await w.find('.pos-capsule').trigger('click')
+    expect(w.find('[data-act="pool-char-10"]').exists()).toBe(true)  // 组未收起
+  })
+})
+
+describe('角色行波次标签', () => {
+  it('已占位角色显示 第N波', () => {
+    const w = mountPool({ charPlacement: new Map([[10, pos(10)]]) })
+    expect(w.find('[data-act="pool-char-10"]').text()).toContain('第1波')
+  })
+  it('并行团：显示 第N波M团', () => {
+    const w = mountPool({ charPlacement: new Map([[10, pos(10, { groupId: 5, groupIndex: 2, roundIndex: 3 })]]) })
+    expect(w.find('[data-act="pool-char-10"]').text()).toContain('第3波2团')
+  })
+  it('未占位角色不显示波次标签', () => {
+    const w = mountPool()
+    expect(w.find('.wave-tag').exists()).toBe(false)
+  })
+  it('当前选中波高亮 .current', () => {
+    const w = mountPool({ charPlacement: new Map([[10, pos(10, { roundIndex: 2 })]]) , currentRound: 2 })
+    expect(w.find('[data-act="pool-char-10"] .wave-tag').classes()).toContain('current')
+  })
+  it('非当前波不高亮', () => {
+    const w = mountPool({ charPlacement: new Map([[10, pos(10, { roundIndex: 1 })]]) , currentRound: 2 })
+    expect(w.find('[data-act="pool-char-10"] .wave-tag').classes()).not.toContain('current')
   })
 })
