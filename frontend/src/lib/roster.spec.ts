@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { loadTargets, saveTargets, clearTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
-import type { ClassType, Slot, Character, Wave } from '../types'
+import { loadTargets, saveTargets, clearTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, recommendFillers, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
+import type { ClassType, Duty, Slot, Character, Wave } from '../types'
 
 function slot(duty: string | null, classType: ClassType | null = '输出'): Slot {
   return {
@@ -229,10 +229,96 @@ function wave(id: number, slots: Slot[]): Wave {
   return { id, index: id, group_id: null, round_index: 1, group_index: 1, slots }
 }
 
+// sqSlot：可指定 squad_index 与「是否已占」；空格 → character_id null
+const sqSlot = (sq: number, filled: boolean, sim: number | null = null, duty: string | null = '主C'): Slot =>
+  ({ id: 0, squad_index: sq, row_index: 0, character_id: filled ? 1 : null,
+     character_name: filled ? 'x' : null, character_class: filled ? '输出' : null,
+     job_name: null, job_title: null, fame: null, simulated_damage: sim, sustained_dps: null,
+     buff_amount: null, sun_buff: null, owner_id: null, owner_nickname: null, owner_avatar: null,
+     duty: filled ? duty as Duty : null, version: 1, adventure_party_id: null, adventure_party_name: null })
+
 describe('sortByPower', () => {
   it('输出按模拟伤害降序（null 排最后）', () => {
     const n: Character = { ...c1, id: 3, simulated_damage: null, sustained_dps: null }
     expect(sortByPower([c2, n, c1]).map(x => x.id)).toEqual([1, 2, 3])
+  })
+})
+
+describe('recommendFillers 队→候选推荐（新引擎）', () => {
+  const tOut = { 0: { outputs: { count: 2, simMin: 20000 } } }
+  const tHeal = { 0: { mainHeal: { buffMin: 45000 } } }
+  const tSun = { 0: { outputs: { count: 2 }, sunHeal: { count: 1 } } }
+  // 缺输出的队（1 已占输出 + 2 空格）
+  const needyWave = (id: number) => wave(id, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)])
+  const wave2 = (id: number, groupIndex: number): Wave =>
+    ({ id, index: id, group_id: groupIndex, round_index: 1, group_index: groupIndex,
+       slots: [sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)] })
+
+  it('P5 无模板 → 空建议', () => {
+    expect(recommendFillers({ candidates: [c1, healer], groups: [needyWave(10)], targets: {} })).toEqual([])
+  })
+  it('P1 满员队不进推荐（未达标但有空格才推）', () => {
+    // 红队(wave10) 4/4 满、总伤 4000 不足 → 跳过；蓝队(wave20) 有空格 → 推
+    const g = [wave(10, [sqSlot(0, true, 1000, '主C'), sqSlot(0, true, 1000, '主C'),
+                         sqSlot(0, true, 1000, '主C'), sqSlot(0, true, 1000, '主C')]),
+              wave(20, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)])]
+    const r = recommendFillers({ candidates: [c1], groups: g, targets: tOut })
+    expect(r.length).toBe(1)
+    expect(r[0].waveId).toBe(20) // 只推蓝队
+  })
+  it('P2 主奶已达标、纯缺输出的队：只推荐输出，不推荐辅助', () => {
+    // 队已有主奶 46000(达标) + 1 输出 + 空格；辅助候选不该被吸过去
+    const g = [wave(10, [aux('主奶', 46000), sqSlot(0, true, 5000, '主C'), sqSlot(0, false), sqSlot(0, false)])]
+    const r = recommendFillers({ candidates: [c1, healer], groups: g, targets: tOut })
+    expect(r.length).toBe(1)
+    expect(r[0].character.id).toBe(c1.id) // 输出
+  })
+  it('缺主奶的队：推荐辅助', () => {
+    const g = [needyWave(10)]
+    const r = recommendFillers({ candidates: [c1, healer], groups: g, targets: tHeal })
+    expect(r.length).toBe(1)
+    expect(r[0].character.id).toBe(healer.id)
+  })
+  it('P3 跨队去重：两个缺人队各拿一条建议、角色不重复', () => {
+    const g = [needyWave(10), needyWave(20)]
+    const r = recommendFillers({ candidates: [c1, c2], groups: g, targets: tOut })
+    expect(r.length).toBe(2)
+    expect(new Set(r.map(x => x.character.id)).size).toBe(2)
+    expect(new Set(r.map(x => x.waveId)).size).toBe(2)
+  })
+  it('P3 同一角色只落一条（缺口更大的队优先占用）', () => {
+    // wave10 有 1 输出(gap2：缺1输出+总伤差)；wave20 全空(gap3：缺2输出+总伤差)；只有一个候选 c1
+    const g = [wave(10, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false)]),
+              wave(20, [sqSlot(0, false), sqSlot(0, false), sqSlot(0, false), sqSlot(0, false)])]
+    const r = recommendFillers({ candidates: [c1], groups: g, targets: tOut })
+    expect(r.length).toBe(1)
+    expect(r[0].waveId).toBe(20) // 缺口更大的队
+  })
+  it('P4 并行团：建议带 roundIndex/groupIndex（角标可区分）', () => {
+    const g = [wave2(10, 1), wave2(20, 2)]
+    const r = recommendFillers({ candidates: [c1, c2], groups: g, targets: tOut })
+    expect(r.length).toBe(2)
+    const g1 = r.find(x => x.groupIndex === 1)!; const g2 = r.find(x => x.groupIndex === 2)!
+    expect(g1.waveId).toBe(10); expect(g1.roundIndex).toBe(1); expect(g1.groupIndex).toBe(1)
+    expect(g2.waveId).toBe(20); expect(g2.groupIndex).toBe(2)
+  })
+  it('混合需求（缺输出+缺太阳奶）：按优先级表推荐输出（输出数 < 目标 优先于 缺太阳奶）', () => {
+    const g = [needyWave(10)]
+    const r = recommendFillers({ candidates: [c1, healer], groups: g, targets: tSun })
+    expect(r.length).toBe(1)
+    expect(r[0].character.id).toBe(c1.id) // 输出
+  })
+  it('排序：gap 降序（缺口更大的队优先被推）', () => {
+    const g = [wave(10, [sqSlot(0, true, 5000, '主C'), sqSlot(0, false)]),   // gap2
+              wave(20, [sqSlot(0, false), sqSlot(0, false), sqSlot(0, false), sqSlot(0, false)])] // gap3
+    const r = recommendFillers({ candidates: [c1, c2], groups: g, targets: tOut })
+    expect(r[0].waveId).toBe(20) // 全空队 gap 更大 → 排最前
+  })
+  it('总伤超上限（simMax）：无角色能改善 → 跳过该队（即使有空格）', () => {
+    const g = [wave(10, [sqSlot(0, true, 30000, '主C'), sqSlot(0, true, 30000, '主C'), sqSlot(0, false)])]
+    const t = { 0: { outputs: { count: 2, simMin: 20000, simMax: 50000 } } }
+    const r = recommendFillers({ candidates: [c1], groups: g, targets: t })
+    expect(r).toEqual([]) // 输出数已够、总伤 60000 > 50000，塞谁都超 → recommendType 返回 null 跳过
   })
 })
 

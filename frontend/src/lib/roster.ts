@@ -233,6 +233,92 @@ export function rankCandidates(opts: {
   return ranked.sort((a, b) => b.score - a.score || powerValue(b.character) - powerValue(a.character))
 }
 
+export interface SquadSuggestion {
+  character: Character
+  waveId: number
+  roundIndex: number
+  groupIndex: number | null
+  squadIndex: number
+  gap: number
+}
+
+/** 队伍缺口分：count 类按缺失个数，连续类(总伤/主奶)各 +1。与旧 squadGap 语义一致。 */
+function gapScore(ov: SquadOverview): number {
+  let gap = 0
+  for (const d of ov.dims) {
+    if (d.ok) continue
+    if (d.key === 'outputCount' || d.key === 'sunHealCount') gap += Math.max(0, (d.min ?? 0) - (d.actual ?? 0))
+    else gap += 1
+  }
+  return gap
+}
+
+/** 按 spec §3.3 优先级表决定该队推荐角色类型；总伤超上限(塞谁都超)返回 null 表示跳过。 */
+function recommendType(slots: Slot[], ov: SquadOverview): '输出' | '辅助' | null {
+  const dim = (k: OverviewDimKey) => ov.dims.find(d => d.key === k)
+  const out = dim('outputCount'); const sim = dim('simDamage')
+  const heal = dim('mainHealBuff'); const sun = dim('sunHealCount')
+  // 注意：超上限判断优先于优先级表——「既超 simMax 又缺输出数」的队也跳过（塞谁都更超，推输出无意义）。这是有意设计，勿改为仍推输出。
+  if (sim && !sim.ok && sim.actual != null && sim.max != null && sim.actual > sim.max) return null
+  if (heal && heal.actual == null) return '辅助'        // 1. 无主奶槽
+  if (!slots.some(s => s.duty === '主C')) return '输出'  // 2. 无主C槽
+  if (out && !out.ok) return '输出'                      // 3. 缺输出数
+  if (sun && !sun.ok) return '辅助'                      // 4. 缺太阳奶
+  if (sim && !sim.ok) return '输出'                      // 5. 总伤低于下限
+  if (heal && !heal.ok) return '辅助'                    // 6. 主奶增益未达标
+  return null
+}
+
+function bestCandidate(candidates: Character[], type: '输出' | '辅助', used: Set<number>): Character | null {
+  let best: Character | null = null
+  for (const c of candidates) {
+    if (used.has(c.id) || c.class_type !== type) continue
+    if (!best || powerValue(c) > powerValue(best)) best = c
+  }
+  return best
+}
+
+export function recommendFillers(opts: {
+  candidates: Character[]
+  groups: Wave[]
+  targets: SquadTargets
+}): SquadSuggestion[] {
+  type Team = { wave: Wave; squadIndex: number; slots: Slot[]; overview: SquadOverview; gap: number }
+  const teams: Team[] = []
+  for (const w of opts.groups) {
+    squadSlotsOf(w).forEach((slots, si) => {
+      const target = opts.targets[si]
+      if (!target) return
+      const overview = squadOverview(slots, target)
+      if (overview.slack || overview.ok) return
+      if (overview.filled >= overview.total) return   // P1 满员
+      teams.push({ wave: w, squadIndex: si, slots, overview, gap: gapScore(overview) })
+    })
+  }
+  // 排序：gap 降序；同 gap 按「该队当前类型最强可选候选的战力」降序（确定性）
+  teams.sort((a, b) => {
+    if (b.gap !== a.gap) return b.gap - a.gap
+    const bestPower = (type: '输出' | '辅助' | null): number => {
+      if (type == null) return -Infinity
+      const c = bestCandidate(opts.candidates, type, new Set())
+      return c ? powerValue(c) : -Infinity
+    }
+    return bestPower(recommendType(b.slots, b.overview)) - bestPower(recommendType(a.slots, a.overview))
+  })
+  const used = new Set<number>()
+  const out: SquadSuggestion[] = []
+  for (const t of teams) {
+    const type = recommendType(t.slots, t.overview)
+    if (type == null) continue
+    const pick = bestCandidate(opts.candidates, type, used)
+    if (!pick) continue
+    used.add(pick.id)
+    out.push({ character: pick, waveId: t.wave.id, roundIndex: t.wave.round_index,
+               groupIndex: t.wave.group_index, squadIndex: t.squadIndex, gap: t.gap })
+  }
+  return out.sort((a, b) => b.gap - a.gap || powerValue(b.character) - powerValue(a.character)).slice(0, 6)
+}
+
 /** 角色在整场攻坚的占位信息（后端保证每角色至多占一格）。 */
 export interface CharPlacement {
   roundIndex: number          // 展示用波数（round_index）
