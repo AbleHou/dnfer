@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
-import { loadTargets, saveTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { loadTargets, saveTargets, clearTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
 import type { ClassType, Slot, Character, Wave } from '../types'
 
 function slot(duty: string | null, classType: ClassType | null = '输出'): Slot {
@@ -30,6 +30,24 @@ describe('模板 localStorage 读写', () => {
   it('localStorage 存 "null" 时返回空对象（防御）', () => {
     localStorage.setItem('dnfer-roster-targets-7', 'null')
     expect(loadTargets(7)).toEqual({})
+  })
+  it('clearTargets 清除该 raid 模板', () => {
+    saveTargets(7, { 0: { outputs: { count: 2 } } })
+    clearTargets(7)
+    expect(loadTargets(7)).toEqual({})
+  })
+  it('clearTargets 只清指定 raid', () => {
+    saveTargets(7, { 0: { outputs: { count: 2 } } }); saveTargets(8, { 0: { outputs: { count: 3 } } })
+    clearTargets(7)
+    expect(loadTargets(7)).toEqual({}); expect(loadTargets(8)[0]?.outputs?.count).toBe(3)
+  })
+  it('saveTargets/clearTargets 在 localStorage 异常时不抛（try/catch 兜底）', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    expect(() => saveTargets(7, { 0: {} })).not.toThrow()
+    spy.mockRestore()
+    const spy2 = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('denied') })
+    expect(() => clearTargets(7)).not.toThrow()
+    spy2.mockRestore()
   })
 })
 

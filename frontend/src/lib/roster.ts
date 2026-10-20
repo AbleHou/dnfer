@@ -22,7 +22,10 @@ export function loadTargets(raidId: number): SquadTargets {
   } catch { return {} }
 }
 export function saveTargets(raidId: number, targets: SquadTargets): void {
-  localStorage.setItem(TARGETS_KEY(raidId), JSON.stringify(targets))
+  try { localStorage.setItem(TARGETS_KEY(raidId), JSON.stringify(targets)) } catch { /* 忽略 */ }
+}
+export function clearTargets(raidId: number): void {
+  try { localStorage.removeItem(TARGETS_KEY(raidId)) } catch { /* 隐私模式等忽略 */ }
 }
 
 /** 填格职责决策表：只看队伍当前状态，与模板无关（防后端「至多一名主奶」硬 400）。 */
