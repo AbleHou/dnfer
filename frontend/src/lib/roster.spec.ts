@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { loadTargets, saveTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower } from './roster'
+import { loadTargets, saveTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower, placementByChar } from './roster'
 import type { ClassType, Slot, Character, Wave } from '../types'
 
 function slot(duty: string | null, classType: ClassType | null = '输出'): Slot {
@@ -208,5 +208,52 @@ describe('squadSlotsOf', () => {
     const groups = squadSlotsOf(wave(10, [s0, s1a, s1b]))
     expect(groups.length).toBe(2)
     expect(groups[1].map(s => s.id)).toEqual([2, 3])
+  })
+})
+
+// 占位映射测试用的 slot：character_id != null 即视为已占位
+function pslot(id: number, charId: number | null, opts: Partial<Slot> = {}): Slot {
+  return { id, squad_index: 0, row_index: 0, character_id: charId,
+    character_name: charId != null ? 'x' : null, character_class: null, job_name: null, job_title: null,
+    fame: null, simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+    owner_id: charId != null ? 1 : null, owner_nickname: null, owner_avatar: null, duty: null, version: 1,
+    adventure_party_id: null, adventure_party_name: null, ...opts }
+}
+
+describe('placementByChar', () => {
+  it('空格（character_id null）不映射', () => {
+    const waves: Wave[] = [{ id: 1, index: 1, group_id: null, round_index: 1, group_index: 1,
+      slots: [pslot(1, null)] }]
+    expect(placementByChar(waves).size).toBe(0)
+  })
+  it('单波占位：正确映射 roundIndex/squadIndex/duty/userId', () => {
+    const waves: Wave[] = [{ id: 1, index: 1, group_id: null, round_index: 2, group_index: 1,
+      slots: [pslot(1, 10, { squad_index: 0, duty: '主C', owner_id: 9 })] }]
+    const m = placementByChar(waves)
+    expect(m.get(10)).toEqual({ roundIndex: 2, groupId: null, groupIndex: 1, squadIndex: 0,
+      duty: '主C', userId: 9 })
+  })
+  it('并行团：映射 groupId/groupIndex', () => {
+    const waves: Wave[] = [{ id: 1, index: 1, group_id: 5, round_index: 1, group_index: 2,
+      slots: [pslot(1, 10, { squad_index: 3, duty: '太阳奶', owner_id: 9 })] }]
+    const m = placementByChar(waves)
+    expect(m.get(10)!.groupId).toBe(5)
+    expect(m.get(10)!.groupIndex).toBe(2)
+    expect(m.get(10)!.squadIndex).toBe(3)
+  })
+  it('多角色多波各自映射', () => {
+    const waves: Wave[] = [
+      { id: 1, index: 1, group_id: null, round_index: 1, group_index: 1,
+        slots: [pslot(1, 10, { duty: '主C' }), pslot(2, 11, { squad_index: 1, duty: '主奶' })] },
+      { id: 2, index: 2, group_id: null, round_index: 2, group_index: 1,
+        slots: [pslot(3, 12, { duty: '辅C' })] },
+    ]
+    const m = placementByChar(waves)
+    expect(m.size).toBe(3)
+    expect(m.get(11)!.roundIndex).toBe(1)
+    expect(m.get(12)!.roundIndex).toBe(2)
+  })
+  it('空 waves → 空 Map', () => {
+    expect(placementByChar([]).size).toBe(0)
   })
 })

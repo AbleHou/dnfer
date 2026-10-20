@@ -148,3 +148,31 @@ export function rankCandidates(opts: {
   })
   return ranked.sort((a, b) => b.score - a.score || powerValue(b.character) - powerValue(a.character))
 }
+
+/** 角色在整场攻坚的占位信息（后端保证每角色至多占一格）。 */
+export interface CharPlacement {
+  roundIndex: number          // 展示用波数（round_index）
+  groupId: number | null      // 并行团 id；null=独立单波
+  groupIndex: number          // 团号（展示用）
+  squadIndex: number          // 队索引 0..4 → SQUAD_NAMES
+  duty: Duty | null
+  userId: number | null
+}
+
+export function placementByChar(waves: Wave[]): Map<number, CharPlacement> {
+  const m = new Map<number, CharPlacement>()
+  for (const w of waves) {
+    for (const s of w.slots) {
+      if (s.character_id == null) continue
+      m.set(s.character_id, {
+        roundIndex: w.round_index,
+        groupId: w.group_id,
+        groupIndex: w.group_index,
+        squadIndex: s.squad_index,
+        duty: s.duty,
+        userId: s.owner_id,
+      })
+    }
+  }
+  return m
+}
