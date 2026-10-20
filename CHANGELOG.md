@@ -8,6 +8,7 @@
 
 - **投票可删除**：管理员可删除任意投票（进行中或已关闭均可），删除时连同全部选项与实名/匿名票一并清除、不可恢复；删除进行中的投票会立即释放「同时仅一个打开」的名额
 - **亮色主题切换（Apple 金）**：新增一版苹果风格（Apple）的明亮主题——白卡片、系统灰底、圆角留白，同时保留 DNF 金色品牌感与小队配色；顶栏新增 ☀/☾ 一键在暗色与亮色间切换，默认保持暗色（不改变现有体验），个人偏好保存在浏览器本地、刷新不闪烁；naive-ui 组件（按钮 / 输入框 / 弹窗 / 消息 / 确认框）与自定义面板随主题同步换色
+- **编队角色池弹框化 + 位置标签**：编队页左侧常驻角色池改为右下角悬浮按钮打开的居中弹框，小屏更省空间；角色池中「用户头」显示该用户当前波的职责胶囊（队色描边 tag + 职责实心 tag，并行团带团号），「角色行」显示该角色出现的波次标签，均纯展示、角色操作仍在网格表格
 
 ### 变更
 
@@ -18,6 +19,7 @@
 - 后端 `services/votes.py` 新增 `delete_vote`（`db.delete` + commit，依赖 `Vote.options/ballots`、`VoteOption.ballots` 既有 `cascade="all, delete-orphan"` 级联清票，零迁移）+ 管理端点 `DELETE /api/admin/votes/{vid}`（仅管理员，`_vote_or_404` + `require_admin`）
 - 前端 `VoteCard` 新增管理员「删除投票」按钮（`dnf-btn-danger` 危险样式 + confirmDialog 强确认）；`collapsed = ref(!vote.open)` 折叠态（头部整块点击 toggle + `▸/▾` 指示符、操作按钮 `@click.stop` 防冒泡、`watch(vote.open)` 开→关自动收起、5s 轮询刷新不重置）
 - 前端新增模块级单例 `composables/useTheme.ts`（`theme` ref 同时驱动 naive `naiveTheme`/`naiveOverrides` 与 `document.documentElement.dataset.theme`）；`styles/theme.ts` 拆 `darkOverrides`/`lightOverrides` 双套 naive 覆写；`styles/dnf.css` 补全 `--dnf-border`/`--dnf-accent` 变量并新增 `[data-theme="light"]` 亮色变量块与结构覆盖（`.dnf-btn:not(.dnf-btn-primary):not(.dnf-btn-danger)` 排除主/危险按钮、5 队 `slot-cell` 浅色队色底）；`App.vue` 顶栏切换按钮（`data-act="theme-toggle"`）；`lib/notify.ts` 离散 API 的 `configProviderProps` 改为响应式 `computed` 随主题换色；`index.html` 内联脚本防亮色刷新闪烁；新增 `useTheme.spec` / `notify.spec` 测试
+- 前端 `lib/roster.ts` 新增 `CharPlacement` 类型与 `placementByChar` 纯函数（全波次占位映射）；`RosterView` 移除左侧 sticky `<aside>`、新增右下角 FAB + naive `NModal` 承载角色池（拿起即自动关闭）；`RosterPool` 新增 `roundUserPos`/`charPlacement`/`currentRound` props 渲染胶囊与波次标签；`dnf.css` 新增 `.pos-team-N`/`.pos-duty-*`/`.wave-tag` 标签样式与亮色主题覆盖
 
 ## [v1.16] - 2026-10-16
 
