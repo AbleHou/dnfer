@@ -77,6 +77,87 @@ export function computeSquadStatus(slots: Slot[], target: SquadTarget | undefine
            mainHealBuff, mainHealOK, sunHealCount, sunHealOK, slack, issues }
 }
 
+export type OverviewDimKey = 'outputCount' | 'simDamage' | 'mainHealBuff' | 'sunHealCount'
+
+export interface OverviewDim {
+  key: OverviewDimKey
+  label: string
+  actual: number | null
+  min: number | null
+  max: number | null
+  ok: boolean
+  diff: number | null
+}
+
+export interface SquadOverview {
+  filled: number
+  total: number
+  dims: OverviewDim[]
+  slack: boolean
+  ok: boolean
+  issues: string[]
+}
+
+function issueText(d: OverviewDim): string {
+  switch (d.key) {
+    case 'outputCount': return `缺${(d.min ?? 0) - (d.actual ?? 0)}输出`
+    case 'sunHealCount': return '缺太阳奶'
+    case 'mainHealBuff': return d.actual == null ? '缺主奶' : '主奶增益'
+    case 'simDamage':
+      return d.actual != null && d.max != null && d.actual > d.max ? `总伤超${d.actual - d.max}` : `总伤差${(d.min ?? 0) - (d.actual ?? 0)}`
+  }
+}
+
+export function squadOverview(slots: Slot[], target: SquadTarget | undefined): SquadOverview {
+  const filled = slots.filter(s => s.character_id != null)
+  const total = slots.length
+  const slack = filled.some(s => s.duty === '划水') || target?.slack === true
+  const dims: OverviewDim[] = []
+  const push = (d: OverviewDim) => dims.push(d)
+  // 维度始终照算（spec §4.1 划水豁免也要显示维度）；slack 时强制 ok、不产 issues
+  if (target) {
+    if (target.outputs?.count != null) {
+      const actual = filled.filter(s => s.character_class === '输出').length
+      push({ key: 'outputCount', label: '输出', actual, min: target.outputs.count, max: null,
+             ok: actual >= target.outputs.count, diff: actual - target.outputs.count })
+    }
+    if (target.outputs?.simMin != null || target.outputs?.simMax != null) {
+      const actual = sumSquadDamage(filled).simulated
+      const min = target.outputs.simMin ?? null
+      const max = target.outputs.simMax ?? null
+      const ok = (min == null || actual >= min) && (max == null || actual <= max)
+      let diff: number | null = null
+      if (actual != null) {
+        if (!ok) diff = min != null && actual < min ? actual - min : (max != null && actual > max ? actual - max : null)
+        else diff = min != null ? actual - min : (max != null ? actual - max : null)
+      }
+      push({ key: 'simDamage', label: '总伤', actual, min, max, ok, diff })
+    }
+    if (target.mainHeal?.buffMin != null || target.mainHeal?.buffMax != null) {
+      const mainHeal = filled.find(s => s.duty === '主奶')
+      const actual = mainHeal?.buff_amount ?? null
+      const min = target.mainHeal.buffMin ?? null
+      const max = target.mainHeal.buffMax ?? null
+      const ok = actual != null && (min == null || actual >= min) && (max == null || actual <= max)
+      let diff: number | null = null
+      if (actual != null) {
+        if (!ok) diff = min != null && actual < min ? actual - min : (max != null && actual > max ? actual - max : null)
+        else diff = min != null ? actual - min : (max != null ? actual - max : null)
+      }
+      push({ key: 'mainHealBuff', label: '主奶增益', actual, min, max, ok, diff })
+    }
+    if (target.sunHeal?.count != null) {
+      const actual = filled.filter(s => s.duty === '太阳奶').length
+      push({ key: 'sunHealCount', label: '太阳奶', actual, min: target.sunHeal.count, max: null,
+             ok: actual >= target.sunHeal.count, diff: actual - target.sunHeal.count })
+    }
+  }
+  const issues: string[] = []
+  if (!slack) for (const d of dims) if (!d.ok) issues.push(issueText(d))
+  if (slack) for (const d of dims) d.ok = true
+  return { filled: filled.length, total, dims, slack, ok: slack || dims.every(d => d.ok), issues }
+}
+
 export interface RankedCandidate {
   character: Character
   score: number

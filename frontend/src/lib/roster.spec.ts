@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { loadTargets, saveTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower, placementByChar } from './roster'
+import { loadTargets, saveTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
 import type { ClassType, Slot, Character, Wave } from '../types'
 
 function slot(duty: string | null, classType: ClassType | null = '输出'): Slot {
@@ -57,6 +57,74 @@ function os(sim: number | null, duty: string | null = '主C', buff: number | nul
 function aux(duty: string, buff: number | null, sun: number | null = null): Slot {
   return { ...slot(duty, '辅助'), simulated_damage: null, sustained_dps: null, buff_amount: buff, sun_buff: sun }
 }
+
+describe('squadOverview 总览（新引擎）', () => {
+  const target = {
+    outputs: { count: 2, simMin: 20000, simMax: 25000 },
+    mainHeal: { buffMin: 45000, buffMax: 48000 },
+    sunHeal: { count: 1 },
+  }
+  it('无模板 → dims 空、ok、issues 空', () => {
+    const ov = squadOverview([os(12000)], undefined)
+    expect(ov.dims).toEqual([]); expect(ov.ok).toBe(true); expect(ov.issues).toEqual([])
+  })
+  it('全达标 → 各维度 ok 且 diff 为超出量', () => {
+    const ov = squadOverview([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+    expect(ov.ok).toBe(true)
+    const sim = ov.dims.find(d => d.key === 'simDamage')!
+    expect(sim.actual).toBe(22000); expect(sim.ok).toBe(true); expect(sim.diff).toBe(2000) // 22000-20000
+    const heal = ov.dims.find(d => d.key === 'mainHealBuff')!
+    expect(heal.ok).toBe(true); expect(heal.diff).toBe(1000) // 46000-45000
+    const out = ov.dims.find(d => d.key === 'outputCount')!
+    expect(out.ok).toBe(true); expect(out.actual).toBe(2); expect(out.min).toBe(2)
+    const sun = ov.dims.find(d => d.key === 'sunHealCount')!
+    expect(sun.ok).toBe(true); expect(sun.actual).toBe(1)
+  })
+  it('缺输出数 → outputCount !ok、diff 为负缺口、issues 缺N输出', () => {
+    const ov = squadOverview([os(20000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+    const out = ov.dims.find(d => d.key === 'outputCount')!
+    expect(out.ok).toBe(false); expect(out.actual).toBe(1); expect(out.diff).toBe(-1)
+    expect(ov.ok).toBe(false); expect(ov.issues.join()).toContain('缺1输出')
+  })
+  it('总伤低于下限 → simDamage !ok、issues 总伤差', () => {
+    const ov = squadOverview([os(5000), os(5000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+    const sim = ov.dims.find(d => d.key === 'simDamage')!
+    expect(sim.ok).toBe(false); expect(sim.diff).toBe(-10000); expect(ov.issues.join()).toContain('总伤差')
+  })
+  it('总伤高于上限 → simDamage !ok、diff 为正（超限）', () => {
+    const ov = squadOverview([os(15000), os(15000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+    const sim = ov.dims.find(d => d.key === 'simDamage')!
+    expect(sim.ok).toBe(false); expect(sim.diff).toBe(5000); expect(ov.issues.join()).toContain('总伤超')
+  })
+  it('主奶无槽 → mainHealBuff actual null、!ok、issues 缺主奶', () => {
+    const ov = squadOverview([os(12000), os(10000), aux('太阳奶', 0)], target)
+    const heal = ov.dims.find(d => d.key === 'mainHealBuff')!
+    expect(heal.actual).toBeNull(); expect(heal.ok).toBe(false); expect(ov.issues.join()).toContain('缺主奶')
+  })
+  it('缺太阳奶 → sunHealCount !ok、issues 缺太阳奶', () => {
+    const ov = squadOverview([os(12000), os(10000), aux('主奶', 46000)], target)
+    const sun = ov.dims.find(d => d.key === 'sunHealCount')!
+    expect(sun.ok).toBe(false); expect(sun.actual).toBe(0); expect(ov.issues.join()).toContain('缺太阳奶')
+  })
+  it('双界：min+max 同时设时 dim 同时带 min/max（总伤须落在区间内才 ok）', () => {
+    const ov = squadOverview([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+    const sim = ov.dims.find(d => d.key === 'simDamage')!
+    expect(sim.min).toBe(20000); expect(sim.max).toBe(25000)
+    expect(sim.actual).toBe(22000); expect(sim.ok).toBe(true)   // 22000 ∈ [20000, 25000]
+  })
+  it('划水豁免（成员划水）→ slack、ok、issues 空', () => {
+    const ov = squadOverview([os(100, '划水')], target)
+    expect(ov.slack).toBe(true); expect(ov.ok).toBe(true); expect(ov.issues).toEqual([])
+  })
+  it('target.slack=true → 豁免', () => {
+    const ov = squadOverview([os(5000), os(5000), aux('主奶', 40000)], { ...target, slack: true })
+    expect(ov.slack).toBe(true); expect(ov.ok).toBe(true); expect(ov.issues).toEqual([])
+  })
+  it('统计字段 filled/total', () => {
+    const ov = squadOverview([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
+    expect(ov.filled).toBe(4); expect(ov.total).toBe(4)
+  })
+})
 
 describe('computeSquadStatus 达标计算', () => {
   const target = {
