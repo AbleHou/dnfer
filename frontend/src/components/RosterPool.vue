@@ -14,9 +14,9 @@ const props = withDefaults(defineProps<{
   recommendTarget: Record<number, number | null>
   holdingId: number | null
   canEdit: boolean
-  roundUserPos: Map<number, CharPlacement>
-  charPlacement: Map<number, CharPlacement>
-  currentRound: number
+  roundUserPos?: Map<number, CharPlacement>
+  charPlacement?: Map<number, CharPlacement>
+  currentRound?: number
 }>(), {
   recommendTop3: () => new Set(),
   recommendTarget: () => ({}),
