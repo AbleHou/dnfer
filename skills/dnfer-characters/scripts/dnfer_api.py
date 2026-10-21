@@ -5,6 +5,8 @@
   DNFER_API_TOKEN=xxx python dnfer_api.py add <identifier> '<characters_json>'
   DNFER_API_TOKEN=xxx python dnfer_api.py list <identifier>
   DNFER_API_TOKEN=xxx python dnfer_api.py register <QQ号>
+  DNFER_API_TOKEN=xxx python dnfer_api.py stats
+  DNFER_API_TOKEN=xxx python dnfer_api.py search --job weapon_master [--category 鬼剑士] [--class-type 输出] [--with-owner]
 
 身份解析（identifier 可为账号 username 或昵称）：
   默认：昵称优先，404 回退账号
@@ -143,6 +145,37 @@ def cmd_register(identifier: str) -> int:
     return 0
 
 
+def cmd_stats() -> int:
+    result = _request("GET", f"{_base()}/api/public/stats/overview")
+    print(json.dumps(result, ensure_ascii=False))
+    if result.get("ok") is False:
+        print(f"[dnfer] 统计失败：{result.get('error')}", file=sys.stderr)
+        return 1
+    print(f"[dnfer] 共 {result.get('total_users', 0)} 名有效用户", file=sys.stderr)
+    return 0
+
+
+def cmd_search(job: str | None, category: str | None, class_type: str | None,
+               with_owner: bool) -> int:
+    params = []
+    if job:
+        params.append(("job", job))
+    if category:
+        params.append(("category", category))
+    if class_type:
+        params.append(("class_type", class_type))
+    if with_owner:
+        params.append(("with_owner", "true"))
+    query = "&".join(f"{k}={urllib.parse.quote(v)}" for k, v in params)
+    result = _request("GET", f"{_base()}/api/public/stats/characters?{query}")
+    print(json.dumps(result, ensure_ascii=False))
+    if result.get("ok") is False:
+        print(f"[dnfer] 查询失败：{result.get('error')}", file=sys.stderr)
+        return 1
+    print(f"[dnfer] 找到 {result.get('total', 0)} 个匹配角色", file=sys.stderr)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="DNfer 机器人 API 助手")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -168,6 +201,14 @@ def main() -> int:
     p_register = sub.add_parser("register", help="按 QQ 号免码注册（账号=密码=昵称=QQ号）")
     p_register.add_argument("identifier", help="纯数字 QQ 号，如 872557240")
 
+    sub.add_parser("stats", help="统计总览（有效用户数 + 每用户角色数 + 职业分布）")
+
+    p_search = sub.add_parser("search", help="按职业/大类/输出·辅助查询角色清单")
+    p_search.add_argument("--job", help="职业 code 或精确 title，如 weapon_master / 极诣·剑魂")
+    p_search.add_argument("--category", help="职业大类 code 或 title 前缀，如 swordman_male / 鬼剑士")
+    p_search.add_argument("--class-type", help="输出 或 辅助")
+    p_search.add_argument("--with-owner", action="store_true", help="携带所属玩家昵称")
+
     args = parser.parse_args()
     if args.cmd == "add":
         return cmd_add(args.identifier, args.characters_json,
@@ -176,6 +217,10 @@ def main() -> int:
         return cmd_list(args.identifier, args.by_nickname, args.by_account)
     if args.cmd == "register":
         return cmd_register(args.identifier)
+    if args.cmd == "stats":
+        return cmd_stats()
+    if args.cmd == "search":
+        return cmd_search(args.job, args.category, args.class_type, args.with_owner)
     return 2
 
 
