@@ -12,7 +12,7 @@ import {
   inferFillDuty, loadTargets, placementByChar, recommendFillers, saveTargets, squadSlotsOf,
   RECOMMEND_KEY,
 } from '../lib/roster'
-import type { CharPlacement, SquadTarget, SquadTargets } from '../lib/roster'
+import type { CharPlacement, RecommendMap, SquadTarget, SquadTargets } from '../lib/roster'
 import RosterPool from '../components/RosterPool.vue'
 import RosterGrid from '../components/RosterGrid.vue'
 import RosterTargetModal from '../components/RosterTargetModal.vue'
@@ -86,8 +86,8 @@ const candidates = computed<Character[]>(() =>
 const suggestions = computed(() => recommendOn.value ? recommendFillers({
   candidates: candidates.value, groups: currentGroups.value, targets: targets.value,
 }) : [])
-const recommend = computed<Record<number, { roundIndex: number; groupIndex: number | null; squadIndex: number }>>(() => {
-  const m: Record<number, { roundIndex: number; groupIndex: number | null; squadIndex: number }> = {}
+const recommend = computed<RecommendMap>(() => {
+  const m: RecommendMap = {}
   for (const s of suggestions.value) m[s.character.id] = { roundIndex: s.roundIndex, groupIndex: s.groupIndex, squadIndex: s.squadIndex }
   return m
 })

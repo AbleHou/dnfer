@@ -3,14 +3,14 @@ import { computed, ref } from 'vue'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import { sortByPower } from '../lib/roster'
-import type { CharPlacement } from '../lib/roster'
+import type { CharPlacement, RecommendMap } from '../lib/roster'
 import type { Character, Duty, RaidSignup, User } from '../types'
 
 const props = withDefaults(defineProps<{
   signups: RaidSignup[]
   blockedCharIds: Set<number>
   slackCharIds: Set<number>
-  recommend?: Record<number, { roundIndex: number; groupIndex: number | null; squadIndex: number }>
+  recommend?: RecommendMap
   holdingId: number | null
   canEdit: boolean
   roundUserPos?: Map<number, CharPlacement>

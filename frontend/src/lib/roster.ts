@@ -182,6 +182,14 @@ export interface SquadSuggestion {
   gap: number
 }
 
+/** 推荐目标：推荐某角色去补的（波/团/队）位置；groupIndex 为 null 表示独立单波（spec §4.2）。 */
+export interface RecommendTarget {
+  roundIndex: number
+  groupIndex: number | null
+  squadIndex: number
+}
+export type RecommendMap = Record<number, RecommendTarget>
+
 /** 队伍缺口分：count 类按缺失个数，连续类(总伤/主奶)各 +1。与旧 squadGap 语义一致。 */
 function gapScore(ov: SquadOverview): number {
   let gap = 0
@@ -254,7 +262,8 @@ export function recommendFillers(opts: {
     if (!pick) continue
     used.add(pick.id)
     out.push({ character: pick, waveId: t.wave.id, roundIndex: t.wave.round_index,
-               groupIndex: t.wave.group_index, squadIndex: t.squadIndex, gap: t.gap })
+               groupIndex: t.wave.group_id == null ? null : t.wave.group_index,
+               squadIndex: t.squadIndex, gap: t.gap })
   }
   return out.sort((a, b) => b.gap - a.gap || powerValue(b.character) - powerValue(a.character)).slice(0, 6)
 }

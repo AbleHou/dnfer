@@ -152,7 +152,7 @@ describe('RosterView', () => {
     await flushPromises()
     await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-act="pool-char-10"]').text()).toContain('推荐')  // 剑魂缺口>0
+    expect(wrapper.find('[data-act="pool-char-10"]').text()).toContain('推荐→红队')  // 剑魂缺口>0；单波 → 红队（spec §4.2）
     wrapper.findComponent({ name: 'Switch' }).vm.$emit('update:value', false)
     await flushPromises()
     expect(localStorage.getItem('dnfer-roster-recommend')).toBe('0')
