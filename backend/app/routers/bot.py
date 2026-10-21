@@ -1,7 +1,7 @@
 import re
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -9,9 +9,11 @@ from .. import jobs as job_data
 from ..auth import hash_password, require_api_token
 from ..db import get_db
 from ..models import AdventureParty, Character, RaidSignup, User
-from ..schemas import (BotCharacterList, BotCharacterResult, BotCharactersIn,
-                       BotCharactersOut, BotRegisterIn, BotSignupIn, PublicVoteBallotIn,
-                       UserOut, VoteDetail, VoteListItem)
+from ..schemas import (BotCategoryCount, BotCharacterList, BotCharacterResult,
+                       BotCharactersIn, BotCharactersOut, BotClassTypeCount,
+                       BotJobCount, BotRegisterIn, BotSignupIn, BotStatsOverview,
+                       BotUserCharCount, PublicVoteBallotIn, UserOut, VoteDetail,
+                       VoteListItem)
 from ..routers.raids import (_raid_or_404, _reject_if_closed, _remove_signup,
                              _signup_characters, _signup_user)
 from ..services.characters import character_out
@@ -102,6 +104,49 @@ def list_characters(account: str | None = None, nickname: str | None = None,
                        .order_by(Character.id)).all()
     return BotCharacterList(account=user.username, nickname=user.nickname,
                             characters=[character_out(c) for c in chars])
+
+@router.get("/stats/overview", response_model=BotStatsOverview)
+def stats_overview(db: Session = Depends(get_db)):
+    valid = db.query(User).filter(User.is_banned.is_(False),
+                                  User.is_guest.is_(False)).all()
+    valid_ids = [u.id for u in valid]
+
+    counts = dict(db.query(Character.user_id, func.count())
+                  .filter(Character.user_id.in_(valid_ids))
+                  .group_by(Character.user_id).all())
+    users = sorted(
+        (BotUserCharCount(nickname=u.nickname, character_count=counts.get(u.id, 0))
+         for u in valid),
+        key=lambda r: (-r.character_count, r.nickname),
+    )
+
+    rows = db.query(Character.job_name, Character.class_type, func.count()) \
+        .filter(Character.user_id.in_(valid_ids)) \
+        .group_by(Character.job_name, Character.class_type).all()
+    job_totals: dict[str, int] = {}
+    class_totals: dict[str, int] = {}
+    cat_totals: dict[str, int] = {}
+    for job_name, class_type, cnt in rows:
+        job_totals[job_name] = job_totals.get(job_name, 0) + cnt
+        class_totals[class_type] = class_totals.get(class_type, 0) + cnt
+        meta = job_data.job_meta(job_name)
+        parent = meta["parent_name"] if meta else job_name
+        cat_totals[parent] = cat_totals.get(parent, 0) + cnt
+
+    cat_titles = {c["name"]: c["title"] for c in job_data.job_tree()}
+    jobs = sorted(
+        (BotJobCount(job_name=j, job_title=(job_data.job_meta(j) or {"title": j})["title"], count=c)
+         for j, c in job_totals.items()),
+        key=lambda r: (-r.count, r.job_title))
+    categories = sorted(
+        (BotCategoryCount(name=p, title=cat_titles.get(p, p), count=c)
+         for p, c in cat_totals.items()),
+        key=lambda r: (-r.count, r.title))
+    class_types = sorted(
+        (BotClassTypeCount(class_type=t, count=c) for t, c in class_totals.items()),
+        key=lambda r: (-r.count, r.class_type))
+    return BotStatsOverview(total_users=len(valid), users=users,
+                            class_types=class_types, categories=categories, jobs=jobs)
 
 @router.post("/register")
 def register(body: BotRegisterIn, db: Session = Depends(get_db)):

@@ -284,6 +284,31 @@ class BotCharacterList(BaseModel):
     nickname: str
     characters: list[CharacterOut]
 
+class BotUserCharCount(BaseModel):
+    nickname: str
+    character_count: int
+
+class BotClassTypeCount(BaseModel):
+    class_type: str
+    count: int
+
+class BotCategoryCount(BaseModel):
+    name: str      # parent_name code，如 swordman_male
+    title: str     # 大类 title，如 鬼剑士(男)
+    count: int
+
+class BotJobCount(BaseModel):
+    job_name: str
+    job_title: str
+    count: int
+
+class BotStatsOverview(BaseModel):
+    total_users: int
+    users: list[BotUserCharCount]
+    class_types: list[BotClassTypeCount]
+    categories: list[BotCategoryCount]
+    jobs: list[BotJobCount]
+
 class BotRegisterIn(BaseModel):
     identifier: str = Field(min_length=1)
 
