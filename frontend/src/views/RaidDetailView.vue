@@ -14,6 +14,7 @@ import SlotActionModal from '../components/SlotActionModal.vue'
 import { useSlotMove } from '../composables/useSlotMove'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import { buildPlacementMap } from '../lib/placement'
+import { clearTargets } from '../lib/roster'
 import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
@@ -81,7 +82,7 @@ onMounted(() => {
   disconnect = connectRaidWs(rid, {
     onEvent: (ev) => {
       // 已被他人关闭 → 断开 WS 并全量刷新为只读快照（覆盖「停留在开放页时被关闭」场景）
-      if (ev.type === 'raid:closed') { disconnect?.(); cancel(); void load() }
+      if (ev.type === 'raid:closed') { clearTargets(rid); disconnect?.(); cancel(); void load() }
       else applyEvent(store, ev)                  // slot/锁定事件增量合并
     },
     onRefresh: async () => { await load() },      // wave 增删触发全量刷新
@@ -215,6 +216,7 @@ async function onCloseRaid() {
   if (!ok) return
   try {
     await api.post(`/api/raids/${store.raid.id}/close`)
+    clearTargets(store.raid.id)
     notifySuccess('已关闭攻坚')
     await load()
   } catch (e: any) { notifyError(e.message) }

@@ -5,6 +5,7 @@ import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
+import { clearTargets } from '../lib/roster'
 import SignupModal from '../components/SignupModal.vue'
 import type { Dungeon, RaidListItem } from '../types'
 
@@ -55,7 +56,7 @@ async function create() {
 async function onDelete(r: RaidListItem) {
   const ok = await confirmDialog({ content: `确认删除攻坚「${r.name}」？该操作不可恢复` })
   if (!ok) return
-  try { await api.del(`/api/raids/${r.id}`); await load() }
+  try { await api.del(`/api/raids/${r.id}`); clearTargets(r.id); await load() }
   catch (e: any) { notifyError(e.message) }
 }
 

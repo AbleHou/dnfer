@@ -252,6 +252,16 @@ describe('RosterView', () => {
     expect(wrapper.text()).toContain('攻坚已关闭，仅查看')
   })
 
+  it('进入已关闭攻坚：清除该 raid 模板（localStorage + 内存）', async () => {
+    localStorage.setItem('dnfer-roster-targets-1', JSON.stringify({ 0: { outputs: { count: 2 } } }))
+    const snapshot = makeRaid([]); snapshot.closed = true
+    const { wrapper } = await mountView([], admin, snapshot)
+    await flushPromises()
+    expect(localStorage.getItem('dnfer-roster-targets-1')).toBeNull()
+    // 内存 targets 也清空 → 状态条回退「未设目标」（Task 5 起状态条恒渲染）
+    expect(wrapper.find('.roster-squad-status').text()).toContain('未设目标')
+  })
+
   it('直链进入已关闭攻坚：load 后立即断开 WS（不再增量合并）', async () => {
     const snapshot = makeRaid([])
     snapshot.closed = true

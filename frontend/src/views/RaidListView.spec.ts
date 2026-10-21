@@ -123,6 +123,23 @@ describe('RaidListView create form', () => {
     expect(apiMock.del).toHaveBeenCalledWith('/api/raids/3')
   })
 
+  it('删除攻坚成功 → 清除该 raid 模板', async () => {
+    localStorage.setItem('dnfer-roster-targets-3', JSON.stringify({ 0: { outputs: { count: 2 } } }))
+    const pinia = createPinia(); setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.user = { id: 1, username: 'a', nickname: 'A', is_admin: true, avatar: null, is_banned: false, is_guest: false }
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/raids') return [raid] as RaidListItem[]
+      if (url === '/api/dungeons') return dungeons
+      return []
+    })
+    const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text().includes('删除'))!.trigger('click')
+    await flushPromises()
+    expect(localStorage.getItem('dnfer-roster-targets-3')).toBeNull()
+  })
+
   it('cancel keeps the raid', async () => {
     confirmDialogMock.mockResolvedValue(false)
     const pinia = createPinia()

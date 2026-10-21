@@ -499,6 +499,16 @@ describe('RaidDetailView 关闭攻坚', () => {
     expect(apiMock.get).toHaveBeenCalled()   // 成功后 load 刷新
   })
 
+  it('关闭攻坚成功 → 清除该 raid 模板', async () => {
+    localStorage.setItem('dnfer-roster-targets-1', JSON.stringify({ 0: { outputs: { count: 2 } } }))
+    apiMock.post.mockResolvedValueOnce({})
+    const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid([adminRow, memberRow]))
+    await flushPromises()
+    await wrapper.find('[data-test="close-raid"]').trigger('click')
+    await flushPromises()
+    expect(localStorage.getItem('dnfer-roster-targets-1')).toBeNull()
+  })
+
   it('关闭按钮确认框取消则不调用 close', async () => {
     const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid([adminRow, memberRow]))
     await flushPromises()
@@ -516,6 +526,7 @@ describe('RaidDetailView 关闭攻坚', () => {
   })
 
   it('收到 raid:closed 事件断开 WS 并刷新为只读快照', async () => {
+    localStorage.setItem('dnfer-roster-targets-1', JSON.stringify({ 0: { outputs: { count: 2 } } }))
     const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid([adminRow, memberRow]))
     await flushPromises()
     const cb = vi.mocked(connectRaidWs).mock.calls[0][1]
@@ -527,6 +538,7 @@ describe('RaidDetailView 关闭攻坚', () => {
     expect(wrapper.find('[data-test="close-raid"]').exists()).toBe(false)
     // 关闭时清移动态（对齐编队页 holding 清理），防止残留「移动中」提示无法放下
     expect(slotMoveMock.cancel).toHaveBeenCalled()
+    expect(localStorage.getItem('dnfer-roster-targets-1')).toBeNull()
   })
 
   it('closed 攻坚管理角色/取消报名按钮隐藏', async () => {

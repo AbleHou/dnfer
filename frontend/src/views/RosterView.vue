@@ -9,7 +9,7 @@ import { connectRaidWs } from '../api/ws'
 import { buildPlacementMap } from '../lib/placement'
 import { computeSlack } from '../lib/slack'
 import {
-  inferFillDuty, loadTargets, placementByChar, recommendFillers, saveTargets, squadSlotsOf,
+  clearTargets, inferFillDuty, loadTargets, placementByChar, recommendFillers, saveTargets, squadSlotsOf,
   RECOMMEND_KEY,
 } from '../lib/roster'
 import type { CharPlacement, RecommendMap, SquadTarget, SquadTargets } from '../lib/roster'
@@ -175,8 +175,11 @@ function onSaveTarget(t: SquadTarget) {
 
 async function load() {
   await store.load(rid)
-  // 已关闭攻坚为只读快照：拉取后立即断开 WS（覆盖直链进入已关闭页面的场景）
-  if (store.raid?.closed) disconnect?.()
+  if (store.raid?.closed) {
+    clearTargets(rid)
+    targets.value = {}
+    disconnect?.()   // 已关闭攻坚只读快照：断开 WS
+  }
 }
 async function onGuestCreated(u: User, charCount: number) {
   guestOpen.value = false
