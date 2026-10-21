@@ -74,4 +74,10 @@ describe('RosterGrid', () => {
     stub.vm.$emit('place', slot)
     expect(w.emitted('place')?.[0]?.[0]).toBe(slot)
   })
+  it('只设上限且达标：不显示 (差N) 矛盾', () => {
+    const w = mountGrid({ groups: [wave(1, [{ ...out(1, 0), simulated_damage: 20000 }])],
+                          targets: { 0: { outputs: { simMax: 25000 } } } })
+    expect(w.text()).toContain('✓')
+    expect(w.text()).not.toContain('(差')
+  })
 })

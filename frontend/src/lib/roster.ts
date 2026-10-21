@@ -88,7 +88,7 @@ export function squadOverview(slots: Slot[], target: SquadTarget | undefined): S
       let diff: number | null = null
       if (actual != null) {
         if (!ok) diff = min != null && actual < min ? actual - min : (max != null && actual > max ? actual - max : null)
-        else diff = min != null ? actual - min : (max != null ? actual - max : null)
+        else diff = min != null ? actual - min : null
       }
       push({ key: 'simDamage', label: '总伤', actual, min, max, ok, diff })
     }
@@ -101,7 +101,7 @@ export function squadOverview(slots: Slot[], target: SquadTarget | undefined): S
       let diff: number | null = null
       if (actual != null) {
         if (!ok) diff = min != null && actual < min ? actual - min : (max != null && actual > max ? actual - max : null)
-        else diff = min != null ? actual - min : (max != null ? actual - max : null)
+        else diff = min != null ? actual - min : null
       }
       push({ key: 'mainHealBuff', label: '主奶增益', actual, min, max, ok, diff })
     }

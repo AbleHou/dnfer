@@ -142,6 +142,12 @@ describe('squadOverview 总览（新引擎）', () => {
     const ov = squadOverview([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
     expect(ov.filled).toBe(4); expect(ov.total).toBe(4)
   })
+  it('只设上限（simMax）且达标：diff 不为负（无下限不报超出量，避免 ✓(差N)）', () => {
+    const ov = squadOverview([os(20000)], { outputs: { simMax: 25000 } })
+    const sim = ov.dims.find(d => d.key === 'simDamage')!
+    expect(sim.ok).toBe(true)
+    expect(sim.diff).toBeNull()
+  })
 })
 
 const c1: Character = { id: 1, name: '高伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
