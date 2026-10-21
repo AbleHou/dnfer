@@ -34,9 +34,29 @@ describe('RosterGrid', () => {
     const w = mountGrid({ groups: [wave(1, [empty(1, 0)]), wave(2, [empty(2, 0)])] })
     expect(w.findAll('.roster-group').length).toBe(2)
   })
-  it('有目标时队头显示缺口文案', () => {
+  it('有目标时状态条显示维度 实际/目标 + 未达标✗', () => {
     const w = mountGrid({ targets: { 0: { outputs: { count: 2 } } } })
     expect(w.text()).toContain('输出')
+    expect(w.text()).toContain('✗')
+  })
+  it('无目标时显示 未设目标', () => {
+    const w = mountGrid()
+    expect(w.text()).toContain('未设目标')
+  })
+  it('全达标时各维度显示 ✓ 且带超出量', () => {
+    const slots = [
+      { ...out(1, 0), simulated_damage: 12000 },
+      { ...out(2, 0), simulated_damage: 10000 },
+    ]
+    const w = mountGrid({ groups: [wave(1, slots)], targets: { 0: { outputs: { count: 2, simMin: 20000 } } } })
+    expect(w.text()).toContain('✓')
+    expect(w.text()).toContain('(+2000)') // 22000-20000
+  })
+  it('划水豁免：显示 划水豁免 tag、维度照显但不标 ✗', () => {
+    const slots = [{ ...out(1, 0), duty: '划水' as any, simulated_damage: 100 }]
+    const w = mountGrid({ groups: [wave(1, slots)], targets: { 0: { outputs: { count: 2 } } } })
+    expect(w.text()).toContain('划水豁免')
+    expect(w.text()).not.toContain('✗')
   })
   it('编辑目标按钮 emit editTarget', async () => {
     const w = mountGrid()

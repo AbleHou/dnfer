@@ -2,8 +2,8 @@
 import type { Character, Slot, Wave } from '../types'
 import RosterSlot from './RosterSlot.vue'
 import { SQUAD_NAMES } from '../lib/colors'
-import { computeSquadStatus, squadSlotsOf } from '../lib/roster'
-import type { SquadTargets } from '../lib/roster'
+import { squadOverview, squadSlotsOf } from '../lib/roster'
+import type { SquadOverview, SquadTargets } from '../lib/roster'
 
 const props = defineProps<{
   groups: Wave[]           // 当前轮所有并行团
@@ -23,8 +23,17 @@ const emit = defineEmits<{
 function groupLabel(w: Wave): string {
   return w.group_id == null ? `第 ${w.round_index} 波` : `第 ${w.round_index} 波 ${w.group_index} 团`
 }
-function squadsOf(w: Wave): { index: number; slots: Slot[] }[] {
-  return squadSlotsOf(w).map((slots, i) => ({ index: i, slots }))
+function squadsOf(w: Wave): { index: number; slots: Slot[]; overview: SquadOverview }[] {
+  return squadSlotsOf(w).map((slots, i) => ({ index: i, slots, overview: squadOverview(slots, props.targets[i]) }))
+}
+function dimText(d: SquadOverview['dims'][number], slack: boolean): string {
+  const tgt = d.min != null && d.max != null ? `${d.min}~${d.max}` : (d.min ?? d.max) != null ? `${d.min ?? d.max}` : ''
+  let margin = ''
+  // slack 时 squadOverview 强制 ok=true 但保留原始 diff——不输出 margin，避免「✓(差N)」矛盾
+  if (!slack && d.diff != null && d.diff !== 0 && (d.key === 'simDamage' || d.key === 'mainHealBuff')) {
+    margin = d.diff > 0 ? `(+${d.diff})` : `(差${-d.diff})`
+  }
+  return `${d.label} ${d.actual ?? '—'}/${tgt} ${d.ok ? '✓' : '✗'}${margin}`
 }
 </script>
 
@@ -41,12 +50,15 @@ function squadsOf(w: Wave): { index: number; slots: Slot[] }[] {
           <button v-if="canEdit" class="dnf-btn dnf-btn-sm"
                   :data-act="`edit-target-${sq.index}`" @click="emit('editTarget', sq.index)">目标</button>
         </div>
-        <div v-if="targets[sq.index]" class="roster-squad-status"
-             :class="computeSquadStatus(sq.slots, targets[sq.index]).issues.length ? 'warn' : 'ok'">
-          <template v-if="computeSquadStatus(sq.slots, targets[sq.index]).issues.length">
-            {{ computeSquadStatus(sq.slots, targets[sq.index]).issues.join(' · ') }}
+        <div class="roster-squad-status"
+             :class="sq.overview.slack || sq.overview.ok ? 'ok' : 'warn'">
+          <template v-if="!targets[sq.index] || sq.overview.dims.length === 0">未设目标</template>
+          <template v-else>
+            <span v-if="sq.overview.slack" class="dim-slack">划水豁免</span>
+            <span v-if="sq.overview.ok && !sq.overview.slack">达标 ✓ </span>
+            <span v-for="d in sq.overview.dims" :key="d.key"
+                  :class="d.ok ? 'dim-ok' : 'dim-warn'">{{ dimText(d, sq.overview.slack) }}</span>
           </template>
-          <template v-else>达标 ✓</template>
         </div>
         <RosterSlot v-for="s in sq.slots" :key="s.id" :slot="s" :can-edit="canEdit"
                     :drop-target="holding != null && s.character_id == null"
@@ -67,4 +79,6 @@ function squadsOf(w: Wave): { index: number; slots: Slot[] }[] {
 .roster-squad-status { font-size: 12px; padding: 2px 6px; border-radius: 4px; margin-bottom: 6px; }
 .roster-squad-status.warn { color: var(--dnf-danger); }
 .roster-squad-status.ok { color: var(--dnf-ok); }
+.dim-ok { color: var(--dnf-ok, #34c759); }
+.dim-warn { color: var(--dnf-danger, #e5484d); }
 </style>

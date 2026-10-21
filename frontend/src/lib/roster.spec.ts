@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { loadTargets, saveTargets, clearTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, recommendFillers, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
+import { loadTargets, saveTargets, clearTargets, inferFillDuty, RECOMMEND_KEY, recommendFillers, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
 import type { ClassType, Duty, Slot, Character, Wave } from '../types'
 
 function slot(duty: string | null, classType: ClassType | null = '输出'): Slot {
@@ -141,77 +141,6 @@ describe('squadOverview 总览（新引擎）', () => {
   it('统计字段 filled/total', () => {
     const ov = squadOverview([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
     expect(ov.filled).toBe(4); expect(ov.total).toBe(4)
-  })
-})
-
-describe('computeSquadStatus 达标计算', () => {
-  const target = {
-    outputs: { count: 2, simMin: 20000, simMax: 25000 },
-    mainHeal: { buffMin: 45000, buffMax: 48000 },
-    sunHeal: { count: 1 },
-  }
-  it('达标：输出数/总伤/主奶增益/太阳奶全满足', () => {
-    const st = computeSquadStatus([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
-    expect(st.outputOK).toBe(true)
-    expect(st.mainHealOK).toBe(true)
-    expect(st.sunHealOK).toBe(true)
-    expect(st.issues).toEqual([])
-  })
-  it('缺输出数：2/1 → 未达标并有缺口文案', () => {
-    const st = computeSquadStatus([os(20000), aux('主奶', 46000), aux('太阳奶', 0)], target)
-    expect(st.outputOK).toBe(false)
-    expect(st.issues.join()).toContain('输出')
-  })
-  it('总伤低于下限 → 未达标', () => {
-    const st = computeSquadStatus([os(5000), os(5000), aux('主奶', 46000), aux('太阳奶', 0)], target)
-    expect(st.outputOK).toBe(false)
-    expect(st.issues.join()).toContain('总伤')
-  })
-  it('主奶增益低于下限 → 未达标', () => {
-    const st = computeSquadStatus([os(12000), os(10000), aux('主奶', 40000), aux('太阳奶', 0)], target)
-    expect(st.mainHealOK).toBe(false)
-  })
-  it('单边区间：只设 simMin 时 simMax 不限', () => {
-    const st = computeSquadStatus([os(30000), aux('主奶', 46000)], { outputs: { count: 1, simMin: 20000 } })
-    expect(st.outputOK).toBe(true)
-  })
-  it('目标为空对象时视为无要求，全部达标', () => {
-    const st = computeSquadStatus([os(1)], undefined)
-    expect(st.outputOK).toBe(true)
-    expect(st.mainHealOK).toBe(true)
-    expect(st.issues).toEqual([])
-  })
-  it('有划水成员 → 组成要求豁免', () => {
-    const st = computeSquadStatus([os(100, '划水')], target)
-    expect(st.issues).toEqual([])
-  })
-  it('统计字段：filled/total/outputCount/mainHealBuff/sunHealCount', () => {
-    const st = computeSquadStatus([os(12000), os(10000), aux('主奶', 46000), aux('太阳奶', 0)], target)
-    expect(st.filled).toBe(4); expect(st.total).toBe(4)
-    expect(st.outputCount).toBe(2); expect(st.outputTotal).toBe(22000)
-    expect(st.mainHealBuff).toBe(46000); expect(st.sunHealCount).toBe(1)
-  })
-  it('主奶缺失（空 buff）→ mainHealOK=false', () => {
-    const st = computeSquadStatus([os(12000), os(10000), aux('太阳奶', 0)], target)
-    expect(st.mainHealOK).toBe(false)
-    expect(st.issues.join()).toContain('主奶增益')
-  })
-  it('总伤高于上限 → outputOK=false', () => {
-    const st = computeSquadStatus([os(15000), os(15000), aux('主奶', 46000), aux('太阳奶', 0)], target)
-    expect(st.outputOK).toBe(false)
-    expect(st.issues.join()).toContain('总伤')
-  })
-  it('缺太阳奶 → sunHealOK=false', () => {
-    const st = computeSquadStatus([os(12000), os(10000), aux('主奶', 46000)], target)
-    expect(st.sunHealOK).toBe(false)
-    expect(st.issues.join()).toContain('缺太阳奶')
-  })
-  it('target.slack=true → 豁免，即使无划水成员且不满足输出', () => {
-    const st = computeSquadStatus([os(5000), os(5000), aux('主奶', 40000)], { ...target, slack: true })
-    expect(st.issues).toEqual([])
-    expect(st.outputOK).toBe(true)
-    expect(st.mainHealOK).toBe(true)
-    expect(st.sunHealOK).toBe(true)
   })
 })
 
