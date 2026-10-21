@@ -11,9 +11,9 @@ from ..db import get_db
 from ..models import AdventureParty, Character, RaidSignup, User
 from ..schemas import (BotCategoryCount, BotCharacterList, BotCharacterResult,
                        BotCharactersIn, BotCharactersOut, BotClassTypeCount,
-                       BotJobCount, BotRegisterIn, BotSignupIn, BotStatsOverview,
-                       BotUserCharCount, PublicVoteBallotIn, UserOut, VoteDetail,
-                       VoteListItem)
+                       BotJobCount, BotRegisterIn, BotSearchItem, BotSearchResult,
+                       BotSignupIn, BotStatsOverview, BotUserCharCount,
+                       PublicVoteBallotIn, UserOut, VoteDetail, VoteListItem)
 from ..routers.raids import (_raid_or_404, _reject_if_closed, _remove_signup,
                              _signup_characters, _signup_user)
 from ..services.characters import character_out
@@ -105,6 +105,24 @@ def list_characters(account: str | None = None, nickname: str | None = None,
     return BotCharacterList(account=user.username, nickname=user.nickname,
                             characters=[character_out(c) for c in chars])
 
+def _resolve_job(job: str) -> list[str] | None:
+    """按职业 code 或精确 title 解析为 job_name code 列表（性别双职业 title 命中多个）。"""
+    if job_data.job_meta(job) is not None:
+        return [job]
+    codes = [c["name"] for cat in job_data.job_tree()
+             for c in cat["children"] if c["title"] == job]
+    return codes or None
+
+
+def _resolve_category(category: str) -> list[str] | None:
+    """按大类 code 或 title 前缀解析为一组 job_name code（鬼剑士 → 男/女两个大类）。"""
+    codes: list[str] = []
+    for cat in job_data.job_tree():
+        if cat["name"] == category or cat["title"].startswith(category):
+            codes.extend(c["name"] for c in cat["children"])
+    return codes or None
+
+
 @router.get("/stats/overview", response_model=BotStatsOverview)
 def stats_overview(db: Session = Depends(get_db)):
     valid = db.query(User).filter(User.is_banned.is_(False),
@@ -147,6 +165,34 @@ def stats_overview(db: Session = Depends(get_db)):
         key=lambda r: (-r.count, r.class_type))
     return BotStatsOverview(total_users=len(valid), users=users,
                             class_types=class_types, categories=categories, jobs=jobs)
+
+@router.get("/stats/characters", response_model=BotSearchResult)
+def stats_characters(job: str | None = None, category: str | None = None,
+                     class_type: str | None = None, with_owner: bool = False,
+                     db: Session = Depends(get_db)):
+    if job is None and category is None and class_type is None:
+        raise HTTPException(400, "job/category/class_type 至少提供一个")
+    if class_type is not None and class_type not in ("输出", "辅助"):
+        raise HTTPException(400, "职业类别无效")
+    q = db.query(Character).join(Character.owner).filter(
+        User.is_banned.is_(False), User.is_guest.is_(False))
+    if job is not None:
+        codes = _resolve_job(job)
+        if not codes:
+            raise HTTPException(400, "职业不存在")
+        q = q.filter(Character.job_name.in_(codes))
+    if category is not None:
+        codes = _resolve_category(category)
+        if not codes:
+            raise HTTPException(400, "职业类别不存在")
+        q = q.filter(Character.job_name.in_(codes))
+    if class_type is not None:
+        q = q.filter(Character.class_type == class_type)
+    rows = q.order_by(Character.fame.desc(), Character.id.asc()).all()
+    items = [BotSearchItem(**character_out(c).model_dump(),
+                           owner_nickname=c.owner.nickname if with_owner else None)
+             for c in rows]
+    return BotSearchResult(items=items, total=len(items))
 
 @router.post("/register")
 def register(body: BotRegisterIn, db: Session = Depends(get_db)):

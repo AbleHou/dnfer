@@ -71,3 +71,113 @@ def test_overview_users_include_zero_char_user(client):
         {"nickname": "没角色", "character_count": 0},   # 没 < 群（码点序）
         {"nickname": "群主", "character_count": 0},
     ]
+
+
+def _mk_sword(client, account, nickname, job="weapon_master", fame=200000):
+    register_user(client, account, nickname)
+    _bot_add(client, account, [{"name": "剑", "job_name": job, "fame": fame}])
+
+
+def test_characters_by_job_code_and_title(client):
+    _mk_sword(client, "a1", "甲")
+    _mk_sword(client, "a2", "乙", job="berserker", fame=300000)
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"job": "weapon_master"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 1
+    assert body["items"][0]["job_name"] == "weapon_master"
+    assert body["items"][0]["owner_nickname"] is None  # 默认不带玩家信息
+    # title 精确匹配同样命中
+    r2 = client.get("/api/public/stats/characters", headers=TOKEN,
+                    params={"job": "极诣·剑魂"})
+    assert r2.json()["total"] == 1
+
+
+def test_characters_gender_split_title(client):
+    _mk_sword(client, "a1", "甲", job="crusader_male", fame=100000)
+    _mk_sword(client, "a2", "乙", job="crusader_female", fame=100000)
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"job": "光启·光明骑士"})
+    assert r.status_code == 200
+    assert r.json()["total"] == 2  # 男+女两个 code 都命中
+    jobs = {i["job_name"] for i in r.json()["items"]}
+    assert jobs == {"crusader_male", "crusader_female"}
+
+
+def test_characters_by_category_name_and_prefix(client):
+    _mk_sword(client, "a1", "甲", job="weapon_master", fame=100000)   # swordman_male 鬼剑士(男)
+    _mk_sword(client, "a2", "乙", job="sword_master", fame=100000)    # swordman_female 鬼剑士(女)
+    _mk_sword(client, "a3", "丙", job="berserker", fame=100000)       # swordman_male
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"category": "swordman_female"})
+    assert r.json()["total"] == 1
+    # title 前缀「鬼剑士」命中男女两个大类
+    r2 = client.get("/api/public/stats/characters", headers=TOKEN,
+                    params={"category": "鬼剑士"})
+    assert r2.json()["total"] == 3
+
+
+def test_characters_by_class_type(client):
+    _mk_sword(client, "a1", "甲", job="weapon_master", fame=100000)   # 输出
+    _mk_sword(client, "a2", "乙", job="crusader_female", fame=100000) # 辅助
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"class_type": "输出"})
+    assert r.json()["total"] == 1
+    assert r.json()["items"][0]["job_name"] == "weapon_master"
+
+
+def test_characters_filters_combine_with_and(client):
+    _mk_sword(client, "a1", "甲", job="weapon_master", fame=100000)    # swordman_male/输出
+    _mk_sword(client, "a2", "乙", job="crusader_female", fame=100000)  # priest_female/辅助
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"category": "swordman_male", "class_type": "输出"})
+    assert r.json()["total"] == 1  # AND：大类与输出 同时命中才计入
+    r2 = client.get("/api/public/stats/characters", headers=TOKEN,
+                    params={"category": "swordman_male", "class_type": "辅助"})
+    assert r2.json()["total"] == 0  # swordman_male 无辅助 → 交集为空
+
+
+def test_characters_with_owner_flag(client):
+    _mk_sword(client, "a1", "甲")
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"job": "weapon_master", "with_owner": "true"})
+    body = r.json()
+    assert body["items"][0]["owner_nickname"] == "甲"
+
+
+def test_characters_sorted_by_fame_desc(client):
+    _mk_sword(client, "a1", "甲", fame=100000)
+    _mk_sword(client, "a2", "乙", fame=500000)
+    _mk_sword(client, "a3", "丙", fame=300000)
+    body = client.get("/api/public/stats/characters", headers=TOKEN,
+                      params={"job": "weapon_master"}).json()
+    fames = [i["fame"] for i in body["items"]]
+    assert fames == [500000, 300000, 100000]
+
+
+def test_characters_excludes_guest_and_banned(client, admin_headers):
+    _mk_sword(client, "a1", "甲")
+    g = client.post("/api/admin/users", headers=admin_headers,
+                    json={"nickname": "来客", "characters": [{"name": "剑", "job_name": "weapon_master"}]})
+    gu = g.json()["user"]
+    b = client.post("/api/admin/users", headers=admin_headers,
+                    json={"nickname": "封客", "characters": [{"name": "剑2", "job_name": "weapon_master"}]})
+    bu = b.json()["user"]
+    client.post(f"/api/admin/users/{bu['id']}/ban", headers=admin_headers)
+    body = client.get("/api/public/stats/characters", headers=TOKEN,
+                      params={"job": "weapon_master"}).json()
+    assert body["total"] == 1  # guest 与封禁用户的角色都被排除
+
+
+def test_characters_validation_errors(client):
+    assert client.get("/api/public/stats/characters", headers=TOKEN).status_code == 400
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"class_type": "坦克"})
+    assert r.status_code == 400 and r.json()["detail"] == "职业类别无效"
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"job": "nope"})
+    assert r.status_code == 400 and r.json()["detail"] == "职业不存在"
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"category": "nope"})
+    assert r.status_code == 400 and r.json()["detail"] == "职业类别不存在"

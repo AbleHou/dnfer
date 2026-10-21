@@ -309,6 +309,13 @@ class BotStatsOverview(BaseModel):
     categories: list[BotCategoryCount]
     jobs: list[BotJobCount]
 
+class BotSearchItem(CharacterOut):
+    owner_nickname: str | None = None   # 仅 with_owner=True 时填充
+
+class BotSearchResult(BaseModel):
+    items: list[BotSearchItem]
+    total: int
+
 class BotRegisterIn(BaseModel):
     identifier: str = Field(min_length=1)
 
