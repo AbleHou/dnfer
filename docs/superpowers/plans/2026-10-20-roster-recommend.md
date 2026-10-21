@@ -855,12 +855,14 @@ Expected: 通过（vue-tsc -b && vite build 无错误）
   - [ ] §4.1：RosterGrid 全维度状态条（Task 5）
   - [ ] §4.2：RosterPool recommend prop + 团号角标（Task 4）
   - [ ] §3.4/§4.3：clearTargets + 4 处 hook（Task 2/6）
-- [ ] **Step 4: 硬化项（Task 3 代码审阅遗留 Minor，酌情处理）**
+- [ ] **Step 4: 硬化项（Task 3/Task 5 代码审阅遗留 Minor，酌情处理）**
   - [ ] `recommendType`：与 simMax 对称地处理 **buffMax 超限**（主奶 buff > buffMax 时不推辅助、返回 null）——决定是否加守卫并补测试
   - [ ] **同 gap tie-break** 补一个测试（当前排序用例都是不同 gap）
   - [ ] `slice(0, 6)` 的魔法数 6 提为具名常量 `MAX_SUGGESTIONS`
   - [ ] tie-break 注释措辞：跨类型比较仅影响输出展示顺序（会被末尾 `out.sort` 重排），不影响角色归属
   - [ ] 可选：`gapScore` 对 buffMax 超限不计缺口（与 simMax 对称）
+  - [ ] `squadOverview` **mainHealBuff 只设上限且达标** 补镜像回归测试（现有只覆盖 simMax 单边；`buffMax` 单边达标 diff 应为 null）
+  - [ ] 清理 `.dim-slack` 悬空 class（RosterGrid 模板用了但无 CSS 规则——要么加样式要么去掉）
 - [ ] **Step 5: 若有遗留问题修复并提交**（如发现 spec 未覆盖场景，回到 Task 处理）
 
 ---
