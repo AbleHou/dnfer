@@ -60,7 +60,7 @@ stdout 成功：`{"account":"872557240","nickname":"872557240"}`
 | 字段 | 规则 |
 |---|---|
 | name（角色名） | 必填，从截图角色名或文字提取 |
-| job_name（职业） | 可见才给（如 `weapon_master` 剑魂、`soul_bender` 鬼泣、`crusader_female` 圣骑士·女）；看不到就**省略**（系统默认极诣·剑魂） |
+| job_name（职业） | 可见才给（如 `weapon_master` 剑魂、`soul_bender` 鬼泣、`crusader_female` 圣骑士·女、`crusader_male` 圣骑士·男）；看不到就**省略**（系统默认极诣·剑魂） |
 | fame（名望） | 可见才给；看不到就**省略**（系统默认 100000） |
 | simulated_damage / sustained_dps | 输出职业的模拟伤害/秒伤，可见才给 |
 | buff_amount | 辅助职业的增益量，可见才给 |
@@ -93,6 +93,26 @@ python scripts/dnfer_api.py list 张三   # 昵称同样可用
 ```
 
 stdout 返回：`{"account":"zhangsan","nickname":"张三","characters":[...]}`
+
+## 统计
+
+群友问「统计 / 有多少人 / 角色分布」时，调用总览；问「统计<职业> / 谁在玩<职业> / 统计输出」时，按职业查角色。
+
+```bash
+# 总览：有效用户数 + 每用户角色数 + 输出/辅助·职业大类·具体职业分布
+python scripts/dnfer_api.py stats
+
+# 按职业 / 职业大类 / 输出·辅助查角色清单；默认不带玩家信息，--with-owner 携带
+python scripts/dnfer_api.py search --job weapon_master
+python scripts/dnfer_api.py search --job 极诣·剑魂
+python scripts/dnfer_api.py search --category 鬼剑士
+python scripts/dnfer_api.py search --category swordman_male
+python scripts/dnfer_api.py search --class-type 输出 --with-owner
+```
+
+- **统计后**：回复有效用户数、输出/辅助各多少、职业大类分布（可补具体职业分布）；群友要时可以列出每用户角色数。
+- **按职业查询后**：列出匹配角色名（默认不带玩家信息）；群友需要知道是谁时用 `--with-owner` 再查；结果为 0 时回复「没有符合条件的角色」。
+- **职业参数**：用职业 code（`weapon_master` 剑魂、`berserker` 狂战、`soul_bender` 鬼泣、`crusader_female` 圣骑士·女、`crusader_male` 圣骑士·男 等）或精确 title（如 `极诣·剑魂`）最稳妥；大类用 code（`swordman_male`）或 title 前缀（`鬼剑士` 会命中男/女两个大类）。
 
 ## 回复群友
 
