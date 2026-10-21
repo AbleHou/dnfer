@@ -42,6 +42,7 @@ const chars: Character[] = [
 
 beforeEach(() => {
   vi.clearAllMocks()
+  localStorage.clear()
   confirmDialogMock.mockResolvedValue(true)
   apiMock.get.mockImplementation(async (url: string) => {
     if (url === '/api/raids') return [] as RaidListItem[]

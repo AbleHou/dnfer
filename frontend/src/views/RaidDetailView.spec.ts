@@ -155,6 +155,7 @@ async function mountParallelView(signups: Raid['signups'], user: User = admin) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  localStorage.clear()
 })
 
 describe('RaidDetailView signup panel', () => {

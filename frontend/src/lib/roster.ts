@@ -164,6 +164,8 @@ function recommendType(slots: Slot[], ov: SquadOverview): '输出' | '辅助' | 
   const heal = dim('mainHealBuff'); const sun = dim('sunHealCount')
   // 注意：超上限判断优先于优先级表——「既超 simMax 又缺输出数」的队也跳过（塞谁都更超，推输出无意义）。这是有意设计，勿改为仍推输出。
   if (sim && !sim.ok && sim.actual != null && sim.max != null && sim.actual > sim.max) return null
+  // 对称：主奶增益超 buffMax（塞谁都更超）同样跳过，不推辅助。
+  if (heal && !heal.ok && heal.actual != null && heal.max != null && heal.actual > heal.max) return null
   if (heal && heal.actual == null) return '辅助'        // 1. 无主奶槽
   if (!slots.some(s => s.duty === '主C')) return '输出'  // 2. 无主C槽
   if (out && !out.ok) return '输出'                      // 3. 缺输出数
@@ -182,6 +184,9 @@ function bestCandidate(candidates: Character[], type: '输出' | '辅助', used:
   return best
 }
 
+/** 最多返回的建议条数。 */
+const MAX_SUGGESTIONS = 6
+
 export function recommendFillers(opts: {
   candidates: Character[]
   groups: Wave[]
@@ -199,7 +204,9 @@ export function recommendFillers(opts: {
       teams.push({ wave: w, squadIndex: si, slots, overview, gap: gapScore(overview) })
     })
   }
-  // 排序：gap 降序；同 gap 按「该队当前类型最强可选候选的战力」降序（确定性）
+  // 排序：gap 降序；同 gap 按「该队推荐类型下最强可选候选的战力」降序（确定性）。
+  // 注意：此处跨类型比较只决定「先处理哪队/展示顺序」（最终 out 还会按 gap+战力重排）；
+  // 角色→队的实际分配由 bestCandidate 在推荐类型内部比较战力，从不跨类型比较。
   teams.sort((a, b) => {
     if (b.gap !== a.gap) return b.gap - a.gap
     const bestPower = (type: '输出' | '辅助' | null): number => {
@@ -221,7 +228,7 @@ export function recommendFillers(opts: {
                groupIndex: t.wave.group_id == null ? null : t.wave.group_index,
                squadIndex: t.squadIndex, gap: t.gap })
   }
-  return out.sort((a, b) => b.gap - a.gap || powerValue(b.character) - powerValue(a.character)).slice(0, 6)
+  return out.sort((a, b) => b.gap - a.gap || powerValue(b.character) - powerValue(a.character)).slice(0, MAX_SUGGESTIONS)
 }
 
 /** 角色在整场攻坚的占位信息（后端保证每角色至多占一格）。 */

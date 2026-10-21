@@ -74,7 +74,7 @@ async function mountView(signups: Raid['signups'], user: User = admin,
   await router.push('/raids/1/roster'); await router.isReady()
   return { wrapper: mount(RosterView, { global: { plugins: [pinia, router],
     stubs: { 'router-link': true, 'router-view': true, DutySelect: true, UserAvatar: true,
-      RosterTargetModal: { name: 'RosterTargetModal', template: '<div />' },
+      RosterTargetModal: { name: 'RosterTargetModal', props: ['open'], template: '<div />' },
       GuestCreateModal: { name: 'GuestCreateModal', template: '<div />' }, teleport: true } } }), auth, store }
 }
 
@@ -284,5 +284,18 @@ describe('RosterView', () => {
     expect(wrapper.text()).toContain('攻坚已关闭，仅查看')
     expect(wrapper.find('[data-test="recommend-switch"]').exists()).toBe(false)
     expect(wrapper.find('.move-hint').exists()).toBe(false)
+  })
+
+  it('收到 raid:closed 事件：关闭正在编辑的目标弹窗', async () => {
+    const { wrapper } = await mountView([adminRow, memberRow], admin, makeRaid([adminRow, memberRow]))
+    await flushPromises()
+    await wrapper.find('[data-act="edit-target-0"]').trigger('click')   // 打开目标弹窗
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'RosterTargetModal' }).props('open')).toBe(true)
+    const cb = vi.mocked(connectRaidWs).mock.calls[0][1]
+    apiMock.get.mockResolvedValueOnce({ ...makeRaid([adminRow, memberRow]), closed: true })
+    cb.onEvent({ type: 'raid:closed' })
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'RosterTargetModal' }).props('open')).toBe(false)
   })
 })

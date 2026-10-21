@@ -164,6 +164,7 @@ async function onDuty(slot: Slot, duty: string) {
 // 模板
 function openTarget(si: number) { targetModal.value = { open: true, squadIndex: si } }
 function onSaveTarget(t: SquadTarget) {
+  if (!canEdit.value) return   // 只读（含攻坚已关闭）时不得保存目标
   const si = targetModal.value.squadIndex
   const next = { ...targets.value }
   if (Object.keys(t).length === 0) delete next[si]
@@ -199,7 +200,7 @@ onMounted(() => {
   disconnect = connectRaidWs(rid, {
     onEvent: (ev) => {
       // 已被他人关闭 → 断开 WS 并全量刷新为只读快照（覆盖「停留在开放页时被关闭」场景）
-      if (ev.type === 'raid:closed') { disconnect?.(); holding.value = null; void load() }
+      if (ev.type === 'raid:closed') { disconnect?.(); holding.value = null; targetModal.value.open = false; void load() }
       else applyEvent(store, ev)                  // slot/锁定事件增量合并
     },
     onRefresh: async () => { await load() },

@@ -148,6 +148,12 @@ describe('squadOverview 总览（新引擎）', () => {
     expect(sim.ok).toBe(true)
     expect(sim.diff).toBeNull()
   })
+  it('只设上限（buffMax）且达标：diff 为 null（对称于 simMax 单边）', () => {
+    const ov = squadOverview([aux('主奶', 46000)], { mainHeal: { buffMax: 48000 } })
+    const heal = ov.dims.find(d => d.key === 'mainHealBuff')!
+    expect(heal.ok).toBe(true)
+    expect(heal.diff).toBeNull()
+  })
 })
 
 const c1: Character = { id: 1, name: '高伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
@@ -220,6 +226,7 @@ describe('recommendFillers 队→候选推荐（新引擎）', () => {
     expect(r.length).toBe(2)
     expect(new Set(r.map(x => x.character.id)).size).toBe(2)
     expect(new Set(r.map(x => x.waveId)).size).toBe(2)
+    expect(r[0].character.id).toBe(c1.id) // 同 gap 建议按战力排序（30000 > 5000）
   })
   it('P3 同一角色只落一条（缺口更大的队优先占用）', () => {
     // wave10 有 1 输出(gap2：缺1输出+总伤差)；wave20 全空(gap3：缺2输出+总伤差)；只有一个候选 c1
@@ -254,6 +261,14 @@ describe('recommendFillers 队→候选推荐（新引擎）', () => {
     const t = { 0: { outputs: { count: 2, simMin: 20000, simMax: 50000 } } }
     const r = recommendFillers({ candidates: [c1], groups: g, targets: t })
     expect(r).toEqual([]) // 输出数已够、总伤 60000 > 50000，塞谁都超 → recommendType 返回 null 跳过
+  })
+  it('主奶增益超上限（buffMax）：塞谁都更超 → 跳过该队（对称于 simMax）', () => {
+    // 队已有 主奶(48000>buffMax47000) + 主C(12000) + 空格；缺 1 输出但有主C槽；
+    // 若走优先级表会推输出——但主奶增益已超上限，塞谁都更超 → buffMax 守卫优先跳过
+    const g = [wave(10, [aux('主奶', 48000), sqSlot(0, true, 12000, '主C'), sqSlot(0, false)])]
+    const t = { 0: { outputs: { count: 2 }, mainHeal: { buffMin: 45000, buffMax: 47000 } } }
+    const r = recommendFillers({ candidates: [c1, healer], groups: g, targets: t })
+    expect(r).toEqual([])
   })
 })
 

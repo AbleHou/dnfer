@@ -54,7 +54,7 @@ function dimText(d: SquadOverview['dims'][number], slack: boolean): string {
              :class="sq.overview.slack || sq.overview.ok ? 'ok' : 'warn'">
           <template v-if="!targets[sq.index] || sq.overview.dims.length === 0">未设目标</template>
           <template v-else>
-            <span v-if="sq.overview.slack" class="dim-slack">划水豁免</span>
+            <span v-if="sq.overview.slack">划水豁免</span>
             <span v-if="sq.overview.ok && !sq.overview.slack">达标 ✓ </span>
             <span v-for="d in sq.overview.dims" :key="d.key"
                   :class="d.ok ? 'dim-ok' : 'dim-warn'">{{ dimText(d, sq.overview.slack) }}</span>
