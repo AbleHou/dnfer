@@ -863,6 +863,8 @@ Expected: 通过（vue-tsc -b && vite build 无错误）
   - [ ] 可选：`gapScore` 对 buffMax 超限不计缺口（与 simMax 对称）
   - [ ] `squadOverview` **mainHealBuff 只设上限且达标** 补镜像回归测试（现有只覆盖 simMax 单边；`buffMax` 单边达标 diff 应为 null）
   - [ ] 清理 `.dim-slack` 悬空 class（RosterGrid 模板用了但无 CSS 规则——要么加样式要么去掉）
+  - [ ] **Task 6 审阅 Important**：RosterView WS `raid:closed` 时关闭 `targetModal.value.open`（正在编辑的目标弹窗 WS 关闭后仍开着，点保存会把模板写回 localStorage 重新泄漏）+ `onSaveTarget` 加 `!canEdit` 早退守卫 + 测试
+  - [ ] **Task 6 审阅 Minor**：RaidDetailView.spec / RaidListView.spec 的 `beforeEach` 加 `localStorage.clear()`（防模板 key 跨用例泄漏）
 - [ ] **Step 5: 若有遗留问题修复并提交**（如发现 spec 未覆盖场景，回到 Task 处理）
 
 ---
