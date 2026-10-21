@@ -46,12 +46,13 @@
 **查询参数**：
 | 参数 | 说明 |
 |---|---|
-| `job` | 职业 code（`weapon_master`）**或**精确 title（`极诣·剑魂`）；解析为 job_name 后过滤 `Character.job_name` |
+| `job` | 职业 code（`weapon_master`）**或**精确 title（`极诣·剑魂`）；解析为 **job_name 列表**后过滤 `Character.job_name.in_(...)`（性别双职业 title 如 `光启·光明骑士` 命中 crusader_male + crusader_female 两个 code） |
 | `category` | 大类 code（`swordman_male`）**或** title **前缀**（`鬼剑士` 命中男/女两个大类）；解析为一组 job_name 后过滤 |
 | `class_type` | `输出`/`辅助`，非法值 → 400「职业类别无效」（对齐 admin `query_characters`） |
 | `with_owner` | bool，默认 false；true 时每个 item 补 `owner_nickname` |
 
 - **至少给一个筛选**（job/category/class_type），否则 400「job/category/class_type 至少提供一个」。
+- **多筛选组合为 AND 语义**：同时给 job + category + class_type 时，依次叠加过滤。
 - 非法 job → 400「职业不存在」；非法 category → 400「职业类别不存在」。
 - 只查有效用户的角色（`Character.user_id.in_(有效用户 id)`）。
 - 排序：`fame` 降序、`Character.id` 升序。
@@ -97,7 +98,10 @@ class BotSearchResult(BaseModel):
 
 ### 3.4 职业/类别解析助手（bot.py 内私有函数）
 
-- `_resolve_job(job: str) -> str | None`：`job_meta(job)` 非 None → 直接是 code；否则遍历 `job_tree()` 找 title 精确匹配的 code；都未命中 → None。
+- `_resolve_job(job: str) -> list[str] | None`：返回匹配的 **job_name code 列表**（过滤用 `Character.job_name.in_(codes)`）——
+  - `job_meta(job)` 非 None → 是 code，返回 `[job]`；
+  - 否则遍历 `job_tree()` 找 title 精确匹配的所有 child，返回全部 code（**性别双职业 title 如 `光启·光明骑士` 命中 crusader_male + crusader_female 两个**）；
+  - 都未命中 → None。
 - `_resolve_category(category: str) -> list[str] | None`：遍历 `job_tree()`，`cat["name"] == category` 或 `cat["title"].startswith(category)` 的大类，收集其 children 的 `job_name` 列表；无匹配 → None。
 
 ## 4. 脚本设计（`scripts/dnfer_api.py` 新增两个子命令）
@@ -115,8 +119,9 @@ python scripts/dnfer_api.py search --class-type 输出 --with-owner
 ```
 
 - `stats`：GET `/api/public/stats/overview`，stdout 全量 JSON，stderr 中文摘要（如 `[dnfer] 共 12 名有效用户，85 个角色`）。
-- `search`：`--job`/`--category`/`--class-type` 三个互斥组参数（可组合，至少一个），`--with-owner` 布尔开关；GET `/api/public/stats/characters`，stdout 全量 JSON，stderr 中文摘要（如 `[dnfer] 找到 3 个极诣·剑魂角色`）。
+- `search`：`--job`/`--category`/`--class-type` 均为**可选值参数，不做 argparse 互斥、不做 required**（「至少一个筛选」由后端校验，无筛选会到达后端并得 400）；`--with-owner` 布尔开关；GET `/api/public/stats/characters`，stdout 全量 JSON，stderr 中文摘要（如 `[dnfer] 找到 3 个匹配角色`）。
 - 沿用现有 `_request`/`_base`/`_token`，零新增依赖；非 2xx 错误沿用 `{"ok": false, ...}` 约定。
+- **脚本模块 docstring 顶部「用法」块同步更新**，补 `stats`/`search` 示例（对齐 SKILL.md/README）。
 
 ## 5. SKILL.md / README 更新
 
@@ -139,18 +144,19 @@ python scripts/dnfer_api.py search --class-type 输出 --with-owner
   - `class_types`/`categories`/`jobs` 三粒度计数正确（title 映射正确）。
 - **characters**：
   - 按 job code / job title 过滤正确。
+  - **性别双职业 title**（如 `--job 光启·光明骑士`）同时命中 crusader_male 与 crusader_female 的角色。
   - 按 category code / title 前缀（`鬼剑士` 命中男女）过滤正确。
   - 按 class_type 过滤正确；非法 class_type → 400。
   - 无筛选 → 400；非法 job → 400「职业不存在」；非法 category → 400「职业类别不存在」。
   - `with_owner=True` 补 `owner_nickname`；默认不携带（owner_nickname 为 null）。
   - guest / 封禁用户的角色被排除。
   - fame 降序排列。
-- 建数用 bot `POST /api/public/characters`；guest 用 admin `POST /api/admin/users`；封禁用 admin `POST /api/admin/users/{uid}/ban`（若 helper 不足，参考现有 guest/ban 测试写法）。
+- 建数用 bot `POST /api/public/characters`；**建 guest / 封禁用户需先以 admin 登录**（`register_user` 返回的是新建用户自己的 token，不是 admin 头）——guest 用 admin `POST /api/admin/users`、封禁用 admin `POST /api/admin/users/{uid}/ban`（若 helper 不足，参考现有 guest/ban 测试写法）。
 
 ### 6.2 脚本 `backend/tests/test_dnfer_api_script.py`（新增，importlib 加载 `dnfer_api.py`）
 - `stats`：monkeypatch `_request` → 断言 URL 为 `/api/public/stats/overview`、GET、返回 overview dict。
-- `search`：断言 URL 与 query 拼装正确——`--job weapon_master`、`--category 鬼剑士`、`--class-type 输出`、`--with-owner` 组合；中文参数经 `urllib.parse.quote`（断言解码后 `toContain` 式校验，对齐既有 list 命令测试语义）。
-- `search` 无筛选参数：脚本允许（后端 400 兜底）或脚本预校验——按「脚本允许、后端兜底」实现，测试断言后端 400 时的 `ok:false` 输出。
+- `search`：断言 URL 与 query 拼装正确——`--job weapon_master`、`--category 鬼剑士`、`--class-type 输出`、`--with-owner` 组合；中文参数经 `urllib.parse.quote`（对齐 `test_dnf_meeting_script.py` 的 monkeypatch `_request` 模式，用 `urllib.parse.unquote(url)` 后 `assert "鬼剑士" in url` 校验中文参数）。
+- `search` 无筛选参数：脚本允许（不做 argparse required/互斥），后端返回 400 → 断言 `ok:false` 输出；`--job`/`--class-type` 组合参数同时传给后端。
 
 ## 7. 非目标（明确排除）
 - 不改数据模型、不加迁移。
