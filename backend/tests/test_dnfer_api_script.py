@@ -27,8 +27,8 @@ def test_search_builds_query(monkeypatch):
         calls.append(url)
         return {"items": [], "total": 0}
     monkeypatch.setattr(dnfer_api, "_request", fake_request)
-    dnfer_api.cmd_search(job="weapon_master", category=None,
-                         class_type="输出", with_owner=True)
+    assert dnfer_api.cmd_search(job="weapon_master", category=None,
+                                class_type="输出", with_owner=True) == 0
     url = calls[0]
     assert url.startswith(f"{DEFAULT_BASE}/api/public/stats/characters?")
     qs = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
@@ -43,9 +43,11 @@ def test_search_chinese_category_quoted(monkeypatch):
         calls.append(url)
         return {"items": [], "total": 0}
     monkeypatch.setattr(dnfer_api, "_request", fake_request)
-    dnfer_api.cmd_search(job=None, category="鬼剑士", class_type=None, with_owner=False)
+    assert dnfer_api.cmd_search(job=None, category="鬼剑士", class_type=None,
+                                with_owner=False) == 0
     url = calls[0]
     assert "鬼剑士" in urllib.parse.unquote(url)
+    assert "鬼剑士" not in url
 
 
 def test_search_no_filter_passes_through(monkeypatch):
