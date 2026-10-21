@@ -112,7 +112,8 @@ python scripts/dnfer_api.py search --class-type 输出 --with-owner
 
 - **统计后**：回复有效用户数、输出/辅助各多少、职业大类分布（可补具体职业分布）；群友要时可以列出每用户角色数。
 - **按职业查询后**：列出匹配角色名（默认不带玩家信息）；群友需要知道是谁时用 `--with-owner` 再查；结果为 0 时回复「没有符合条件的角色」。
-- **职业参数**：用职业 code（`weapon_master` 剑魂、`berserker` 狂战、`soul_bender` 鬼泣、`crusader_female` 圣骑士·女、`crusader_male` 圣骑士·男 等）或精确 title（如 `极诣·剑魂`）最稳妥；大类用 code（`swordman_male`）或 title 前缀（`鬼剑士` 会命中男/女两个大类）。
+- **职业参数**：用职业 code（`weapon_master` 剑魂、`berserker` 狂战、`soul_bender` 鬼泣、`crusader_female` 圣骑士·女、`crusader_male` 圣骑士·男 等）或精确 title（如 `极诣·剑魂`）最稳妥；大类用 code（`swordman_male`）或 title 前缀（`鬼剑士` 会命中男/女两个大类）。群友说的短名（如「剑魂」）需转成 code「weapon_master」或精确 title「极诣·剑魂」再传 `--job`，直接传短名会 400「职业不存在」。
+- **失败回复**：统计/查询报错（如 400「职业不存在」、Token/网络错误）时，按「回复群友」小节的错误约定回复。
 
 ## 回复群友
 
