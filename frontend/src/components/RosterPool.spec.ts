@@ -25,7 +25,7 @@ function mountPool(overrides: Record<string, unknown> = {}) {
   return mount(RosterPool, {
     props: {
       signups, blockedCharIds: new Set<number>(), slackCharIds: new Set<number>(),
-      recommendTop3: new Set<number>(), recommendTarget: {}, holdingId: null, canEdit: true,
+      recommend: {}, holdingId: null, canEdit: true,
       roundUserPos: new Map<number, CharPlacement>(), charPlacement: new Map<number, CharPlacement>(),
       currentRound: 0,
       ...overrides,
@@ -61,15 +61,17 @@ describe('RosterPool', () => {
     expect(w.find('[data-act="pool-char-12"]').text()).toContain('划水')
     expect(w.find('[data-act="pool-char-12"]').classes()).toContain('slack')
   })
-  it('推荐 top3 显示 推荐 角标 + 目标队色', () => {
-    const w = mountPool({ recommendTop3: new Set([10]), recommendTarget: { 10: 0 } })
-    expect(w.find('[data-act="pool-char-10"]').text()).toContain('推荐')
-    expect(w.find('[data-act="pool-char-10"]').text()).toContain('红队')
+  it('推荐角标：单波显示 推荐→红队', () => {
+    const w = mountPool({ recommend: { 10: { roundIndex: 1, groupIndex: null, squadIndex: 0 } } })
+    expect(w.find('[data-act="pool-char-10"]').text()).toContain('推荐→红队')
   })
-  it('推荐但无目标队：只显示 推荐 角标、不显示目标队名', () => {
-    const w = mountPool({ recommendTop3: new Set([11]), recommendTarget: {} })
-    expect(w.find('[data-act="pool-char-11"]').text()).toContain('推荐')
-    expect(w.find('[data-act="pool-char-11"]').text()).not.toContain('→')
+  it('推荐角标：并行团带团号', () => {
+    const w = mountPool({ recommend: { 10: { roundIndex: 1, groupIndex: 2, squadIndex: 0 } } })
+    expect(w.find('[data-act="pool-char-10"]').text()).toContain('推荐→第 1 波 2 团红队')
+  })
+  it('无建议角色不打推荐标', () => {
+    const w = mountPool({ recommend: {} })
+    expect(w.find('[data-act="pool-char-10"]').text()).not.toContain('推荐')
   })
   it('组内按战力降序：高战力角色排前', () => {
     const w = mountPool({ signups: [{ user: u1, created_at: null, characters: [c4, c1] }] })

@@ -9,7 +9,7 @@ import { connectRaidWs } from '../api/ws'
 import { buildPlacementMap } from '../lib/placement'
 import { computeSlack } from '../lib/slack'
 import {
-  inferFillDuty, loadTargets, placementByChar, rankCandidates, saveTargets, squadSlotsOf,
+  inferFillDuty, loadTargets, placementByChar, recommendFillers, saveTargets, squadSlotsOf,
   RECOMMEND_KEY,
 } from '../lib/roster'
 import type { CharPlacement, SquadTarget, SquadTargets } from '../lib/roster'
@@ -83,16 +83,12 @@ const slackCharIds = computed(() =>
 
 const candidates = computed<Character[]>(() =>
   allChars.value.filter(c => !blockedCharIds.value.has(c.id)))
-const ranked = computed(() => rankCandidates({
-  candidates: candidates.value, groups: currentGroups.value,
-  targets: targets.value, recommendOn: recommendOn.value,
-}))
-// 推荐 top3：开关开启时取前 3（无模板时 score 全 0，仍标「推荐」但无目标色，对齐 spec）
-const recommendTop3 = computed<Set<number>>(() =>
-  recommendOn.value ? new Set(ranked.value.slice(0, 3).map(r => r.character.id)) : new Set<number>())
-const recommendTarget = computed<Record<number, number | null>>(() => {
-  const m: Record<number, number | null> = {}
-  for (const r of ranked.value) if (r.score > 0) m[r.character.id] = r.targetSquadIndex
+const suggestions = computed(() => recommendOn.value ? recommendFillers({
+  candidates: candidates.value, groups: currentGroups.value, targets: targets.value,
+}) : [])
+const recommend = computed<Record<number, { roundIndex: number; groupIndex: number | null; squadIndex: number }>>(() => {
+  const m: Record<number, { roundIndex: number; groupIndex: number | null; squadIndex: number }> = {}
+  for (const s of suggestions.value) m[s.character.id] = { roundIndex: s.roundIndex, groupIndex: s.groupIndex, squadIndex: s.squadIndex }
   return m
 })
 
@@ -270,8 +266,7 @@ onBeforeUnmount(() => {
     <n-modal :show="poolOpen" preset="card" title="角色池" style="width:min(380px,92vw)"
              @update:show="(s: boolean) => { if (!s) poolOpen = false }">
       <RosterPool :signups="store.raid.signups" :blocked-char-ids="blockedCharIds"
-                  :slack-char-ids="slackCharIds" :recommend-top3="recommendTop3"
-                  :recommend-target="recommendTarget" :holding-id="holding?.id ?? null"
+                  :slack-char-ids="slackCharIds" :recommend="recommend" :holding-id="holding?.id ?? null"
                   :can-edit="canEdit" :round-user-pos="roundUserPos"
                   :char-placement="charPlacement" :current-round="currentRound"
                   @pick="onPick">

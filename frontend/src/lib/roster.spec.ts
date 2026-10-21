@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { loadTargets, saveTargets, clearTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, rankCandidates, recommendFillers, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
+import { loadTargets, saveTargets, clearTargets, inferFillDuty, RECOMMEND_KEY, computeSquadStatus, recommendFillers, squadSlotsOf, sortByPower, placementByChar, squadOverview } from './roster'
 import type { ClassType, Duty, Slot, Character, Wave } from '../types'
 
 function slot(duty: string | null, classType: ClassType | null = '输出'): Slot {
@@ -319,56 +319,6 @@ describe('recommendFillers 队→候选推荐（新引擎）', () => {
     const t = { 0: { outputs: { count: 2, simMin: 20000, simMax: 50000 } } }
     const r = recommendFillers({ candidates: [c1], groups: g, targets: t })
     expect(r).toEqual([]) // 输出数已够、总伤 60000 > 50000，塞谁都超 → recommendType 返回 null 跳过
-  })
-})
-
-describe('rankCandidates 推荐排序', () => {
-  const targets = { 0: { outputs: { count: 2, simMin: 20000 } } }
-  const group = [wave(10, [os(5000)])]  // 红队(0)已有 1 输出 5000，缺 1 输出
-  it('推荐开关开 + 有模板：同队缺口相同 → 按战力 tie-break，高伤排前，目标队红队(0)', () => {
-    const r = rankCandidates({ candidates: [c2, c1], groups: group, targets, recommendOn: true })
-    expect(r[0].character.id).toBe(1)
-    expect(r[1].character.id).toBe(2)
-    expect(r[0].score).toBe(r[1].score)  // 缺口分是队伍缺口（候选无关），同队同分
-    expect(r[0].score).toBeGreaterThan(0)
-    expect(r[0].targetSquadIndex).toBe(0)
-  })
-  it('推荐开关关：按战力排序、score 为 0、无目标队', () => {
-    const r = rankCandidates({ candidates: [c2, c1], groups: group, targets, recommendOn: false })
-    expect(r.map(x => x.character.id)).toEqual([1, 2])
-    expect(r.every(x => x.score === 0 && x.targetSquadIndex === null)).toBe(true)
-  })
-  it('无模板：全 score 0、按战力排序、无目标队', () => {
-    const r = rankCandidates({ candidates: [c2, c1], groups: group, targets: {}, recommendOn: true })
-    expect(r.map(x => x.character.id)).toEqual([1, 2])
-    expect(r.every(x => x.score === 0 && x.targetSquadIndex === null)).toBe(true)
-  })
-  it('辅助角色 → 推荐到缺主奶的队', () => {
-    const t = { 0: { mainHeal: { buffMin: 45000 } } }
-    const g = [wave(10, [os(5000)])]  // 红队无主奶
-    const r = rankCandidates({ candidates: [healer], groups: g, targets: t, recommendOn: true })
-    expect(r[0].targetSquadIndex).toBe(0)
-    expect(r[0].score).toBeGreaterThan(0)
-  })
-  it('并行团：取缺口更大的团（跨 wave 比较）', () => {
-    const g2 = [wave(10, [os(5000)]), wave(20, [os(30000)])]  // 团1(wave 10)红队缺1输出，团2(wave 20)已满
-    const r = rankCandidates({ candidates: [c1], groups: g2, targets, recommendOn: true })
-    expect(r[0].targetWaveId).toBe(10)
-    expect(r[0].score).toBeGreaterThan(0)
-  })
-  it('输出数已够但总伤不足下限 → 输出候选仍可匹配该队（缺总伤场景）', () => {
-    const t = { 0: { outputs: { count: 2, simMin: 20000 } } }
-    const g = [wave(10, [os(5000, '主C'), os(5000, '辅C')])]  // 已有 2 输出 + 主C，但总伤 10000 < 20000
-    const r = rankCandidates({ candidates: [c1], groups: g, targets: t, recommendOn: true })
-    expect(r[0].targetSquadIndex).toBe(0)
-    expect(r[0].score).toBeGreaterThan(0)
-  })
-  it('队内有划水成员 → 不再推荐到该队（与达标豁免一致）', () => {
-    const t = { 0: { outputs: { count: 2 } } }
-    const g = [wave(10, [os(100, '划水')])]  // 已有划水成员 → 豁免
-    const r = rankCandidates({ candidates: [c1], groups: g, targets: t, recommendOn: true })
-    expect(r[0].score).toBe(0)
-    expect(r[0].targetSquadIndex).toBeNull()
   })
 })
 

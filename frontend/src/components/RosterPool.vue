@@ -10,16 +10,14 @@ const props = withDefaults(defineProps<{
   signups: RaidSignup[]
   blockedCharIds: Set<number>
   slackCharIds: Set<number>
-  recommendTop3: Set<number>
-  recommendTarget: Record<number, number | null>
+  recommend?: Record<number, { roundIndex: number; groupIndex: number | null; squadIndex: number }>
   holdingId: number | null
   canEdit: boolean
   roundUserPos?: Map<number, CharPlacement>
   charPlacement?: Map<number, CharPlacement>
   currentRound?: number
 }>(), {
-  recommendTop3: () => new Set(),
-  recommendTarget: () => ({}),
+  recommend: () => ({}),
   roundUserPos: () => new Map(),
   charPlacement: () => new Map(),
   currentRound: 0,
@@ -85,6 +83,12 @@ function powerText(c: Character): string {
 function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c.id)) emit('pick', c) }
 
 function squadName(si: number): string { return SQUAD_NAMES[si] ?? `队${si + 1}` }
+function recText(cid: number): string {
+  const r = props.recommend[cid]
+  if (!r) return ''
+  const squad = squadName(r.squadIndex)
+  return r.groupIndex != null ? `→第 ${r.roundIndex} 波 ${r.groupIndex} 团${squad}` : `→${squad}`
+}
 function dutyClass(d: Duty | null): string {
   switch (d) {
     case '主C': return 'mainc'
@@ -146,9 +150,7 @@ function cPos(cid: number): CharPlacement | undefined { return props.charPlaceme
                 <div style="color:var(--dnf-text-faint);font-size:12px">{{ powerText(c) }}</div>
               </div>
               <span v-if="slackCharIds.has(c.id)" class="pool-tag slack">划水</span>
-              <span v-if="recommendTop3.has(c.id)" class="pool-tag rec">
-                推荐<template v-if="recommendTarget[c.id] != null">→{{ SQUAD_NAMES[recommendTarget[c.id]!] ?? `队${recommendTarget[c.id]! + 1}` }}</template>
-              </span>
+              <span v-if="recommend[c.id]" class="pool-tag rec">推荐{{ recText(c.id) }}</span>
             </div>
           </div>
         </div>
