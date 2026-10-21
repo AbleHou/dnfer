@@ -181,3 +181,6 @@ def test_characters_validation_errors(client):
     r = client.get("/api/public/stats/characters", headers=TOKEN,
                    params={"category": "nope"})
     assert r.status_code == 400 and r.json()["detail"] == "职业类别不存在"
+    r = client.get("/api/public/stats/characters", headers=TOKEN,
+                   params={"category": ""})
+    assert r.status_code == 400 and r.json()["detail"] == "职业类别不存在"

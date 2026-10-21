@@ -116,6 +116,8 @@ def _resolve_job(job: str) -> list[str] | None:
 
 def _resolve_category(category: str) -> list[str] | None:
     """按大类 code 或 title 前缀解析为一组 job_name code（鬼剑士 → 男/女两个大类）。"""
+    if not category:
+        return None
     codes: list[str] = []
     for cat in job_data.job_tree():
         if cat["name"] == category or cat["title"].startswith(category):
