@@ -12,7 +12,7 @@ import type { AdminCharacterRow, AdminUser, CharacterQueryResult, JobCategory, U
 import { NTabs, NTabPane } from 'naive-ui'
 
 // ---- tab 切换（角色查询 / 账号管理）----
-const activeTab = ref('query')   // 默认「角色查询」
+const activeTab = ref<'query' | 'users'>('query')   // 默认「角色查询」
 
 // ---- 角色查询区 ----
 const queryItems = ref<AdminCharacterRow[]>([])
