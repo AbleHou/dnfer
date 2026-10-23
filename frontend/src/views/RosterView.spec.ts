@@ -89,6 +89,7 @@ describe('RosterView', () => {
     expect(wrapper.find('[data-act="pool-char-11"]').exists()).toBe(false)  // 弹框默认关闭
     await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
+    await wrapper.find('[data-user-id="3"]').trigger('click')               // 展开 队员 组（默认收起）
     expect(wrapper.find('[data-act="pool-char-11"]').exists()).toBe(true)   // 打开后池可见
   })
 
@@ -98,6 +99,7 @@ describe('RosterView', () => {
     expect(wrapper.find('[data-test="recommend-switch"]').exists()).toBe(false)
     await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
+    await wrapper.find('[data-user-id="3"]').trigger('click')               // 展开 队员 组（默认收起）
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')
     expect(wrapper.find('.move-hint').exists()).toBe(false)
   })
@@ -107,6 +109,7 @@ describe('RosterView', () => {
     await flushPromises()
     await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
+    await wrapper.find('[data-user-id="3"]').trigger('click')               // 展开 队员 组（默认收起）
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')  // 拿起「奶」
     expect(wrapper.find('.move-hint').text()).toContain('奶')
     expect(wrapper.find('[data-act="pool-char-11"]').exists()).toBe(false)  // 拿起自动关闭弹框
@@ -122,6 +125,7 @@ describe('RosterView', () => {
     await flushPromises()
     await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
+    await wrapper.find('[data-user-id="3"]').trigger('click')               // 展开 队员 组（默认收起）
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')  // 拿起「奶」
     await wrapper.find('.roster-slot.occupied').trigger('click')      // 点已占格（剑魂 主C）
     expect(confirmDialog).toHaveBeenCalled()
@@ -152,6 +156,7 @@ describe('RosterView', () => {
     await flushPromises()
     await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
+    await wrapper.find('[data-user-id="3"]').trigger('click')               // 展开 队员 组（默认收起）
     expect(wrapper.find('[data-act="pool-char-10"]').text()).toContain('推荐→红队')  // 剑魂缺口>0；单波 → 红队（spec §4.2）
     wrapper.findComponent({ name: 'Switch' }).vm.$emit('update:value', false)
     await flushPromises()
@@ -203,6 +208,7 @@ describe('RosterView', () => {
     await flushPromises()
     await wrapper.find('[data-test="pool-fab"]').trigger('click')
     await flushPromises()
+    await wrapper.find('[data-user-id="3"]').trigger('click')               // 展开 队员 组（默认收起）
     await wrapper.find('[data-act="pool-char-11"]').trigger('click')
     expect(wrapper.find('.move-hint').exists()).toBe(true)
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))

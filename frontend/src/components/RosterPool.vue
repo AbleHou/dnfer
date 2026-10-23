@@ -46,8 +46,11 @@ const groups = computed<PoolUser[]>(() => props.signups
   .map(s => ({ user: s.user, parties: groupByParty(s.characters),
                pos: props.roundUserPos.get(s.user.id) })))
 
-// 折叠态（内存态，离开页面重置）：收起 user.id 集合，默认全展开
-const collapsed = ref<Set<number>>(new Set())
+// 折叠态（内存态，离开页面重置）：收起 user.id 集合，默认全收起——只露用户头与职责胶囊，
+// 便于一览每人分配的位置；展开某用户才显示其冒险团小节（小节默认展开）
+const collapsed = ref<Set<number>>(new Set(
+  props.signups.filter((s) => s.characters.length > 0).map((s) => s.user.id)
+))
 function toggleGroup(uid: number) {
   const next = new Set(collapsed.value)
   if (next.has(uid)) next.delete(uid)
