@@ -23,14 +23,14 @@
 ### 2.1 模板
 
 - `import { NTabs, NTabPane } from 'naive-ui'`（按需 import，对齐 RaidListView 等既有用法）。
-- `<h2>用户管理</h2>` 之后、四个弹窗之前，用 `<n-tabs v-model:value="activeTab" display-directive="show">` 包住原两个 `<section>`：
+- `<h2>用户管理</h2>` 之后、四个弹窗之前，用 `<n-tabs v-model:value="activeTab">` 包住原两个 `<section>`；**`display-directive="show"` 放在每个 `<n-tab-pane>` 上**（naive-ui 2.45.3 该 prop 只属于 pane，放 `<n-tabs>` 会被静默忽略回落默认 `"if"`）：
 
 ```vue
-<n-tabs v-model:value="activeTab" display-directive="show">
-  <n-tab-pane name="query" tab="角色查询">
+<n-tabs v-model:value="activeTab">
+  <n-tab-pane name="query" tab="角色查询" display-directive="show">
     <!-- 原「角色查询」section 内容，去掉 <h3>角色查询</h3> -->
   </n-tab-pane>
-  <n-tab-pane name="users" tab="账号管理">
+  <n-tab-pane name="users" tab="账号管理" display-directive="show">
     <!-- 原「用户列表」section 内容，去掉 <h3>用户列表</h3> -->
   </n-tab-pane>
 </n-tabs>
