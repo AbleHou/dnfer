@@ -2,6 +2,16 @@
 
 本项目所有值得记录的版本变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 变更
+
+- **用户管理页拆双 tab**：管理→用户管理把「角色查询」与「账号管理」两个功能从上下平铺拆成两个 tab，默认激活「角色查询」；账号信息操作不再需要滚动到页面底部，tab 切换即时且保留各自筛选与滚动状态
+
+### 工程
+
+- 前端 `AdminUsersView` 用 naive-ui `n-tabs` 包住原两个 section（标签「角色查询」/「账号管理」、删除重复 `<h3>`），`display-directive="show"` 使两个 pane 常驻、非激活用 `vShow` 隐藏（切 tab 保留滚动/焦点），`activeTab = ref<'query' | 'users'>('query')` 默认角色查询，四个弹窗保持在 tab 容器外根级；新增 tab 切换 spec 用例（断言 naive `.n-tabs-tab--active` 类），AdminUsersView 13 例全绿、`npm run build` 通过，后端零改动
+
 ## [v1.18] - 2026-10-21
 
 编队「推荐」模块重构：从「逐角色推荐角标」改为「缺口总览为主、推荐角标为辅」，并修复模板生命周期。
