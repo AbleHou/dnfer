@@ -201,4 +201,15 @@ describe('AdminUsersView', () => {
     await wrapper.find('[data-act="convert-3"]').trigger('click')
     expect(wrapper.findComponent({ name: 'GuestConvertModal' }).exists()).toBe(true)
   })
+  it('默认激活角色查询 tab，可切换到账号管理 tab', async () => {
+    const wrapper = mount(AdminUsersView, { global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } } })
+    await flushPromises()
+    // 默认激活「角色查询」tab（naive 激活 tab 按钮带 n-tabs-tab--active 类）
+    expect(wrapper.find('.n-tabs-tab--active').text()).toContain('角色查询')
+    const usersTab = wrapper.findAll('.n-tabs-tab').find((t) => t.text().includes('账号管理'))
+    expect(usersTab).toBeTruthy()
+    await usersTab!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.n-tabs-tab--active').text()).toContain('账号管理')   // 切到「账号管理」tab
+  })
 })

@@ -9,6 +9,10 @@ import GuestConvertModal from '../components/GuestConvertModal.vue'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
 import { jobGenderTitle } from '../lib/job'
 import type { AdminCharacterRow, AdminUser, CharacterQueryResult, JobCategory, User } from '../types'
+import { NTabs, NTabPane } from 'naive-ui'
+
+// ---- tab 切换（角色查询 / 账号管理）----
+const activeTab = ref('query')   // 默认「角色查询」
 
 // ---- 角色查询区 ----
 const queryItems = ref<AdminCharacterRow[]>([])
@@ -133,8 +137,9 @@ onMounted(() => {
     <AdminNav />
     <h2>用户管理</h2>
 
-    <section class="dnf-panel dnf-section">
-      <h3>角色查询</h3>
+    <n-tabs v-model:value="activeTab">
+      <n-tab-pane name="query" tab="角色查询" display-directive="show">
+        <section class="dnf-panel dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select v-model="classType" class="dnf-select" data-filter="class_type">
           <option value="">全部类别</option>
@@ -186,10 +191,10 @@ onMounted(() => {
         </tbody>
       </table>
       <p style="color:var(--dnf-text-faint)">共 {{ total }} 个角色</p>
-    </section>
-
-    <section class="dnf-panel dnf-section">
-      <h3>用户列表</h3>
+        </section>
+      </n-tab-pane>
+      <n-tab-pane name="users" tab="账号管理" display-directive="show">
+        <section class="dnf-panel dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <input v-model="userQ" placeholder="搜索昵称/用户名" class="dnf-input" data-filter="user_q"
                @keyup.enter="loadUsers" />
@@ -228,7 +233,9 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
-    </section>
+        </section>
+      </n-tab-pane>
+    </n-tabs>
 
     <AdminUserCharactersModal v-if="modalOpen" :open="modalOpen" :user="modalUser"
                               @close="onModalClose" />
