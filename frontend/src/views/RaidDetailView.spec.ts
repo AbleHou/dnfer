@@ -477,6 +477,7 @@ describe('RaidDetailView 关闭攻坚', () => {
     const { wrapper } = await mountView([], admin, closedRaid)
     await flushPromises()
     expect(wrapper.text()).toContain('已关闭')
+    expect(wrapper.text()).toContain('已锁定')  // 关闭攻坚默认视为锁定
     expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="signup-plus"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="add-guest"]').exists()).toBe(false)

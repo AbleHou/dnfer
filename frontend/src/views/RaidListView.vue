@@ -109,8 +109,8 @@ async function onSignupSubmit(ids: number[]) {
       <router-link :to="`/raids/${r.id}`" class="raid-link">
         <span class="raid-name">{{ r.name }}</span>
         <span class="raid-meta">{{ r.dungeon_name }} · {{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
-        <span class="dnf-badge" :class="r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
-          {{ r.locked ? '已锁定' : '未锁定' }}
+        <span class="dnf-badge" :class="r.closed || r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
+          {{ r.closed || r.locked ? '已锁定' : '未锁定' }}
         </span>
         <span v-if="r.closed" class="dnf-badge dnf-badge-danger">已关闭</span>
         <span class="raid-meta" style="color:var(--dnf-text-faint)">

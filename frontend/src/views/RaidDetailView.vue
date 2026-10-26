@@ -296,8 +296,8 @@ async function onGuestCreated(u: User, charCount: number) {
       <h2 style="margin:0">{{ store.raid.name }}</h2>
       <span v-if="store.raid.dungeon_name" style="color:var(--dnf-text-muted)">{{ store.raid.dungeon_name }}</span>
       <span style="color:var(--dnf-text-faint)">{{ store.raid.size }} 人 · {{ formatDateTime(store.raid.starts_at) }}</span>
-      <span class="dnf-badge" :class="store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
-        {{ store.raid.locked ? '已锁定' : '未锁定' }}
+      <span class="dnf-badge" :class="closed || store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
+        {{ closed || store.raid.locked ? '已锁定' : '未锁定' }}
       </span>
       <span v-if="closed" class="dnf-badge dnf-badge-danger">已关闭</span>
       <span style="margin-left:auto;display:flex;gap:8px">

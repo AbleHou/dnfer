@@ -251,6 +251,7 @@ describe('RaidListView create form', () => {
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     expect(wrapper.text()).toContain('已关闭')
+    expect(wrapper.text()).toContain('已锁定')
     expect(wrapper.find('[data-test="signup"]').exists()).toBe(false)
     const delBtn = wrapper.findAll('button').find(b => b.text().includes('删除'))
     expect(delBtn).toBeTruthy()
