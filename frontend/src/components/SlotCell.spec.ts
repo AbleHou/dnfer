@@ -68,12 +68,16 @@ describe('SlotCell admin interactions', () => {
     expect(wrapper.emitted('manage')).toBeUndefined()
   })
 
-  it('辅助占位格显示增益量与太阳增益', () => {
+  it('输出占位格在模拟前显示名望', () => {
+    const wrapper = mount(SlotCell, { props: { slot: occupied(1), squadIndex: 0, editable: false, pickable: false } })
+    expect(wrapper.text()).toContain('名望 1 · 模拟 2亿 · 秒伤 3亿')
+  })
+
+  it('辅助占位格在增益前显示名望、增益量与太阳增益', () => {
     const s: Slot = { ...occupied(1), character_class: '辅助', job_name: 'crusader_male',
       job_title: '神启·圣骑士', buff_amount: 9000, sun_buff: 3000 }
     const wrapper = mount(SlotCell, { props: { slot: s, squadIndex: 0, editable: false, pickable: false } })
-    expect(wrapper.text()).toContain('增益 9000')
-    expect(wrapper.text()).toContain('太阳 3000')
+    expect(wrapper.text()).toContain('名望 1 · 增益 9000 · 太阳 3000')
   })
 
   it('grayed 占位格灰显', () => {

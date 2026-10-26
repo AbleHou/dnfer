@@ -9,11 +9,11 @@ const emptySlot: Slot = { id: 1, squad_index: 0, row_index: 0, character_id: nul
   sustained_dps: null, buff_amount: null, sun_buff: null, owner_id: null, owner_nickname: null,
   owner_avatar: null, duty: null, version: 1, adventure_party_id: null, adventure_party_name: null }
 const filledSlot: Slot = { ...emptySlot, id: 2, character_id: 10, character_name: '剑魂',
-  character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂',
+  character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 5000,
   simulated_damage: 12000, sustained_dps: 3000, owner_id: 3, owner_nickname: '队员',
   duty: '主C', version: 2, adventure_party_id: 5, adventure_party_name: '队员的冒险团' }
 const healSlot: Slot = { ...emptySlot, id: 3, character_id: 20, character_name: '奶',
-  character_class: '辅助', job_name: 'crusader_female', job_title: '神启·圣骑士',
+  character_class: '辅助', job_name: 'crusader_female', job_title: '神启·圣骑士', fame: 8000,
   buff_amount: 46000, sun_buff: 1000, owner_id: 3, owner_nickname: '队员', duty: '主奶', version: 2,
   adventure_party_id: 5, adventure_party_name: '队员的冒险团' }
 
@@ -36,18 +36,19 @@ describe('RosterSlot', () => {
     await w.find('.roster-slot').trigger('click')
     expect(w.emitted('place')).toBeTruthy()
   })
-  it('已占格显示 owner/角色名/数值', () => {
+  it('已占格显示 owner/角色名/名望/数值', () => {
     const w = mountSlot({ slot: filledSlot })
     expect(w.text()).toContain('队员'); expect(w.text()).toContain('剑魂')
+    expect(w.text()).toContain('名望 5000 · 模拟 12000亿')
     expect(w.text()).toContain('12000')
   })
   it('已占格 canEdit 时显示撤下与拿起', () => {
     const w = mountSlot({ slot: filledSlot })
     expect(w.text()).toContain('撤下'); expect(w.text()).toContain('拿起')
   })
-  it('已占辅助格显示增益且无 亿 单位', () => {
+  it('已占辅助格显示名望/增益且无 亿 单位', () => {
     const w = mountSlot({ slot: healSlot })
-    expect(w.text()).toContain('46000')
+    expect(w.text()).toContain('名望 8000 · 增益 46000')
     expect(w.text()).not.toContain('46000亿')
   })
   it('撤下点击 emit remove', async () => {
