@@ -193,3 +193,14 @@ def test_create_raid_unaffected_by_closed(client):
                           "starts_at": "2026-10-01T12:00:00"})
     assert r.status_code == 200
     assert r.json()["closed"] is False
+
+
+def test_close_sets_locked_true(client):
+    """关闭攻坚默认置为锁定：返回详情与快照 locked 均为 True。"""
+    ah = _admin(client)
+    rid = make_raid(client, ah)["id"]
+    assert client.get(f"/api/raids/{rid}", headers=ah).json()["locked"] is False
+    r = client.post(f"/api/raids/{rid}/close", headers=ah)
+    assert r.status_code == 200
+    assert r.json()["locked"] is True
+    assert client.get(f"/api/raids/{rid}", headers=ah).json()["locked"] is True

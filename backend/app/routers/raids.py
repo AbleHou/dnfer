@@ -248,6 +248,7 @@ async def close_raid(rid: int, admin: User = Depends(require_admin),
         raise HTTPException(403, "你已被封禁，无法操作")
     if raid.closed:
         raise HTTPException(400, "攻坚已关闭")
+    raid.locked = True  # 关闭默认置为锁定，先于快照记录
     raid.snapshot = _detail(db, raid).model_dump(mode="json")  # 先取快照（datetime→ISO）
     raid.closed = True
     # 清理 live 行：Slot → Wave → RaidSignupCharacter → RaidSignup（释放角色引用）
