@@ -18,7 +18,7 @@
 2. **门禁**：每阶段结束在 `frontend/` 跑 `npm run build`（vue-tsc 类型把关）与 `npx vitest run`，**全绿**才提交。
 3. **后端零改动**；只动 `frontend/`。
 4. **提交直接到 main**，信息 `[feat]/[test]/[ref]` 风格 + 中文描述 + `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` 尾注。
-5. **spec 全量适配**：行为契约不变；naive 内部断言（`findComponent({name:'Switch'})` 等）改为针对 DNF 组件（`{name:'DnfSwitch'}`）或 `data-test` 选择器。**注意**：vendored 编译产物里组件可能只有 `__name` 而无全局 `name`，`findComponent({name:'DnfXxx'})` 不一定能解析——**优先用 `data-test`/`data-act` 属性定位**，name 定位作为备选。`vi.mock('../lib/notify')` 因签名不变保持原样。
+5. **spec 全量适配**：行为契约不变；naive 内部断言（`findComponent({name:'Switch'})` 等）改为针对 DNF 组件（`{name:'DnfSwitch'}`）或 `data-test` 选择器。**name 定位可用**：@vue/test-utils 的 `getComponentName` 会回退到编译产物的 `__name`，`findComponent({name:'DnfXxx'})` 可解析；仍**优先用 `data-test`/`data-act` 属性定位**更稳。`vi.mock('../lib/notify')` 因签名不变保持原样。
 6. **改每个文件前先读它**；`<template>` 中 naive 组件标签（`<n-modal>` 等）在 Vue 模板中是 kebab/camel 均可解析，迁移后统一改为 DNF 组件标签。
 
 ---
@@ -92,7 +92,7 @@ export default defineConfig({
 
 - [ ] **Step 5: main.ts 引样式（顺序：库样式在前，dnf.css 在后）**
 
-`frontend/src/main.ts` 引库样式，**必须在 `./styles/dnf.css` 之前**（CSS 变量层面 §5.2 靠 DOM 就近取库值，与顺序无关；但 `.dnf-badge-danger/ok` 与库 `.dnf-badge` 是**同特异性**的颜色规则，库在前、dnf.css 在后才能让状态色覆盖金色默认）：
+`frontend/src/main.ts` 引库样式，**放在 `./styles/dnf.css` 之前**（CSS 变量层面 §5.2 靠 DOM 就近取库值，与顺序无关；库 `style.css` 规则包在 `@layer components` 内，而 `dnf.css` 无 @layer，未分层规则总是优先于分层规则——故 `.dnf-badge-danger/ok` 覆盖库 `.dnf-badge` 金色默认**与引入顺序无关**；保持「库在前」仅作保险，防库未来去 layer）：
 ```ts
 import '@dnftools/ui/style.css'
 import './styles/dnf.css'
@@ -609,20 +609,20 @@ git commit -m "feat: 管理表格换 DnfTable 声明式表格"
 ### Task 2.5: 原生表单皮肤 → DnfInput/DnfSelect
 
 **Files:**
-- Modify: `frontend/src/components/CharacterForm.vue`（原生 `<input class="dnf-input">` 与 `<select class="dnf-select">`）
-- Modify: `frontend/src/views/MyCharactersView.vue`、`frontend/src/views/AdminUsersView.vue`（原生 input/select）
-- Modify: `frontend/src/components/GuestCreateModal.vue`（多行角色编辑器原生输入）
-- Delete: `frontend/src/styles/dnf.css` 中 `.dnf-input`/`.dnf-select` 规则
+- Modify: 全部含原生 `<input class="dnf-input">` 的文件（见 Step 1 的 grep 清单）
+- Modify: `frontend/src/styles/dnf.css`（删 `.dnf-input`/`.dnf-select` 规则）
+- Test: 对应文件的 spec（`CharacterForm.spec`/`AdminUsersView.spec` 等）
 
 映射规则：
 - `<input class="dnf-input" v-model="x" placeholder="…">` → `<DnfInput v-model="x" placeholder="…">`
 - `<input class="dnf-input" v-model.number="x" type="number">` → `<DnfInput v-model="x" type="number">`（v-model.number 保留）
-- `<select class="dnf-select" v-model="x"><option>…</select>` → 若选项简单且不依赖原生 option 语义，可换 `<DnfSelect v-model="x" :options="[{value,label},…]">`；**若选项含分组/复杂结构或测试依赖原生 select，先保留原生**（阶段 3 的 NSelect 迁移统一处理 DnfSelect）
+- `<select class="dnf-select" v-model="x"><option>…</select>` → **阶段 2 不换 select**，统一留到阶段 3 Task 3.1（见 Step 2）
 - `:focus` 边框样式随库组件自带，删 dnf.css 对应规则
 
-- [ ] **Step 1: 替换原生 input**
+- [ ] **Step 1: grep 全部原生 input 并逐个替换**
 
-对每个文件：读后把 `<input class="dnf-input">` 换 `<DnfInput>`（保留 `data-test`/`data-filter`/`id` 属性——DnfInput 会把 attrs 透传到底层原生元素，见规格 §输入）。
+Run: `cd frontend && grep -rn 'class="dnf-input"' src/ | grep -v '.spec.ts'`
+Expected: 覆盖以下全部（已核实的 9+ 处）：CharacterForm / SlackRulesModal（7 处）/ VoteCreateModal（3）/ GuestConvertModal（3）/ ChangePasswordModal（3）/ AdventurePartyModal（2）/ AdminResetPasswordModal（2）/ AdminDungeonsView（2）/ AdminCodesView（1）/ **RosterPool（`data-act="pool-search"` 搜索框）**。逐个读文件后把 `<input class="dnf-input">` 换 `<DnfInput>`（保留 `data-test`/`data-filter`/`data-act`/`id` 属性——DnfInput 会把 attrs 透传到底层原生元素，见规格 §输入）。
 
 - [ ] **Step 2: 原生 select 统一留到阶段 3**
 
@@ -686,7 +686,7 @@ git log --oneline -10
 
 ## 阶段 3「弹窗与表单控件」
 
-目标：所有 naive 表单控件与 17 处 NModal 全部替换。**按组件归属、不按视图整体归属**。
+目标：所有 naive 表单控件与 18 处 NModal（17 个文件）全部替换。**按组件归属、不按视图整体归属**。
 
 ### Task 3.1: NSelect + 原生 select → DnfSelect
 
@@ -893,7 +893,7 @@ git add -A frontend/src
 git commit -m "feat: 日期时间选择换原生 datetime-local"
 ```
 
-### Task 3.7: NModal → DnfDialog（17 处）
+### Task 3.7: NModal → DnfDialog（18 处 / 17 文件）
 
 **Files:**
 - Modify: `frontend/src/components/*Modal.vue` 与含 NModal 的视图（AdventurePartyModal / ChangePasswordModal / GuestCreateModal / GuestConvertModal / MemberCharactersModal / AdminResetPasswordModal / AdminUserCharactersModal / CharacterPickerModal / RosterTargetModal / SignupModal / SignupMemberPicker / SlackRulesModal / SlotActionModal / VoteCreateModal / ProfilePanel / RaidDetailView / RosterView）
@@ -937,7 +937,7 @@ Expected: 全绿。
 
 ```bash
 git add -A frontend/src
-git commit -m "feat: 17 处弹窗换 DnfDialog"
+git commit -m "feat: 18 处弹窗换 DnfDialog"
 ```
 
 ### Task 3.8: 阶段 3 门禁
