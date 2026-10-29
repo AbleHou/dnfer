@@ -90,11 +90,12 @@ export default defineConfig({
 ```
 注：`__dirname` 在 ESM 配置里不可用，需 `const __dirname = path.dirname(new URL(import.meta.url).pathname)` 或改用 `new URL('./src/...', import.meta.url).pathname`。
 
-- [ ] **Step 5: main.ts 引样式**
+- [ ] **Step 5: main.ts 引样式（顺序：库样式在前，dnf.css 在后）**
 
-`frontend/src/main.ts` 加一行（放在 `./styles/dnf.css` 之前或之后均可，见规格 §5.2 生效机制）：
+`frontend/src/main.ts` 引库样式，**必须在 `./styles/dnf.css` 之前**（CSS 变量层面 §5.2 靠 DOM 就近取库值，与顺序无关；但 `.dnf-badge-danger/ok` 与库 `.dnf-badge` 是**同特异性**的颜色规则，库在前、dnf.css 在后才能让状态色覆盖金色默认）：
 ```ts
 import '@dnftools/ui/style.css'
+import './styles/dnf.css'
 ```
 
 - [ ] **Step 6: vendored index.d.ts 的 styles 引用处理**
@@ -470,7 +471,7 @@ Expected: 阶段 1 各 task 提交齐全。
 
 - [ ] **Step 1: 先改一个代表文件确认 API**
 
-读 `frontend/src/views/LoginView.vue`，把 `<n-button type="primary" attr-type="submit" block :loading="loading">登录</n-button>` 换成 `<DnfButton type="submit" :loading="loading">登录</DnfButton>`（`tone="gold"`），并把其余 `dnf-btn` 按钮替换。验证 `npm run build` 类型通过。
+读 `frontend/src/views/LoginView.vue`，把 `<n-button type="primary" attr-type="submit" block :loading="loading">登录</n-button>` 换成 `<DnfButton type="submit" :loading="loading">登录</DnfButton>`（`tone="gold"`），并把其余 `dnf-btn` 按钮替换。验证 `npm run build` 类型通过。**同时验证组件 name 解析**：写一个最小 spec 尝试 `findComponent({name:'DnfButton'})`，若 vendored 组件只有 `__name` 无法按 name 命中，**本阶段起一律用 `data-test`/`data-act` 定位组件**（总则 #5）。
 
 - [ ] **Step 2: 全局替换**
 
@@ -695,7 +696,9 @@ git log --oneline -10
 - Modify: `frontend/src/views/RaidListView.vue`（NSelect，`dungeonId` 的 `null`→`undefined`）
 - Modify: `frontend/src/views/AdminUsersView.vue`（原生 `<select class="dnf-select">` × 3：class_type / job / sort）
 - Modify: `frontend/src/components/GuestCreateModal.vue`（原生职业 select，若存在）
-- Test: `frontend/src/views/RaidListView.spec.ts`、`frontend/src/components/CharacterPickerModal.spec.ts`
+- Modify: `frontend/src/components/CharacterForm.vue`（原生冒险团 `<select id="char-party" data-act="adventure-party">`，约 102 行）
+- Modify: `frontend/src/views/AdminDungeonsView.vue`（原生 `<select class="dnf-select">`，`dgSize` 约 56 行）
+- Test: `frontend/src/views/RaidListView.spec.ts`、`frontend/src/components/CharacterPickerModal.spec.ts`、`frontend/src/views/AdminUsersView.spec.ts`、`frontend/src/components/CharacterForm.spec.ts`
 
 映射规则：
 - `<n-select size="small" :options="opts" :value="modelValue" @update:value="(v)=>emit('update:modelValue', v)">` → `<DnfSelect :options="opts" :model-value="modelValue" @update:model-value="(v)=>emit('update:modelValue', v)">`
@@ -712,7 +715,8 @@ git log --oneline -10
 
 - CharacterPickerModal：换 DnfSelect，处理 `filterable` 降级（上方搜索输入）。spec 中 `Select` 断言改为 DnfSelect，事件名 `update:value`→`update:modelValue`、prop `value`→`modelValue`。
 - RaidListView：`dungeonId`/`startsAt` 相关 null 处理按 DnfSelect/DnfInput 语义适配；`onDungeonChange` 在 `@update:model-value` 触发。RaidList 的 `dungeonOptions` 的 value 是 `d.id`（number）——DnfSelect 支持 number value。spec 中 `RaidListView.spec.ts:65` 的 `findComponent({name:'Select'}).vm.$emit('update:value', 7)` 改为 DnfSelect + `update:modelValue`。
-- AdminUsersView / GuestCreateModal：原生 select 换 DnfSelect，`:options` 构造，`data-filter` 属性透传。
+- AdminUsersView / GuestCreateModal / CharacterForm（冒险团 select）/ AdminDungeonsView（`dgSize`）：原生 select 换 DnfSelect，`:options` 构造，`data-filter`/`data-act`/`data-test` 属性透传。
+- **原生 select 相关 spec 交互改写（重点）**：DnfSelect 渲染的是 `<div class="dnf-select">` + 触发按钮（非 aria attrs 落在根 div 上），原 `find('[data-filter="class_type"]').setValue('辅助')`（AdminUsersView.spec 39-41、108）对 div 会失败；`find('[data-act="adventure-party"]')` 断言 `HTMLSelectElement`（CharacterForm.spec 82）也不再成立。**改写为驱动 reka-ui 弹层**：click 触发按钮 → click 选项，或改断言组件渲染（DnfSelect + 选项文本）。实现时若 jsdom 驱动 reka-ui 弹层困难，优先收窄断言到「触发按钮存在 + v-model 绑定」这一契约层。
 
 - [ ] **Step 3: 门禁 + Commit**
 
@@ -728,6 +732,7 @@ git commit -m "feat: 下拉选择换 DnfSelect"
 - Modify: `frontend/src/views/LoginView.vue`、`frontend/src/views/RegisterView.vue`（两处 NInput）
 - Modify: `frontend/src/components/ProfilePanel.vue`（NInput）
 - Modify: `frontend/src/views/RaidListView.vue`（创建表单 `name` 的 NInput）
+- Modify: `frontend/src/views/RaidDetailView.vue`（编辑表单 `editName` 的 NInput，约 390 行，与 NDatePicker 同一表单）
 - Test: `frontend/src/views/RaidListView.spec.ts`
 
 映射规则：
@@ -791,7 +796,7 @@ git commit -m "feat: 数值输入与勾选换 DnfNumberInput/DnfCheckbox"
 
 - [ ] **Step 1: 替换**
 
-读 `RosterView.vue` 找到 NSwitch（「推荐」开关，约 225 行），按受控式映射替换。spec 中 `findComponent({ name: 'Switch' })` 改为 `{ name: 'DnfSwitch' }` 或 `data-test`。
+读 `RosterView.vue` 找到 NSwitch（「推荐」开关，约 225 行），按受控式映射替换。spec 中 `findComponent({ name: 'Switch' })` 改为 `{ name: 'DnfSwitch' }` 或 `data-test`；**事件名同步**：`RosterView.spec.ts:161` 对开关 emit 的 `'update:value'` 改为 `'update:modelValue'`。
 
 - [ ] **Step 2: 门禁 + Commit**
 
@@ -915,7 +920,7 @@ git commit -m "feat: 日期时间选择换原生 datetime-local"
 
 AdventurePartyModal、SignupModal、RosterTargetModal：读文件 → 换 DnfDialog → 对应 spec 适配（`findComponent({name:'Modal'})` 等改为 DnfDialog）→ `npx vitest run` 通过。确认模式可行。
 
-- [ ] **Step 2: 迁移其余 14 处**
+- [ ] **Step 2: 迁移其余 14 个文件（共 17 个文件、18 处 `<n-modal>`，RaidDetailView 有 2 处）**
 
 逐个弹窗/视图按同一模式迁移，每完成一批跑一次 `npx vitest run`。
 
