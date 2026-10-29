@@ -354,7 +354,7 @@ git commit -m "ref: 删除亮色主题与 FOUC 脚本，锁定暗色（App 同�
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { DnfProvider, DnfFrame, DnfDropdownMenu, DnfDialogProvider, DnfMessageProvider } from '@dnftools/ui'
+import { DnfProvider, DnfDropdownMenu, DnfDialogProvider, DnfMessageProvider } from '@dnftools/ui'
 import type { DnfMenuItem } from '@dnftools/ui'
 import { useAuthStore } from './stores/auth'
 import { dialogs, messages } from './lib/notify'
@@ -610,7 +610,7 @@ git commit -m "feat: 管理表格换 DnfTable 声明式表格"
 
 **Files:**
 - Modify: 全部含原生 `<input class="dnf-input">` 的文件（见 Step 1 的 grep 清单）
-- Modify: `frontend/src/styles/dnf.css`（删 `.dnf-input`/`.dnf-select` 规则）
+- Modify: `frontend/src/styles/dnf.css`（删 `.dnf-input` 规则；**`.dnf-select` 保留到 Task 3.1 全部原生 select 换完后再删**，避免阶段 2 末到阶段 3 之间 select 无皮肤）
 - Test: 对应文件的 spec（`CharacterForm.spec`/`AdminUsersView.spec` 等）
 
 映射规则：
@@ -869,9 +869,10 @@ git commit -m "feat: 标签页换 DnfTabs"
 ```
 换成：
 ```html
-<input type="datetime-local" data-test="starts-at" class="dnf-input"
+<input type="datetime-local" data-test="starts-at" class="dnf-datetime"
        v-model="startsAtLocal" placeholder="发起时间" style="width:100%" />
 ```
+**皮肤（重点）**：Task 2.5 已删除 `.dnf-input` 规则，此处不能再引用它。在 `dnf.css` 保留/新增一个 `.dnf-datetime` 皮肤规则（复用 `.dnf-input` 的视觉，背景 `var(--dnf-panel-inner)` + 金色边框），或包一层 `DnfFrame`/自定义 class。Task 4.2 清理时保留该规则。
 script 适配：
 ```ts
 // startsAt 保留 ISO 字符串（发后端）；startsAtLocal 是 datetime-local 的本地值
