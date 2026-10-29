@@ -307,10 +307,10 @@ git commit -m "feat: notify 消息/弹窗适配层切到 @dnftools/ui（createDn
 - Modify: `frontend/index.html`（删 FOUC 脚本）
 - Modify: `frontend/src/styles/dnf.css`（删 `[data-theme="light"]` 全部块，含 body/panel/btn/slot-cell/pos-team 等覆盖）
 
-- [ ] **Step 1: 确认 useTheme 引用只剩 App.vue**
+- [ ] **Step 1: 确认 useTheme 外部引用只剩 App.vue**
 
 Run: `cd frontend && grep -rn "useTheme\|styles/theme" src/ | grep -v spec`
-Expected: 只剩 `App.vue`（Task 1.3 已替 notify.ts）。
+Expected: 只剩 `App.vue` 与 `composables/useTheme.ts` 自身（`notify.ts` 已被 Task 1.3 替换）；本任务随后删除 useTheme.ts/theme.ts 即可清空。
 
 - [ ] **Step 2: App.vue 移除 useTheme（与删文件同一提交，避免中间红 commit）**
 
@@ -622,7 +622,7 @@ git commit -m "feat: 管理表格换 DnfTable 声明式表格"
 - [ ] **Step 1: grep 全部原生 input 并逐个替换**
 
 Run: `cd frontend && grep -rn 'class="dnf-input"' src/ | grep -v '.spec.ts'`
-Expected: 覆盖以下全部（已核实的 9+ 处）：CharacterForm / SlackRulesModal（7 处）/ VoteCreateModal（3）/ GuestConvertModal（3）/ ChangePasswordModal（3）/ AdventurePartyModal（2）/ AdminResetPasswordModal（2）/ AdminDungeonsView（2）/ AdminCodesView（1）/ **RosterPool（`data-act="pool-search"` 搜索框）**。逐个读文件后把 `<input class="dnf-input">` 换 `<DnfInput>`（保留 `data-test`/`data-filter`/`data-act`/`id` 属性——DnfInput 会把 attrs 透传到底层原生元素，见规格 §输入）。
+Expected: 覆盖以下全部（**实测 12 文件**）：CharacterForm（6）/ SlackRulesModal（7）/ GuestCreateModal（8）/ GuestConvertModal（3）/ VoteCreateModal（3，**其中 1 处是 `<textarea class="dnf-input">`，映射 `DnfTextarea`**）/ ChangePasswordModal（3）/ AdventurePartyModal（2）/ AdminResetPasswordModal（2）/ AdminDungeonsView（2）/ **AdminUsersView（3：`keyword`/`owner`/`user_q` 搜索框）**/ AdminCodesView（1）/ **RosterPool（`data-act="pool-search"` 搜索框）**。逐个读文件后把 `<input class="dnf-input">` 换 `<DnfInput>`（保留 `data-test`/`data-filter`/`data-act`/`id` 属性；**attrs 透传到底层原生元素需在实现时验证**——DnfInput 的 d.ts 未声明 `placeholder`，靠 fallthrough 生效）。
 
 - [ ] **Step 2: 原生 select 统一留到阶段 3**
 
