@@ -614,9 +614,13 @@ git commit -m "feat: 管理表格换 DnfTable 声明式表格"
 - Test: 对应文件的 spec（`CharacterForm.spec`/`AdminUsersView.spec` 等）
 
 映射规则：
-- `<input class="dnf-input" v-model="x" placeholder="…">` → `<DnfInput v-model="x" placeholder="…">`
-- `<input class="dnf-input" v-model.number="x" type="number">` → `<DnfInput v-model="x" type="number">`（v-model.number 保留）
-- `<select class="dnf-select" v-model="x"><option>…</select>` → **阶段 2 不换 select**，统一留到阶段 3 Task 3.1（见 Step 2）
+- `<input class="dnf-input" v-model="x" placeholder="…">`（x 为 string）→ `<DnfInput v-model="x" placeholder="…">`
+- **数字字段（重点）**：DnfInput 的 `modelValue` 是 `string`（无 number 变体，已核实 d.ts）。凡 `<input type="number" v-model.number>` 绑定的 `number | null` 字段（CharacterForm `fame/simulated_damage/sustained_dps/buff_amount/sun_buff`、GuestCreateModal 每角色行数值、AdminCodesView `expireDays`、SlackRulesModal `value/count`），**不能直接 `v-model`**，须显式转换：
+  ```html
+  <DnfInput :model-value="form.fame?.toString() ?? ''" @update:model-value="v => form.fame = v ? Number(v) : null" type="number" />
+  ```
+  否则 vue-tsc 门禁因 number→string 类型不符而失败。若字段语义是整数（如 `expireDays`），`Number(v)` 可加 `Math.trunc`。
+- `<select class="dnf-select" v-model="x">` 或 `<select class="dnf-input" v-model="x">` → **阶段 2 一律不换 select**，统一留到阶段 3 Task 3.1（见 Step 2；注意 SlackRulesModal 的 4 个下拉用的是 `class="dnf-input"`，也归 Task 3.1）
 - `:focus` 边框样式随库组件自带，删 dnf.css 对应规则
 
 - [ ] **Step 1: grep 全部原生 input 并逐个替换**
@@ -626,7 +630,7 @@ Expected: 覆盖以下全部（**实测 12 文件**）：CharacterForm（6）/ S
 
 - [ ] **Step 2: 原生 select 统一留到阶段 3**
 
-**阶段 2 不替换任何 `<select class="dnf-select">`**——包括简单选项与 60 项职业选择（AdminUsersView `flatJobs`、GuestCreateModal 职业选择，两者同为扁平长列表，统一处理）。全部在阶段 3 Task 3.1 一并转 `DnfSelect`（含 `:options` 构造与 null/undefined 适配）。
+**阶段 2 不替换任何原生 `<select>`**——无论 `class="dnf-select"` 还是 `class="dnf-input"`（含简单选项与 60 项职业选择、SlackRulesModal 的 4 个下拉）。全部在阶段 3 Task 3.1 一并转 `DnfSelect`（含 `:options` 构造与 null/undefined 适配）。
 
 - [ ] **Step 3: spec 适配 + 门禁**
 
@@ -698,6 +702,7 @@ git log --oneline -10
 - Modify: `frontend/src/components/GuestCreateModal.vue`（原生职业 select，若存在）
 - Modify: `frontend/src/components/CharacterForm.vue`（原生冒险团 `<select id="char-party" data-act="adventure-party">`，约 102 行）
 - Modify: `frontend/src/views/AdminDungeonsView.vue`（原生 `<select class="dnf-select">`，`dgSize` 约 56 行）
+- Modify: `frontend/src/components/SlackRulesModal.vue`（4 个 `<select class="dnf-input">`：class_type/metric 下拉，约 54/58/73/77 行）
 - Test: `frontend/src/views/RaidListView.spec.ts`、`frontend/src/components/CharacterPickerModal.spec.ts`、`frontend/src/views/AdminUsersView.spec.ts`、`frontend/src/components/CharacterForm.spec.ts`
 
 映射规则：
@@ -729,7 +734,7 @@ git commit -m "feat: 下拉选择换 DnfSelect"
 ### Task 3.2: NInput → DnfInput
 
 **Files:**
-- Modify: `frontend/src/views/LoginView.vue`、`frontend/src/views/RegisterView.vue`（两处 NInput）
+- Modify: `frontend/src/views/LoginView.vue`（2 处 NInput）、`frontend/src/views/RegisterView.vue`（4 处 NInput）
 - Modify: `frontend/src/components/ProfilePanel.vue`（NInput）
 - Modify: `frontend/src/views/RaidListView.vue`（创建表单 `name` 的 NInput）
 - Modify: `frontend/src/views/RaidDetailView.vue`（编辑表单 `editName` 的 NInput，约 390 行，与 NDatePicker 同一表单）
