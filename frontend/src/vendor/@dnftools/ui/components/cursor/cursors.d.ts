@@ -1,0 +1,106 @@
+declare const cursorLabels: {
+    readonly normal: "正常操作";
+    readonly learn: "技能学习";
+    readonly menu: "物品查看菜单 · 手形";
+    readonly 'menu-mouse': "查看菜单 · 鼠标按键图示";
+    readonly lock: "锁定";
+    readonly unlock: "解除锁定";
+    readonly 'learn-remove': "解除 · 鼠标按键图示";
+    readonly 'gold-normal': "金色普通光标";
+    readonly buy: "购买";
+    readonly disassemble: "分解";
+    readonly sell: "出售";
+    readonly repair: "修理";
+    readonly rent: "租赁";
+    readonly rotate: "旋转形态";
+    readonly try: "试穿";
+    readonly checkout: "结算";
+    readonly equip: "装入";
+    readonly put: "放入";
+    readonly take: "取出";
+    readonly produce: "生产";
+    readonly enhance: "强化";
+    readonly challenge: "挑战";
+    readonly enchant: "附魔";
+    readonly 'buy-now': "立即购买";
+    readonly bid: "竞拍";
+    readonly cancel: "取消";
+    readonly reforge: "重铸";
+    readonly purify: "净化";
+    readonly amplify: "增幅";
+    readonly convert: "扭转";
+    readonly 'try-alt': "试穿 · 另一组";
+    readonly gift: "赠送";
+    readonly 'lock-alt': "锁定 · 另一组";
+    readonly 'unlock-alt': "解除锁定 · 另一组";
+    readonly reform: "改造";
+    readonly 'lock-command': "锁定指令";
+    readonly remove: "解除 · 手形";
+    readonly move: "移动";
+    readonly talk: "对话形态";
+    readonly 'talk-blue': "蓝色对话形态";
+    readonly enter: "入口形态";
+    readonly scroll: "卷轴形态";
+    readonly effect: "旋转标记形态";
+    readonly details: "查看详情";
+    readonly 'resize-v': "纵向调整";
+    readonly 'resize-diagonal': "斜向调整";
+    readonly pointer: "箭头形态";
+    readonly flag: "旗帜形态";
+    readonly hint: "提示";
+    readonly forge: "锻造";
+    readonly 'forge-alt': "锻造 · 另一组";
+    readonly wear: "穿戴";
+    readonly cost: "倍率提示";
+    readonly upgrade: "升级";
+    readonly animation: "替换动画";
+    readonly select: "选择";
+    readonly greet: "打招呼";
+    readonly 'resize-diagonal-alt': "反向斜线调整";
+    readonly multi: "多选";
+    readonly edit: "编辑";
+    readonly return: "弯箭头形态";
+    readonly withdraw: "撤回道具";
+    readonly add: "添加";
+    readonly split: "拆解";
+    readonly unblock: "解除屏蔽";
+    readonly 'details-alt': "查看详情 · 另一组";
+    readonly wheel: "滚轮按键图示";
+    readonly unseal: "人物解禁";
+    readonly content: "查看内容";
+    readonly smelt: "冶炼";
+    readonly special: "特殊效果";
+    readonly copy: "复制";
+    readonly 'copy-alt': "复制 · 另一组";
+    readonly 'wear-mouse': "穿戴 · 鼠标按键图示";
+    readonly 'talk-mouse': "调适 · 鼠标滚轮图示";
+};
+export type DnfCursorName = keyof typeof cursorLabels;
+export interface DnfCursorStep {
+    readonly src: string;
+    readonly hotspot: readonly [number, number];
+    readonly jiffies: number;
+}
+export interface DnfCursorTrack {
+    readonly mode: 'static' | 'animation' | 'press';
+    readonly source?: string;
+    readonly steps: readonly DnfCursorStep[];
+}
+export interface DnfCursorDefinition {
+    readonly label: string;
+    readonly frames: readonly string[];
+    readonly disabledFrames: readonly string[];
+    readonly normal: DnfCursorTrack;
+    readonly disabled?: DnfCursorTrack;
+    readonly pressed?: DnfCursorTrack;
+    readonly pending?: boolean;
+}
+export declare const dnfCursors: Record<DnfCursorName, DnfCursorDefinition>;
+export declare function dnfCursorStepAt(track: DnfCursorTrack, elapsedMs: number): DnfCursorStep;
+export declare function dnfCursorStepStyle(step: DnfCursorStep, hotspot?: readonly [number, number]): {
+    '--dnf-cursor': string;
+};
+export declare function dnfCursorStyle(name: DnfCursorName, frame?: number, disabled?: boolean, hotspot?: readonly [number, number]): {
+    '--dnf-cursor': string;
+};
+export {};
