@@ -1,0 +1,152 @@
+# @dnftools/ui 全量 UI 升级 — 设计规格
+
+日期：2026-10-29
+状态：已确认
+需求来源：用户在开源社区找到 DNF 混合贴图版 Vue3 组件库 `@dnftools/ui`（本地 v0.1.0，位于 `~/Desktop/package/`，未发 npm），希望用它全面升级当前 UI——替换 naive-ui 与自绘 `dnf.css`，呈现更接近 DNF 游戏的视觉。
+
+已确认的决策：
+- **全量迁移**：所有视图/组件换到 `@dnftools/ui`，naive-ui 全部移除，`dnf.css` 只留库不覆盖的定制类。
+- **只留暗色**：删除亮色主题（Apple 金）与切换按钮，锁定游戏暗色。
+- **NDatePicker 缺口**：用原生 `<input type="datetime-local">` + DNF 皮肤替代（两处：创建攻坚、编辑攻坚时间）。
+- **分阶段迁移**：一张 spec + 一份 plan，实现拆 4 个阶段独立提交，每阶段可 review、可回退。
+- **spec 全量适配**：现有前端 spec 全部保留并适配新组件，行为契约不变。
+- **库接入方式**：vendored dist 内置仓库 + TS 别名（`@dnftools/ui`）。
+
+## 1. 背景与现状
+
+### 1.1 组件库 `@dnftools/ui`（v0.1.0）
+
+- DNF 混合贴图版 Vue3 组件库，约 70 个组件；依赖 `reka-ui` + `@vueuse/core`，peerDependency `vue ^3.5.0`。
+- 覆盖能力：`DnfProvider`（主题容器）/ `DnfDialog` / `DnfWindow` / `DnfMessage`（含函数式 `createDnfDialog` / `createDnfMessage` + Provider）/ `DnfFrame` / `DnfNinePatch` / `DnfButton` / `DnfInput` / `DnfTextarea` / `DnfNumberInput` / `DnfSelect` / `DnfCombobox` / `DnfCheckbox` / `DnfSwitch` / `DnfSlider` / `DnfTabs` / `DnfTable` / `DnfFormField` / `DnfBadge` / `DnfAvatar` / `DnfIcon`（内置 289 图标）/ `DnfDropdownMenu` / `DnfTooltip` 等。
+- 样式：`@dnftools/ui/style.css` 需在应用入口显式引入一次；公开 CSS 与变量带 `dnf` 前缀，不附带全局 Preflight 或游戏字体。
+- 主题：通过 `DnfProvider` 上的 `--dnf-*` CSS 变量控制，Provider 将变量复制到浮层容器（Dialog/Select 等脱离 DOM 父级仍继承主题）。
+- 发布形态：`dist/` 含编译 ESM（`index.js`）、类型（`index.d.ts`/`types.d.ts`）、`style.css`（260KB）、`resources.json`（图片来源清单）、`assets/`（30 个哈希图片资源，>4KB 未内联的大图）。
+- 注意：当前版本 **无** `NDatePicker` 等价组件；**无** 顶部导航栏组件（App 顶栏需自绘 + `DnfFrame` 皮肤）。
+
+### 1.2 当前前端现状
+
+- **naive-ui 使用面**（`frontend/package.json` 依赖 `naive-ui ^2.45.3`）：
+  - `App.vue`：`NConfigProvider` + `NDropdown`（导航菜单）。
+  - 约 16 处 `NModal`：AdventurePartyModal / ChangePasswordModal / GuestCreateModal / GuestConvertModal / MemberCharactersModal / AdminResetPasswordModal / AdminUserCharactersModal / CharacterPickerModal / RosterTargetModal / SignupModal / SignupMemberPicker / SlackRulesModal / SlotActionModal / VoteCreateModal / ProfilePanel / RaidDetailView。
+  - 表单控件：`NSelect`（DutySelect / CharacterPicker / RaidList / RosterTargetModal）、`NInput`（Login/Register/Profile/CharacterForm 等）、`NInputNumber`（RosterTargetModal）、`NCheckbox`（RosterTargetModal）、`NSwitch`（RosterView）、`NTabs`/`NTabPane`（AdminUsersView）、`NButton`（Login/Register）、`NDatePicker`（RaidList 创建 / RaidDetail 编辑）。
+- **`lib/notify.ts`**：模块级 `createDiscreteApi(['message','dialog'])` 封装 `notifyError/notifyWarning/notifySuccess/confirmDialog`（naive message/dialog）；约 10 个 spec 文件 `vi.mock('../lib/notify')`。
+- **`styles/dnf.css`**（262 行）：`--dnf-*` CSS 变量 + `dnf-btn` / `dnf-panel` / `dnf-badge` / `dnf-input` / `dnf-select` / `dnf-table` / `squad-grid` / `slot-cell` / `raid-card` / `char-pick` / `job-pick-btn` / `pos-capsule` / `wave-tag` / `dnf-nav` / `auth-*` 等。
+- **主题**：`composables/useTheme.ts` 模块级单例 + `styles/theme.ts`（dark/light naive overrides）+ `data-theme` CSS 机制；`App.vue` 有主题切换按钮（`data-act="theme-toggle"`）。
+- **构建**：`vite.config.ts` 无 alias；`tsconfig.json` 无 paths；vitest 无全局 setup（各 spec 用 `// @vitest-environment jsdom` 注解）。
+
+## 2. 目标架构与接入
+
+### 2.1 依赖接入（vendored）
+
+1. 把 `~/Desktop/package/dist/` 内容拷贝进 `frontend/src/vendor/@dnftools/ui/`（`index.js`、`index.d.ts`、`types.d.ts`、`style.css`、`resources.json`、`assets/`、`components/`、`composables/`）。
+2. `tsconfig.json` 加 `"paths": { "@dnftools/ui": ["./src/vendor/@dnftools/ui/index.d.ts"], "@dnftools/ui/style.css": ["./src/vendor/@dnftools/ui/style.css"] }`（类型走 index.d.ts，样式路径显式声明）。
+3. `vite.config.ts` 加 `resolve.alias`：`'@dnftools/ui'` → `src/vendor/@dnftools/ui/index.js`、`'@dnftools/ui/style.css'` → `src/vendor/@dnftools/ui/style.css`。
+4. `main.ts`：`import '@dnftools/ui/style.css'`（在 `./styles/dnf.css` 之前或之后按 cascade 策略定序，见 §5 变量冲突）。
+5. 未来库发 npm 时：删除 vendor 目录 + 移除 alias + 改为真实依赖，import 路径不变。
+
+### 2.2 应用根结构（App.vue）
+
+- `NConfigProvider` → `DnfProvider`（包住全局，`--dnf-*` 主题变量由它管理，浮层自动继承）。
+- 内部嵌套 `DnfDialogProvider` + `DnfMessageProvider`，服务实例从 `lib/notify.ts` 导入共享（模块级单例）。
+- 导航栏：`DnfFrame`（surface 皮肤）包裹顶栏，`NDropdown` → `DnfDropdownMenu`；主题切换按钮删除。
+
+### 2.3 消息/弹窗适配层（关键，保持签名不变）
+
+重写 `lib/notify.ts` 内部实现，**保留对外签名不变**：
+
+```ts
+import { createDnfDialog, createDnfMessage } from '@dnftools/ui'
+export const dialogs = createDnfDialog()
+export const messages = createDnfMessage()
+export function notifyError(content: string): void { messages.error(content) }
+export function notifyWarning(content: string): void { messages.warning(content) }
+export function notifySuccess(content: string): void { messages.success(content) }
+export function confirmDialog(options: { title?: string; content: string }): Promise<boolean> {
+  return dialogs.confirm({ title: options.title ?? '确认', content: options.content, confirmLabel: '确定', cancelLabel: '取消' })
+    .then((r) => r.action === 'confirm')
+}
+```
+
+- 服务实例在模块级创建，`App.vue` 中 `:service="notify.dialogs"` / `:service="notify.messages"` 绑定 Provider。
+- 好处：所有视图的调用点 + 所有 spec 的 `vi.mock('../lib/notify')` **零改动**。
+- 组件内后续可直接用 `useDnfDialog()` / `useDnfMessage()` 做更复杂的函数式弹窗。
+
+### 2.4 主题删除
+
+- 删除 `composables/useTheme.ts` 亮色分支与 `data-theme` 机制，锁定暗色。
+- 删除 `styles/theme.ts`（naive dark/light overrides）与 `App.vue` 主题切换按钮。
+- 删除 `dnf.css` 中 `[data-theme="light"]` 全部块。
+- 相关 spec（`useTheme.spec.ts` / `notify.spec.ts` 的主题断言）同步删改。
+
+## 3. 组件映射表
+
+### 3.1 naive-ui → @dnftools/ui
+
+| 现状 | 替换为 | 涉及位置 |
+|---|---|---|
+| `NConfigProvider` | `DnfProvider` | App.vue |
+| `NDropdown` | `DnfDropdownMenu` | App.vue |
+| `NModal`（约 16 处） | `DnfDialog` / `useDnfDialog()` | 全部弹窗组件/视图 |
+| `NSelect` | `DnfSelect` | DutySelect / CharacterPicker / RaidList / RosterTargetModal |
+| `NInput` | `DnfInput` | Login / Register / Profile / CharacterForm 等 |
+| `NInputNumber` | `DnfNumberInput` | RosterTargetModal |
+| `NCheckbox` | `DnfCheckbox` | RosterTargetModal |
+| `NSwitch` | `DnfSwitch` | RosterView |
+| `NTabs`/`NTabPane` | `DnfTabs` | AdminUsersView |
+| `NButton` | `DnfButton` | Login / Register |
+| `NDatePicker` | `<input type="datetime-local">` + DNF 皮肤 | RaidList 创建 / RaidDetail 编辑 |
+
+### 3.2 自定义 dnf.css → 库组件
+
+| 现状 class | 替换为 |
+|---|---|
+| `dnf-btn` / `dnf-btn-primary` / `dnf-btn-danger` | `DnfButton` |
+| `dnf-panel` | `DnfFrame`（surface 面板） |
+| `dnf-badge` / `dnf-badge-ok` / `dnf-badge-danger` | `DnfBadge` |
+| `dnf-table` | `DnfTable` |
+| `dnf-input` / `dnf-select`（原生控件皮肤） | `DnfInput` / `DnfSelect` |
+| `UserAvatar`（自绘） | 内部改用 `DnfAvatar` |
+
+### 3.3 保留的定制 CSS（库无对应，沿用但变量换源）
+
+- 编队网格：`squad-grid` / `squad-col` / `squad-head` / `squad-cells` / `slot-cell`（5 队色）。
+- 攻坚卡片：`raid-card`。
+- 角色/职业选择：`char-pick` / `job-pick-btn`。
+- 编队标签：`pos-capsule` / `wave-tag`。
+- 页面布局：`dnf-page` / `dnf-nav` / `auth-*`。
+- 这些统一改用库的 `--dnf-*` 变量（如 `--dnf-gold` 用库值）。
+
+## 4. 分阶段迁移（每阶段独立提交、spec 全绿）
+
+- **阶段 1「基础接入」**：vendored 依赖 + alias + `main.ts` 引 style.css + `App.vue` 换 `DnfProvider`/`DnfDialogProvider`/`DnfMessageProvider` + 重写 `notify.ts`（签名不变）+ 删亮色主题与切换按钮 + 导航栏换 `DnfFrame`/`DnfDropdownMenu`。naive 仍保留，但消息/弹窗已切到 DNF。全量 build + test 通过。
+- **阶段 2「通用视觉层」**：全局换肤——`dnf-btn→DnfButton`、`dnf-panel→DnfFrame`、`dnf-badge→DnfBadge`、`dnf-table→DnfTable`、原生表单皮肤→`DnfInput`/`DnfSelect`；Login / Register / RaidList / MyCharacters 等视图替换。
+- **阶段 3「弹窗与表单控件」**：16 个 `NModal→DnfDialog`、`NSelect/NInputNumber/NCheckbox/NSwitch/NTabs` 逐组件替换，`NDatePicker→datetime-local`。
+- **阶段 4「收尾清理」**：移除 `naive-ui` 依赖 + 删除 `useTheme/theme.ts` + `dnf.css` 裁剪与库重复的变量 + 全量 `npm run build` + `vitest run` 通过。
+
+## 5. 测试策略与风险
+
+### 5.1 测试策略（全量适配）
+
+- 每阶段结束：`npm run build`（vue-tsc 类型把关）+ `vitest run` 全绿再提交。
+- spec 适配：`findComponent({name:'Switch'})` 等 naive 内部断言 → 改为针对 DNF 组件或行为断言；`vi.mock('../lib/notify')` 因签名不变保持原样。
+- 新增：`notify.ts` 适配层单测（mock DnfDialog/Message service，断言 `confirmDialog` 的 `action==='confirm'` 映射）。
+- 后端测试不受影响。
+
+### 5.2 风险与对策
+
+1. **reka-ui 在 jsdom 兼容性**：库底层用 reka-ui，vitest 可能需要全局 stub `ResizeObserver`/`matchMedia`（当前无 vitest setup 文件）。→ 阶段 1 先建最小 spec 验证，卡住早暴露；必要时加 `vitest.config.ts` setup。
+2. **变量冲突**：库 `style.css` 与现有 `dnf.css` 的 `--dnf-gold/--dnf-panel/--dnf-text/--dnf-text-muted/--dnf-danger` 重名（已确认）。→ 以库为准：`dnf.css` 裁剪掉这些变量定义，保留库未定义的 `--dnf-bg/--dnf-gold-hi/--dnf-gold-deep/--dnf-panel-inner/--dnf-text-faint/--dnf-ok/--dnf-border/--dnf-accent` 等；引入顺序保证库值生效。
+3. **库未发 npm，vendored 更新靠手动拷贝** → 接受；未来发版删 vendor + 改别名无缝切换。
+4. **datetime-local 无秒** → 前端提交前补 `:00`（后端 pydantic 解析 ISO，测试已用 `"2026-09-20T14:00:00"` 无时区格式，兼容 `YYYY-MM-DDTHH:mm`）。
+5. **库图片资源**：`dist/assets` 有 30 个哈希图（>4KB 未内联），vendored 时整目录拷入。
+
+## 6. CHANGELOG
+
+Unreleased 新增：**UI 全面升级 @dnftools/ui**——以 DNF 游戏贴图组件库替换 naive-ui 与自绘样式（全量迁移、只留暗色、分阶段落地）。
+
+## 7. 非目标 / 后续
+
+- 库源码的修改/定制（vendored dist 原样使用，不改库）。
+- 保留亮色主题或跟随系统主题（明确不做）。
+- 攻坚列表/详情页日期选择器的日历弹层（用原生 datetime-local，不造轮子）。
+- 未来库发 npm 后的依赖切换（接入方式已预留无缝迁移）。
