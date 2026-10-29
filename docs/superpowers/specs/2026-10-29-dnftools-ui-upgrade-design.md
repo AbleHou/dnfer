@@ -29,7 +29,7 @@
   - `App.vue`：`NConfigProvider` + `NDropdown`（导航菜单）。
   - 约 17 处 `NModal`：AdventurePartyModal / ChangePasswordModal / GuestCreateModal / GuestConvertModal / MemberCharactersModal / AdminResetPasswordModal / AdminUserCharactersModal / CharacterPickerModal / RosterTargetModal / SignupModal / SignupMemberPicker / SlackRulesModal / SlotActionModal / VoteCreateModal / ProfilePanel / RaidDetailView / RosterView（角色池弹窗）。
   - 表单控件：`NSelect`（DutySelect / CharacterPicker / RaidList / RosterTargetModal）、`NInput`（Login/Register/Profile/CharacterForm 等）、`NInputNumber`（RosterTargetModal）、`NCheckbox`（RosterTargetModal）、`NSwitch`（RosterView）、`NTabs`/`NTabPane`（AdminUsersView）、`NButton`（Login/Register）、`NDatePicker`（RaidList 创建 / RaidDetail 编辑）。
-- **`lib/notify.ts`**：模块级 `createDiscreteApi(['message','dialog'])` 封装 `notifyError/notifyWarning/notifySuccess/confirmDialog`（naive message/dialog）；约 10 个 spec 文件 `vi.mock('../lib/notify')`。
+- **`lib/notify.ts`**：模块级 `createDiscreteApi(['message','dialog'])` 封装 `notifyError/notifyWarning/notifySuccess/confirmDialog`（naive message/dialog）；约 17 个 spec 文件 `vi.mock('../lib/notify')`。
 - **`styles/dnf.css`**（262 行）：`--dnf-*` CSS 变量 + `dnf-btn` / `dnf-panel` / `dnf-badge` / `dnf-input` / `dnf-select` / `dnf-table` / `squad-grid` / `slot-cell` / `raid-card` / `char-pick` / `job-pick-btn` / `pos-capsule` / `wave-tag` / `dnf-nav` / `auth-*` 等。
 - **主题**：`composables/useTheme.ts` 模块级单例 + `styles/theme.ts`（dark/light naive overrides）+ `data-theme` CSS 机制；`App.vue` 有主题切换按钮（`data-act="theme-toggle"`）。
 - **构建**：`vite.config.ts` 无 alias；`tsconfig.json` 无 paths；vitest 无全局 setup（各 spec 用 `// @vitest-environment jsdom` 注解）。
@@ -104,7 +104,7 @@ export function confirmDialog(options: { title?: string; content: string }): Pro
 | `NDropdown` | `DnfDropdownMenu` | App.vue |
 | `NModal`（约 17 处，含 RosterView 角色池弹窗） | `DnfDialog` / `useDnfDialog()` | 全部弹窗组件/视图 |
 | `NSelect` | `DnfSelect` | DutySelect / CharacterPicker / RaidList / RosterTargetModal |
-| `NInput` | `DnfInput` | Login / Register / Profile / CharacterForm 等 |
+| `NInput` | `DnfInput` | Login / Register / Profile 等 |
 | `NInputNumber` | `DnfNumberInput` | RosterTargetModal |
 | `NCheckbox` | `DnfCheckbox` | RosterTargetModal |
 | `NSwitch` | `DnfSwitch` | RosterView |
