@@ -135,8 +135,8 @@ export function confirmDialog(options: { title?: string; content: string }): Pro
 ## 4. 分阶段迁移（每阶段独立提交、spec 全绿）
 
 - **阶段 1「基础接入」**：vendored 依赖 + alias + `main.ts` 引 style.css + `App.vue` 换 `DnfProvider`/`DnfDialogProvider`/`DnfMessageProvider` + 重写 `notify.ts`（签名不变）+ 删亮色主题与切换按钮 + 导航栏换 `DnfFrame`/`DnfDropdownMenu`。naive 仍保留，但消息/弹窗已切到 DNF。全量 build + test 通过。
-- **阶段 2「通用视觉层」**：全局换肤——`dnf-btn→DnfButton`、`dnf-panel→DnfFrame`、`dnf-badge→DnfBadge`、`dnf-table→DnfTable`、原生表单皮肤→`DnfInput`/`DnfSelect`；替换**不含表单控件的简单视图**（Login / Register / MyCharacters / AdminCodes / AdminDungeons / RosterView 的非表单部分）。**注意**：此阶段 `NConfigProvider` 已移除但 naive 组件仍在其余视图使用 → naive 回退默认亮色主题，属预期阶段性视觉回归，非 bug。
-- **阶段 3「弹窗与表单控件」**：所有含表单控件/弹窗的视图在此阶段完成——约 17 处 `NModal→DnfDialog`、`NSelect→DnfSelect`、`NInput→DnfInput`、`NInputNumber→DnfNumberInput`、`NCheckbox→DnfCheckbox`、`NSwitch→DnfSwitch`、`NTabs→DnfTabs`、`NDatePicker→datetime-local`（RaidList 创建 / RaidDetail 编辑）。**RaidListView 在阶段 2 只换视觉皮肤（卡片/徽章/按钮），其表单控件（NSelect/NDatePicker/NInput）在阶段 3 替换**——同一视图跨两阶段但改动面不重叠，实现时按组件归属、不按视图整体归属。
+- **阶段 2「通用视觉层」**：全局换肤——`dnf-btn→DnfButton`、`dnf-panel→DnfFrame`、`dnf-badge→DnfBadge`、`dnf-table→DnfTable`、原生表单皮肤→`DnfInput`/`DnfSelect`；替换视觉皮肤（按钮/卡片/徽章/面板/原生控件皮肤），覆盖 MyCharacters / AdminCodes / AdminDungeons / RosterView 非表单部分。**含 naive 表单控件的视图在此阶段只换皮肤不换控件**：Login/Register 只换 `NButton→DnfButton` 与页面皮肤（其 `NInput→DnfInput` 在阶段 3）、RaidListView 只换卡片/徽章/按钮（其 `NSelect/NDatePicker/NInput` 在阶段 3）——同一视图跨两阶段但改动面不重叠，**实现按组件归属、不按视图整体归属**。**注意**：`NConfigProvider` 在阶段 1 已移除，从阶段 1 末起 naive 组件回退默认亮色主题，属预期阶段性视觉回归，非 bug。
+- **阶段 3「弹窗与表单控件」**：所有 naive 表单控件与弹窗在此阶段完成——约 17 处 `NModal→DnfDialog`、`NSelect→DnfSelect`、`NInput→DnfInput`、`NInputNumber→DnfNumberInput`、`NCheckbox→DnfCheckbox`、`NSwitch→DnfSwitch`、`NTabs→DnfTabs`、`NDatePicker→datetime-local`（RaidList 创建 / RaidDetail 编辑）。
 - **阶段 4「收尾清理」**：移除 `naive-ui` 依赖 + 删除 `useTheme/theme.ts` + `dnf.css` 裁剪与库重复的变量 + 全量 `npm run build` + `vitest run` 通过。
 
 ## 5. 测试策略与风险
@@ -151,7 +151,7 @@ export function confirmDialog(options: { title?: string; content: string }): Pro
 ### 5.2 风险与对策
 
 1. **reka-ui 在 jsdom 兼容性**：库底层用 reka-ui，vitest 可能需要全局 stub `ResizeObserver`/`matchMedia`（当前无 vitest setup 文件）。→ 阶段 1 先建最小 spec 验证，卡住早暴露；必要时加 `vitest.config.ts` setup。
-2. **变量冲突**：库 `style.css` 与现有 `dnf.css` 的 `--dnf-gold/--dnf-panel/--dnf-text/--dnf-text-muted/--dnf-danger` 重名（已确认）。→ 以库为准：`dnf.css` 裁剪掉这些变量定义，保留库未定义的 `--dnf-bg/--dnf-gold-hi/--dnf-gold-deep/--dnf-panel-inner/--dnf-text-faint/--dnf-ok/--dnf-border/--dnf-accent` 等；引入顺序保证库值生效。
+2. **变量冲突**：库 `style.css` 与现有 `dnf.css` 的 `--dnf-gold/--dnf-panel/--dnf-text/--dnf-text-muted/--dnf-danger` 重名（已确认）。→ 以库为准：`dnf.css` 裁剪掉这些变量定义，保留库未定义的 `--dnf-bg/--dnf-gold-hi/--dnf-gold-deep/--dnf-panel-inner/--dnf-text-faint/--dnf-ok/--dnf-border/--dnf-accent` 等。**生效机制**：库把变量定义在 `DnfProvider` 根元素（`.dnf-theme` 类，`<html>` 的后代）上，而 `dnf.css` 定义在 `:root`——组件在 Provider 内按 DOM 就近原则取到库的值，无需纠结引入顺序；裁剪重名变量是双保险。
 3. **库未发 npm，vendored 更新靠手动拷贝** → 接受；未来发版删 vendor + 改别名无缝切换。
 4. **datetime-local 无秒** → 前端提交前补 `:00`（后端 pydantic 解析 ISO，测试已用 `"2026-09-20T14:00:00"` 无时区格式，兼容 `YYYY-MM-DDTHH:mm`）。
 5. **库图片资源**：`dist/assets` 有 30 个哈希图（>4KB 未内联），vendored 时整目录拷入。
