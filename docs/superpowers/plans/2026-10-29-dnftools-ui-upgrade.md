@@ -255,11 +255,11 @@ export function notifySuccess(content: string): void { messages.success(content)
 
 export function confirmDialog(options: { title?: string; content: string }): Promise<boolean> {
   return dialogs
-    .confirm({ title: options.title ?? '确认', content: options.content, confirmLabel: '确定', cancelLabel: '取消' })
+    .confirm({ title: options.title ?? '确认', content: options.content, confirmLabel: '确定', cancelLabel: '取消', modal: true })
     .then((r) => r.action === 'confirm')
 }
 ```
-注：若库 `confirm()` 默认 `showCancel` 不为 true，需显式加 `showCancel: true`（实现时查 `dist/components/dialog/service.d.ts` 的 `DnfDialogOptions`）。
+注：`showCancel` 库默认 `true`（已核实）无需显式传；**`modal: true` 必须显式传**——库 `confirm()` 默认 `modal: false`（无遮罩/焦点陷阱），旧 naive `dialog.warning()` 是模态，危险操作（删除/封禁等）需保留背景阻断。
 
 - [ ] **Step 4: 运行确认通过**
 
