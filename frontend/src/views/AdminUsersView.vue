@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfTable } from '@dnftools/ui'
+import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
 import AdminUserCharactersModal from '../components/AdminUserCharactersModal.vue'
@@ -58,6 +59,28 @@ watch(queryKey, () => { void loadQuery() })
 
 function toggleOrder() { order.value = order.value === 'desc' ? 'asc' : 'desc' }
 function fmtNum(n: number | null): string { return n == null ? '—' : String(n) }
+
+// ---- DnfTable 列定义 ----
+const queryCols: DnfColumn[] = [
+  { key: 'name', label: '角色名' },
+  { key: 'job_title', label: '职业' },
+  { key: 'class_type', label: '类别' },
+  { key: 'fame', label: '名望' },
+  { key: 'simulated_damage', label: '模拟伤害' },
+  { key: 'sustained_dps', label: '持续输出' },
+  { key: 'buff_amount', label: '增益量' },
+  { key: 'sun_buff', label: '太阳增益' },
+  { key: 'adventure_party_name', label: '冒险团' },
+  { key: 'owner_nickname', label: '归属玩家' },
+]
+const userCols: DnfColumn[] = [
+  { key: 'nickname', label: '昵称' },
+  { key: 'username', label: '用户名' },
+  { key: 'is_admin', label: '管理员' },
+  { key: 'character_count', label: '角色数' },
+  { key: 'status', label: '状态' },
+  { key: 'actions', label: '操作' },
+]
 
 // ---- 用户管理区 ----
 const users = ref<AdminUser[]>([])
@@ -167,30 +190,19 @@ onMounted(() => {
         <span v-if="queryLoading" style="color:var(--dnf-text-faint)">加载中…</span>
       </div>
       <p v-if="queryError" class="form-error">{{ queryError }}</p>
-      <table class="dnf-table">
-        <thead>
-          <tr><th scope="col">角色名</th><th scope="col">职业</th><th scope="col">类别</th>
-            <th scope="col">名望</th><th scope="col">模拟伤害</th><th scope="col">持续输出</th>
-            <th scope="col">增益量</th><th scope="col">太阳增益</th><th scope="col">冒险团</th><th scope="col">归属玩家</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in queryItems" :key="c.id">
-            <td>{{ c.name }}</td>
-            <td>{{ jobGenderTitle(c.job_name, c.job_title) }}</td>
-            <td>{{ c.class_type }}</td>
-            <td>{{ c.fame }}</td>
-            <td>{{ c.class_type === '输出' ? fmtNum(c.simulated_damage) : '—' }}</td>
-            <td>{{ c.class_type === '输出' ? fmtNum(c.sustained_dps) : '—' }}</td>
-            <td>{{ c.class_type === '辅助' ? fmtNum(c.buff_amount) : '—' }}</td>
-            <td>{{ c.class_type === '辅助' ? fmtNum(c.sun_buff) : '—' }}</td>
-            <td>{{ c.adventure_party_name ?? '—' }}</td>
-            <td>
-              <DnfButton class="dnf-btn-sm" :data-act="'manage-owner-' + c.owner_id"
-                         @click="openOwner(c)">{{ c.owner_nickname }}</DnfButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DnfTable label="角色查询结果" :columns="queryCols" :rows="queryItems" :row-key="(r) => r.id">
+        <template #cell-name="{ row }">{{ row.name }}</template>
+        <template #cell-job_title="{ row }">{{ jobGenderTitle(row.job_name, row.job_title) }}</template>
+        <template #cell-simulated_damage="{ row }">{{ row.class_type === '输出' ? fmtNum(row.simulated_damage) : '—' }}</template>
+        <template #cell-sustained_dps="{ row }">{{ row.class_type === '输出' ? fmtNum(row.sustained_dps) : '—' }}</template>
+        <template #cell-buff_amount="{ row }">{{ row.class_type === '辅助' ? fmtNum(row.buff_amount) : '—' }}</template>
+        <template #cell-sun_buff="{ row }">{{ row.class_type === '辅助' ? fmtNum(row.sun_buff) : '—' }}</template>
+        <template #cell-adventure_party_name="{ row }">{{ row.adventure_party_name ?? '—' }}</template>
+        <template #cell-owner_nickname="{ row }">
+          <DnfButton class="dnf-btn-sm" :data-act="'manage-owner-' + row.owner_id"
+                     @click="openOwner(row)">{{ row.owner_nickname }}</DnfButton>
+        </template>
+      </DnfTable>
       <p style="color:var(--dnf-text-faint)">共 {{ total }} 个角色</p>
         </DnfFrame>
       </n-tab-pane>
@@ -203,37 +215,27 @@ onMounted(() => {
         <DnfButton tone="gold" class="dnf-btn-sm" data-act="add-guest" @click="guestOpen = true">＋ 添加临时用户</DnfButton>
       </div>
       <p v-if="userError" class="form-error">{{ userError }}</p>
-      <table class="dnf-table">
-        <thead>
-          <tr><th scope="col">昵称</th><th scope="col">用户名</th><th scope="col">管理员</th>
-            <th scope="col">角色数</th><th scope="col">状态</th><th scope="col"></th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="u in users" :key="u.id">
-            <td>{{ u.nickname }}<DnfBadge v-if="u.is_guest" style="margin-left:6px">临时</DnfBadge></td>
-            <td>{{ u.username }}</td>
-            <td>{{ u.is_admin ? '是' : '否' }}</td>
-            <td>{{ u.character_count }}</td>
-            <td>{{ u.is_banned ? '已封禁' : '正常' }}</td>
-            <td style="white-space:nowrap">
-              <div style="display:flex;gap:8px">
-                <DnfButton class="dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</DnfButton>
-                <DnfButton v-if="!u.is_guest" class="dnf-btn-sm" :data-act="'reset-pw-' + u.id" @click="openResetPw(u)">改密</DnfButton>
-                <template v-if="u.is_guest">
-                  <DnfButton class="dnf-btn-sm" :data-act="'convert-' + u.id" @click="openConvert(u)">转正</DnfButton>
-                  <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'delete-guest-' + u.id"
-                             @click="onDeleteGuest(u)">删除</DnfButton>
-                </template>
-                <template v-if="!u.is_admin">
-                  <DnfButton v-if="!u.is_banned" tone="orange" class="dnf-btn-sm" :data-act="'ban-' + u.id"
-                             @click="toggleBan(u)">封禁</DnfButton>
-                  <DnfButton v-else class="dnf-btn-sm" :data-act="'unban-' + u.id" @click="toggleBan(u)">解封</DnfButton>
-                </template>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DnfTable label="账号列表" :columns="userCols" :rows="users" :row-key="(r) => r.id">
+        <template #cell-nickname="{ row }">{{ row.nickname }}<DnfBadge v-if="row.is_guest" style="margin-left:6px">临时</DnfBadge></template>
+        <template #cell-is_admin="{ row }">{{ row.is_admin ? '是' : '否' }}</template>
+        <template #cell-status="{ row }">{{ row.is_banned ? '已封禁' : '正常' }}</template>
+        <template #cell-actions="{ row }">
+          <div style="display:flex;gap:8px;white-space:nowrap">
+            <DnfButton class="dnf-btn-sm" :data-act="'manage-' + row.id" @click="openManage(row)">查看角色</DnfButton>
+            <DnfButton v-if="!row.is_guest" class="dnf-btn-sm" :data-act="'reset-pw-' + row.id" @click="openResetPw(row)">改密</DnfButton>
+            <template v-if="row.is_guest">
+              <DnfButton class="dnf-btn-sm" :data-act="'convert-' + row.id" @click="openConvert(row)">转正</DnfButton>
+              <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'delete-guest-' + row.id"
+                         @click="onDeleteGuest(row)">删除</DnfButton>
+            </template>
+            <template v-if="!row.is_admin">
+              <DnfButton v-if="!row.is_banned" tone="orange" class="dnf-btn-sm" :data-act="'ban-' + row.id"
+                         @click="toggleBan(row)">封禁</DnfButton>
+              <DnfButton v-else class="dnf-btn-sm" :data-act="'unban-' + row.id" @click="toggleBan(row)">解封</DnfButton>
+            </template>
+          </div>
+        </template>
+      </DnfTable>
         </DnfFrame>
       </n-tab-pane>
     </n-tabs>

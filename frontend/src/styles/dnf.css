@@ -179,10 +179,6 @@ a { color: var(--dnf-gold-hi); }
 .job-pick-btn:hover { border-color: var(--dnf-gold); }
 .job-pick-btn.active { outline: 2px solid var(--dnf-gold-hi); }
 
-/* 管理页表格 */
-.dnf-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-.dnf-table th { text-align: left; color: var(--dnf-gold-hi); border-bottom: 2px solid var(--dnf-gold-deep); padding: 8px; font-family: serif; }
-.dnf-table td { padding: 8px; border-bottom: 1px solid var(--dnf-gold-deep); color: var(--dnf-text); }
 .dnf-section { padding: 16px; margin: 16px 0; }
 
 /* 登录/注册 */

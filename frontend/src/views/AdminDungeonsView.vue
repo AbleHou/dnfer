@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfTable } from '@dnftools/ui'
+import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { Dungeon } from '../types'
@@ -18,6 +19,13 @@ async function load() {
   dungeons.value = await api.get<Dungeon[]>('/api/dungeons')
 }
 onMounted(load)
+
+const cols: DnfColumn[] = [
+  { key: 'name', label: '副本' },
+  { key: 'size', label: '人数' },
+  { key: 'description', label: '描述' },
+  { key: 'actions', label: '操作' },
+]
 
 async function saveDungeon() {
   dgBusy.value = true; dgError.value = ''
@@ -61,22 +69,14 @@ async function delDungeon(d: Dungeon) {
         <DnfButton tone="gold" data-act="save" :disabled="dgBusy" @click="saveDungeon">{{ editingId ? '保存' : '新增' }}</DnfButton>
       </div>
       <p v-if="dgError" class="form-error">{{ dgError }}</p>
-      <table class="dnf-table">
-        <thead>
-          <tr><th scope="col">副本</th><th scope="col">人数</th><th scope="col">描述</th><th scope="col"></th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="d in dungeons" :key="d.id">
-            <td>{{ d.name }}</td><td>{{ d.size }}</td><td>{{ d.description }}</td>
-            <td style="white-space:nowrap">
-              <div style="display:flex;gap:8px">
-                <DnfButton class="dnf-btn-sm" @click="editDungeon(d)">编辑</DnfButton>
-                <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'del-' + d.id" @click="delDungeon(d)">删除</DnfButton>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DnfTable label="副本列表" :columns="cols" :rows="dungeons" :row-key="(r) => r.id">
+        <template #cell-actions="{ row }">
+          <div style="display:flex;gap:8px;white-space:nowrap">
+            <DnfButton class="dnf-btn-sm" @click="editDungeon(row)">编辑</DnfButton>
+            <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'del-' + row.id" @click="delDungeon(row)">删除</DnfButton>
+          </div>
+        </template>
+      </DnfTable>
     </DnfFrame>
   </div>
 </template>

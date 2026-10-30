@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfTable } from '@dnftools/ui'
+import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import type { CodeItem } from '../types'
 import AdminNav from '../components/AdminNav.vue'
@@ -15,6 +16,12 @@ async function load() {
   codes.value = await api.get<CodeItem[]>('/api/admin/codes')
 }
 onMounted(load)
+
+const cols: DnfColumn[] = [
+  { key: 'code', label: '注册码' },
+  { key: 'status', label: '状态' },
+  { key: 'expires', label: '过期' },
+]
 
 async function genCode() {
   generating.value = true; error.value = ''
@@ -38,18 +45,11 @@ async function genCode() {
         <DnfButton data-act="gen" :disabled="generating" @click="genCode">{{ generating ? '生成中…' : '生成' }}</DnfButton>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
-      <table class="dnf-table">
-        <thead>
-          <tr><th scope="col">注册码</th><th scope="col">状态</th><th scope="col">过期</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in codes" :key="c.id">
-            <td><code>{{ c.code }}</code></td>
-            <td>{{ c.single_use ? (c.used_by ? '已使用' : '未使用') : '多用户' }}</td>
-            <td>{{ c.expires_at ? new Date(c.expires_at + 'Z').toLocaleString() : '不限' }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <DnfTable label="注册码列表" :columns="cols" :rows="codes" :row-key="(r) => r.id">
+        <template #cell-code="{ row }"><code>{{ row.code }}</code></template>
+        <template #cell-status="{ row }">{{ row.single_use ? (row.used_by ? '已使用' : '未使用') : '多用户' }}</template>
+        <template #cell-expires="{ row }">{{ row.expires_at ? new Date(row.expires_at + 'Z').toLocaleString() : '不限' }}</template>
+      </DnfTable>
     </DnfFrame>
   </div>
 </template>
