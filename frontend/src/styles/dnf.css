@@ -29,6 +29,9 @@ h1, h2, h3 {
 }
 a { color: var(--dnf-gold-hi); }
 
+/* 库 .dnf-frame 只设 border-width/color 无 border-style（假设消费方有 preflight），补上 */
+.dnf-frame { border-style: solid; }
+
 .dnf-title {
   font-family: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
   color: var(--dnf-gold-hi);
