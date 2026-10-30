@@ -52,11 +52,11 @@ function submit() {
         <div class="slack-sec-head"><b>划水名望</b>
           <span class="slack-sec-hint">数值小于输入值的角色视为划水</span></div>
         <div v-for="(row, i) in criteria" :key="i" class="slack-row">
-          <select v-model="row.class_type" class="dnf-input" :data-field="'criteria-job-' + i"
+          <select v-model="row.class_type" class="dnf-select" :data-field="'criteria-job-' + i"
                   @change="onJobChange(row)">
             <option value="输出">输出</option><option value="辅助">辅助</option>
           </select>
-          <select v-model="row.metric" class="dnf-input" :data-field="'criteria-metric-' + i">
+          <select v-model="row.metric" class="dnf-select" :data-field="'criteria-metric-' + i">
             <option v-for="m in METRICS[row.class_type]" :key="m.value" :value="m.value">{{ m.label }}</option>
           </select>
           <DnfInput :model-value="row.value?.toString() ?? ''"
@@ -72,11 +72,11 @@ function submit() {
         <div class="slack-sec-head"><b>兑换标准</b>
           <span class="slack-sec-hint">数值大于输入值的角色可兑换对应划水位</span></div>
         <div v-for="(row, i) in exchange" :key="i" class="slack-row">
-          <select v-model="row.class_type" class="dnf-input" :data-field="'exchange-job-' + i"
+          <select v-model="row.class_type" class="dnf-select" :data-field="'exchange-job-' + i"
                   @change="onJobChange(row)">
             <option value="输出">输出</option><option value="辅助">辅助</option>
           </select>
-          <select v-model="row.metric" class="dnf-input" :data-field="'exchange-metric-' + i">
+          <select v-model="row.metric" class="dnf-select" :data-field="'exchange-metric-' + i">
             <option v-for="m in METRICS[row.class_type]" :key="m.value" :value="m.value">{{ m.label }}</option>
           </select>
           <DnfInput :model-value="row.value?.toString() ?? ''"
