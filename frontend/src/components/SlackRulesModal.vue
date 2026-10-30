@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfInput } from '@dnftools/ui'
 import type { ClassType, SlackMetric, SlackRuleCriterion, SlackRuleExchange, SlackRuleSet } from '../types'
 
 const props = defineProps<{ open: boolean; rules: SlackRuleSet }>()
@@ -59,8 +59,9 @@ function submit() {
           <select v-model="row.metric" class="dnf-input" :data-field="'criteria-metric-' + i">
             <option v-for="m in METRICS[row.class_type]" :key="m.value" :value="m.value">{{ m.label }}</option>
           </select>
-          <input v-model.number="row.value" type="number" min="0" class="dnf-input"
-                 :data-field="'criteria-value-' + i" />
+          <DnfInput :model-value="row.value?.toString() ?? ''"
+                     @update:model-value="v => row.value = v ? Number(v) : 0"
+                     type="number" min="0" :data-field="'criteria-value-' + i" />
           <DnfButton v-if="criteria.length > 1" class="dnf-btn-sm" type="button"
                      :data-act="'rm-criterion-' + i" @click="removeCriterion(i)">删除</DnfButton>
         </div>
@@ -78,10 +79,12 @@ function submit() {
           <select v-model="row.metric" class="dnf-input" :data-field="'exchange-metric-' + i">
             <option v-for="m in METRICS[row.class_type]" :key="m.value" :value="m.value">{{ m.label }}</option>
           </select>
-          <input v-model.number="row.value" type="number" min="0" class="dnf-input"
-                 :data-field="'exchange-value-' + i" />
-          <input v-model.number="row.count" type="number" min="1" class="dnf-input"
-                 :data-field="'exchange-count-' + i" style="width:72px" />
+          <DnfInput :model-value="row.value?.toString() ?? ''"
+                     @update:model-value="v => row.value = v ? Number(v) : 0"
+                     type="number" min="0" :data-field="'exchange-value-' + i" />
+          <DnfInput :model-value="row.count?.toString() ?? ''"
+                     @update:model-value="v => row.count = v ? Number(v) : 0"
+                     type="number" min="1" :data-field="'exchange-count-' + i" style="width:72px" />
           <DnfButton v-if="exchange.length > 1" class="dnf-btn-sm" type="button"
                      :data-act="'rm-exchange-' + i" @click="removeExchange(i)">删除</DnfButton>
         </div>

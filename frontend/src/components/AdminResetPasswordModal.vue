@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { validatePassword } from '../utils/password'
 import { notifyError, notifySuccess } from '../lib/notify'
@@ -43,12 +43,12 @@ async function submit() {
       </div>
       <div>
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">新密码</div>
-        <input v-model="newPw" type="password" class="dnf-input" data-field="new-pw" />
+        <DnfInput v-model="newPw" type="password" data-field="new-pw" />
       </div>
       <div>
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">确认新密码</div>
-        <input v-model="confirmPw" type="password" class="dnf-input" data-field="confirm-pw"
-               @keyup.enter="submit" />
+        <DnfInput v-model="confirmPw" type="password" data-field="confirm-pw"
+                  @keyup.enter="submit" />
       </div>
       <p v-if="error" class="form-error" style="margin:0">{{ error }}</p>
       <DnfButton tone="gold" data-act="submit" :disabled="saving"

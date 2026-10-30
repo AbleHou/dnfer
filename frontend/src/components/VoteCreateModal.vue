@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfInput, DnfTextarea } from '@dnftools/ui'
 import { api } from '../api/client'
 import { notifyError, notifySuccess } from '../lib/notify'
 import type { VoteDetail } from '../types'
@@ -45,14 +45,14 @@ async function create() {
   <n-modal :show="open" preset="card" title="发起投票" style="width:480px"
            @update:show="(v: boolean) => { if (!v) emit('close') }">
     <div class="vote-form">
-      <input v-model="title" data-field="title" class="dnf-input" placeholder="标题" />
-      <textarea v-model="description" data-field="desc" class="dnf-input" rows="2"
-                placeholder="描述（可选）" />
+      <DnfInput v-model="title" data-field="title" placeholder="标题" />
+      <DnfTextarea v-model="description" data-field="desc" rows="2"
+                   placeholder="描述（可选）" />
       <label class="vote-check">
         <input v-model="multiChoice" data-field="multi" type="checkbox" /> 多选
       </label>
       <div v-for="(o, i) in options" :key="i" class="vote-opt-row">
-        <input v-model="options[i]" :data-field="'opt-' + i" class="dnf-input" placeholder="选项" />
+        <DnfInput v-model="options[i]" :data-field="'opt-' + i" placeholder="选项" />
         <DnfButton v-if="options.length > 2" class="dnf-btn-sm" type="button"
                    :data-act="'rm-opt-' + i" @click="removeOption(i)">删除</DnfButton>
       </div>

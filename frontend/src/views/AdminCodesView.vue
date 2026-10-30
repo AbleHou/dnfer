@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { DnfButton, DnfFrame, DnfTable } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfInput, DnfTable } from '@dnftools/ui'
 import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import type { CodeItem } from '../types'
@@ -41,7 +41,9 @@ async function genCode() {
       <h3>生成注册码</h3>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <label class="form-label" style="width:auto"><input type="checkbox" v-model="singleUse" /> 一次性</label>
-        <input v-model.number="expireDays" type="number" min="0" placeholder="有效期(天,0=不限)" class="dnf-input" />
+        <DnfInput :model-value="expireDays.toString()" type="number" min="0"
+                   placeholder="有效期(天,0=不限)"
+                   @update:model-value="v => expireDays = v ? Math.trunc(Number(v)) : 0" />
         <DnfButton data-act="gen" :disabled="generating" @click="genCode">{{ generating ? '生成中…' : '生成' }}</DnfButton>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>

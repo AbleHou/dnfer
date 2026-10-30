@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { jobGenderTitle } from '../lib/job'
 import { notifyError, notifySuccess } from '../lib/notify'
@@ -74,11 +74,11 @@ async function submit() {
       </div>
       <div>
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">昵称 *</div>
-        <input v-model="nickname" class="dnf-input" data-field="nickname" placeholder="对方常用称呼" />
+        <DnfInput v-model="nickname" data-field="nickname" placeholder="对方常用称呼" />
       </div>
       <div>
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">用户名（可选）</div>
-        <input v-model="username" class="dnf-input" data-field="username" placeholder="留空则自动生成" />
+        <DnfInput v-model="username" data-field="username" placeholder="留空则自动生成" />
       </div>
       <div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -86,19 +86,29 @@ async function submit() {
           <DnfButton type="button" class="dnf-btn-sm" data-act="add-row" @click="addRow">＋ 添加角色</DnfButton>
         </div>
         <div v-for="(r, i) in rows" :key="i" class="guest-row" :data-test="`guest-row-${i}`">
-          <input v-model="r.name" class="dnf-input" data-field="char-name" placeholder="角色名" style="flex:1;min-width:90px" />
+          <DnfInput v-model="r.name" data-field="char-name" placeholder="角色名" style="flex:1;min-width:90px" />
           <select v-model="r.job_name" class="dnf-select" data-field="job" style="max-width:140px">
             <option value="">选择职业</option>
             <option v-for="j in flatJobs" :key="j.name" :value="j.name">{{ jobGenderTitle(j.name, j.title) }}</option>
           </select>
-          <input v-model.number="r.fame" type="number" class="dnf-input" data-field="fame" placeholder="名望" style="width:80px" />
+          <DnfInput :model-value="r.fame?.toString() ?? ''"
+                     @update:model-value="v => r.fame = v ? Number(v) : null"
+                     type="number" data-field="fame" placeholder="名望" style="width:80px" />
           <template v-if="jobOf(r.job_name)?.class_type === '输出'">
-            <input v-model.number="r.damage" type="number" class="dnf-input" data-field="damage" placeholder="模拟伤害(亿)" style="width:100px" />
-            <input v-model.number="r.dps" type="number" class="dnf-input" data-field="dps" placeholder="秒伤(亿)" style="width:100px" />
+            <DnfInput :model-value="r.damage?.toString() ?? ''"
+                       @update:model-value="v => r.damage = v ? Number(v) : null"
+                       type="number" data-field="damage" placeholder="模拟伤害(亿)" style="width:100px" />
+            <DnfInput :model-value="r.dps?.toString() ?? ''"
+                       @update:model-value="v => r.dps = v ? Number(v) : null"
+                       type="number" data-field="dps" placeholder="秒伤(亿)" style="width:100px" />
           </template>
           <template v-else-if="jobOf(r.job_name)?.class_type === '辅助'">
-            <input v-model.number="r.buff" type="number" class="dnf-input" data-field="buff" placeholder="增益量" style="width:90px" />
-            <input v-model.number="r.sun" type="number" class="dnf-input" data-field="sun" placeholder="太阳" style="width:90px" />
+            <DnfInput :model-value="r.buff?.toString() ?? ''"
+                       @update:model-value="v => r.buff = v ? Number(v) : null"
+                       type="number" data-field="buff" placeholder="增益量" style="width:90px" />
+            <DnfInput :model-value="r.sun?.toString() ?? ''"
+                       @update:model-value="v => r.sun = v ? Number(v) : null"
+                       type="number" data-field="sun" placeholder="太阳" style="width:90px" />
           </template>
           <DnfButton type="button" tone="orange" class="dnf-btn-sm" data-act="remove-row" @click="removeRow(i)">×</DnfButton>
         </div>

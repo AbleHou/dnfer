@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { DnfButton, DnfFrame, DnfTable } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfInput, DnfTable } from '@dnftools/ui'
 import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError } from '../lib/notify'
@@ -61,11 +61,11 @@ async function delDungeon(d: Dungeon) {
     <h2>副本管理</h2>
     <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input v-model="dgName" placeholder="副本名称" class="dnf-input" />
+        <DnfInput v-model="dgName" placeholder="副本名称" />
         <select v-model.number="dgSize" class="dnf-select">
           <option v-for="s in [4,8,12,16,20]" :key="s" :value="s">{{ s }} 人</option>
         </select>
-        <input v-model="dgDesc" placeholder="描述（可选）" class="dnf-input" />
+        <DnfInput v-model="dgDesc" placeholder="描述（可选）" />
         <DnfButton tone="gold" data-act="save" :disabled="dgBusy" @click="saveDungeon">{{ editingId ? '保存' : '新增' }}</DnfButton>
       </div>
       <p v-if="dgError" class="form-error">{{ dgError }}</p>

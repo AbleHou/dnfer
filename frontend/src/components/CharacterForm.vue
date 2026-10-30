@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { categoryIcon, jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import type { AdventureParty, Character, JobCategory, JobChild } from '../types'
@@ -66,7 +66,7 @@ async function save() {
     <h3>{{ editing ? '编辑角色' : '添加角色' }}</h3>
     <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
       <label for="char-name" class="form-label">角色名：</label>
-      <input id="char-name" v-model="form.name" class="dnf-input" style="flex:1" />
+      <DnfInput id="char-name" v-model="form.name" style="flex:1" />
     </div>
     <div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0">
       <label class="form-label">职业：</label>
@@ -96,7 +96,9 @@ async function save() {
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
       <label for="char-fame" class="form-label">名望：</label>
-      <input id="char-fame" v-model.number="form.fame" type="number" class="dnf-input" style="flex:1" />
+      <DnfInput id="char-fame" :model-value="form.fame?.toString() ?? ''"
+                @update:model-value="v => form.fame = v ? Number(v) : null"
+                type="number" style="flex:1" />
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
       <label for="char-party" class="form-label">冒险团：</label>
@@ -109,21 +111,29 @@ async function save() {
       <template v-if="!isSupport">
         <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
           <label for="char-damage" class="form-label">模拟伤害（亿）：</label>
-          <input id="char-damage" v-model.number="form.simulated_damage" type="number" class="dnf-input" style="flex:1" />
+          <DnfInput id="char-damage" :model-value="form.simulated_damage?.toString() ?? ''"
+                    @update:model-value="v => form.simulated_damage = v ? Number(v) : null"
+                    type="number" style="flex:1" />
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
           <label for="char-dps" class="form-label">秒伤（亿）：</label>
-          <input id="char-dps" v-model.number="form.sustained_dps" type="number" class="dnf-input" style="flex:1" />
+          <DnfInput id="char-dps" :model-value="form.sustained_dps?.toString() ?? ''"
+                    @update:model-value="v => form.sustained_dps = v ? Number(v) : null"
+                    type="number" style="flex:1" />
         </div>
       </template>
       <template v-else>
         <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
           <label for="char-buff" class="form-label">增益量：</label>
-          <input id="char-buff" v-model.number="form.buff_amount" type="number" class="dnf-input" style="flex:1" />
+          <DnfInput id="char-buff" :model-value="form.buff_amount?.toString() ?? ''"
+                    @update:model-value="v => form.buff_amount = v ? Number(v) : null"
+                    type="number" style="flex:1" />
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
           <label for="char-sun-buff" class="form-label">太阳增益：</label>
-          <input id="char-sun-buff" v-model.number="form.sun_buff" type="number" class="dnf-input" style="flex:1" />
+          <DnfInput id="char-sun-buff" :model-value="form.sun_buff?.toString() ?? ''"
+                    @update:model-value="v => form.sun_buff = v ? Number(v) : null"
+                    type="number" style="flex:1" />
         </div>
       </template>
     </template>

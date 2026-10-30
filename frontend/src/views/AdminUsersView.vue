@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { DnfBadge, DnfButton, DnfFrame, DnfTable } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfTable } from '@dnftools/ui'
 import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
@@ -174,8 +174,8 @@ onMounted(() => {
           <option value="">全部职业</option>
           <option v-for="j in flatJobs" :key="j.id" :value="j.name">{{ jobGenderTitle(j.name, j.title) }}</option>
         </select>
-        <input v-model="keyword" placeholder="角色名" class="dnf-input" data-filter="keyword" />
-        <input v-model="owner" placeholder="归属玩家" class="dnf-input" data-filter="owner" />
+        <DnfInput v-model="keyword" placeholder="角色名" data-filter="keyword" />
+        <DnfInput v-model="owner" placeholder="归属玩家" data-filter="owner" />
         <select v-model="sort" class="dnf-select" data-filter="sort">
           <option value="fame">名望</option>
           <option value="simulated_damage">模拟伤害</option>
@@ -209,8 +209,8 @@ onMounted(() => {
       <n-tab-pane name="users" tab="账号管理" display-directive="show">
         <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-        <input v-model="userQ" placeholder="搜索昵称/用户名" class="dnf-input" data-filter="user_q"
-               @keyup.enter="loadUsers" />
+        <DnfInput v-model="userQ" placeholder="搜索昵称/用户名" data-filter="user_q"
+                  @keyup.enter="loadUsers" />
         <DnfButton class="dnf-btn-sm" data-act="user-search" @click="loadUsers">搜索</DnfButton>
         <DnfButton tone="gold" class="dnf-btn-sm" data-act="add-guest" @click="guestOpen = true">＋ 添加临时用户</DnfButton>
       </div>
