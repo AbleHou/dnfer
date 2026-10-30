@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { AdventureParty } from '../types'
@@ -81,27 +82,27 @@ async function remove(p: AdventureParty) {
         <template v-if="renamingId === p.id">
           <input v-model="renameName" class="dnf-input" data-act="party-rename-input"
                  style="flex:1" />
-          <button class="dnf-btn dnf-btn-sm dnf-btn-primary" data-act="party-rename-save"
-                  @click="saveRename(p)">保存</button>
+          <DnfButton tone="gold" class="dnf-btn-sm" data-act="party-rename-save"
+                     @click="saveRename(p)">保存</DnfButton>
         </template>
         <template v-else>
           <div style="flex:1">
             <b style="margin-right:6px">{{ p.name }}</b>
             <span style="color:var(--dnf-text-faint);font-size:12px">（{{ p.character_count }} 角色）</span>
           </div>
-          <button class="dnf-btn dnf-btn-sm" :data-act="'party-rename-'+p.id"
-                  @click="startRename(p)">改名</button>
-          <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'party-delete-'+p.id"
-                  :disabled="p.character_count > 0 || parties.length <= 1"
-                  @click="remove(p)">删除</button>
+          <DnfButton class="dnf-btn-sm" :data-act="'party-rename-'+p.id"
+                     @click="startRename(p)">改名</DnfButton>
+          <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'party-delete-'+p.id"
+                     :disabled="p.character_count > 0 || parties.length <= 1"
+                     @click="remove(p)">删除</DnfButton>
         </template>
       </div>
 
       <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
         <input v-model="createName" class="dnf-input" data-act="party-create-input"
                placeholder="新冒险团名" style="flex:1" />
-        <button class="dnf-btn dnf-btn-primary" data-act="party-create"
-                @click="create">创建</button>
+        <DnfButton tone="gold" data-act="party-create"
+                   @click="create">创建</DnfButton>
       </div>
     </div>
   </n-modal>

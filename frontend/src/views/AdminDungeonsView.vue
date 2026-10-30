@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { Dungeon } from '../types'
@@ -57,7 +58,7 @@ async function delDungeon(d: Dungeon) {
           <option v-for="s in [4,8,12,16,20]" :key="s" :value="s">{{ s }} 人</option>
         </select>
         <input v-model="dgDesc" placeholder="描述（可选）" class="dnf-input" />
-        <button class="dnf-btn dnf-btn-primary" data-act="save" :disabled="dgBusy" @click="saveDungeon">{{ editingId ? '保存' : '新增' }}</button>
+        <DnfButton tone="gold" data-act="save" :disabled="dgBusy" @click="saveDungeon">{{ editingId ? '保存' : '新增' }}</DnfButton>
       </div>
       <p v-if="dgError" class="form-error">{{ dgError }}</p>
       <table class="dnf-table">
@@ -69,8 +70,8 @@ async function delDungeon(d: Dungeon) {
             <td>{{ d.name }}</td><td>{{ d.size }}</td><td>{{ d.description }}</td>
             <td style="white-space:nowrap">
               <div style="display:flex;gap:8px">
-                <button class="dnf-btn dnf-btn-sm" @click="editDungeon(d)">编辑</button>
-                <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'del-' + d.id" @click="delDungeon(d)">删除</button>
+                <DnfButton class="dnf-btn-sm" @click="editDungeon(d)">编辑</DnfButton>
+                <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'del-' + d.id" @click="delDungeon(d)">删除</DnfButton>
               </div>
             </td>
           </tr>

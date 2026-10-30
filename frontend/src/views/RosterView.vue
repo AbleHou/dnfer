@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { DnfButton } from '@dnftools/ui'
 import { NModal, NSwitch } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -22,6 +23,7 @@ import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib
 import type { Character, Slot, User, Wave } from '../types'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const store = useRaidStore()
 const rid = Number(route.params.id)
@@ -217,7 +219,7 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="store.raid" class="dnf-page">
     <div class="page-head" style="flex-wrap:wrap;gap:10px">
-      <router-link :to="`/raids/${rid}`" class="dnf-btn dnf-btn-sm" style="text-decoration:none">← 返回</router-link>
+      <DnfButton class="dnf-btn-sm" @click="router.push(`/raids/${rid}`)">← 返回</DnfButton>
       <h2 style="margin:0">{{ store.raid.name }} · 编队</h2>
       <span v-if="store.raid?.closed" class="dnf-badge dnf-badge-danger">攻坚已关闭，仅查看</span>
       <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
@@ -230,17 +232,17 @@ onBeforeUnmount(() => {
 
     <!-- 波标签 -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
-      <button v-for="w in store.raid.waves" :key="w.id" class="dnf-btn dnf-btn-sm"
-              :class="{ 'dnf-btn-primary': w.index === currentIndex }"
-              :data-test="`wave-tab-${w.index}`" @click="currentIndex = w.index; holding = null">
+      <DnfButton v-for="w in store.raid.waves" :key="w.id" class="dnf-btn-sm"
+                 :tone="w.index === currentIndex ? 'gold' : 'blue'"
+                 :data-test="`wave-tab-${w.index}`" @click="currentIndex = w.index; holding = null">
         {{ waveLabel(w) }}
-      </button>
+      </DnfButton>
       <!-- 未排状态条 -->
       <span style="margin-left:auto;display:flex;align-items:center;gap:6px">
-        <button class="dnf-btn dnf-btn-sm" data-test="unplaced-toggle"
-                @click="showUnplaced = !showUnplaced">
+        <DnfButton class="dnf-btn-sm" data-test="unplaced-toggle"
+                   @click="showUnplaced = !showUnplaced">
           本波未排 {{ roundUnplaced }} · 全局未排 {{ globalUnplaced }}
-        </button>
+        </DnfButton>
       </span>
     </div>
     <div v-if="showUnplaced" class="dnf-panel" style="margin-bottom:10px;padding:10px" data-test="unplaced-list">
@@ -253,7 +255,7 @@ onBeforeUnmount(() => {
     <!-- 拿起提示 -->
     <div v-if="holding" class="move-hint" style="display:flex;align-items:center;gap:10px;margin:8px 0">
       <span style="color:var(--dnf-gold-hi)">拿起中：{{ holding.name }} → 点击右侧目标格</span>
-      <button class="dnf-btn dnf-btn-sm" data-test="cancel-holding" @click="holding = null">取消（Esc）</button>
+      <DnfButton class="dnf-btn-sm" data-test="cancel-holding" @click="holding = null">取消（Esc）</DnfButton>
     </div>
 
     <div style="display:flex;gap:16px;align-items:flex-start">
@@ -275,8 +277,8 @@ onBeforeUnmount(() => {
                   :char-placement="charPlacement" :current-round="currentRound"
                   @pick="onPick">
         <template #toolbar-extra>
-          <button v-if="canEdit && !store.raid.locked" class="dnf-btn dnf-btn-sm"
-                  data-test="add-guest" @click="guestOpen = true">＋临时</button>
+          <DnfButton v-if="canEdit && !store.raid.locked" class="dnf-btn-sm"
+                     data-test="add-guest" @click="guestOpen = true">＋临时</DnfButton>
         </template>
       </RosterPool>
     </n-modal>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { categoryIcon, jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import type { AdventureParty, Character, JobCategory, JobChild } from '../types'
@@ -129,8 +130,8 @@ async function save() {
     <p v-else style="color:var(--dnf-text-faint);font-size:12px">请先选择职业</p>
     <p v-if="error" class="form-error">{{ error }}</p>
     <div style="display:flex;gap:8px">
-      <button class="dnf-btn dnf-btn-primary" :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
-      <button class="dnf-btn" @click="emit('cancel')">取消</button>
+      <DnfButton tone="gold" :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</DnfButton>
+      <DnfButton @click="emit('cancel')">取消</DnfButton>
     </div>
   </div>
 </template>

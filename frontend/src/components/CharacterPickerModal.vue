@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { NModal, NSelect } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { defaultDuty, dutyOptions } from '../lib/duty'
@@ -75,8 +76,8 @@ const options = computed(() =>
     </div>
     <template #footer>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="dnf-btn" @click="emit('close')">关闭</button>
-        <button v-if="selected" class="dnf-btn dnf-btn-primary" @click="confirmPick">确定</button>
+        <DnfButton @click="emit('close')">关闭</DnfButton>
+        <DnfButton v-if="selected" tone="gold" @click="confirmPick">确定</DnfButton>
       </div>
     </template>
   </n-modal>

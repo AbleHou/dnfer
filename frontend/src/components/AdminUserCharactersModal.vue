@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import CharacterCard from './CharacterCard.vue'
 import CharacterForm from './CharacterForm.vue'
@@ -62,7 +63,7 @@ async function remove(c: Character) {
     <div style="max-height:70vh;overflow:auto">
       <p v-if="error" class="form-error">{{ error }}</p>
       <div v-if="user" style="display:flex;justify-content:flex-end;margin-bottom:8px">
-        <button class="dnf-btn dnf-btn-primary" data-act="add" @click="startAdd">＋ 添加角色</button>
+        <DnfButton tone="gold" data-act="add" @click="startAdd">＋ 添加角色</DnfButton>
       </div>
 
       <CharacterForm v-if="showForm" :categories="categories" :editing="editing" :base-url="base()"
@@ -73,8 +74,8 @@ async function remove(c: Character) {
         <div v-for="c in characters" :key="c.id"
              class="dnf-panel" style="padding:12px;margin:8px 0;display:flex;align-items:center;gap:12px">
           <div style="flex:1"><CharacterCard :character="c" :placement="null" readonly /></div>
-          <button class="dnf-btn dnf-btn-sm" :data-act="'edit-'+c.id" @click="startEdit(c)">编辑</button>
-          <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'del-'+c.id" @click="remove(c)">删除</button>
+          <DnfButton class="dnf-btn-sm" :data-act="'edit-'+c.id" @click="startEdit(c)">编辑</DnfButton>
+          <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'del-'+c.id" @click="remove(c)">删除</DnfButton>
         </div>
       </template>
     </div>

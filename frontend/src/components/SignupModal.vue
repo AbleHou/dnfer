@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import type { Character } from '../types'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
@@ -98,10 +99,10 @@ function submit() {
     <template #footer>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <template v-if="mode === 'signup'">
-          <button class="dnf-btn" @click="emit('close')">取消</button>
-          <button class="dnf-btn dnf-btn-primary" data-act="submit" @click="submit">确认报名</button>
+          <DnfButton @click="emit('close')">取消</DnfButton>
+          <DnfButton tone="gold" data-act="submit" @click="submit">确认报名</DnfButton>
         </template>
-        <button v-else class="dnf-btn" @click="emit('close')">关闭</button>
+        <DnfButton v-else @click="emit('close')">关闭</DnfButton>
       </div>
     </template>
   </n-modal>

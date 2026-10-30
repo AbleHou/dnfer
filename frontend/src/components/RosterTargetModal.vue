@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import { NModal, NInputNumber, NCheckbox } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import type { SquadTarget } from '../lib/roster'
 
 const props = defineProps<{ open: boolean; squadLabel: string; target: SquadTarget | null }>()
@@ -60,8 +61,8 @@ function toTarget(): SquadTarget {
     </div>
     <template #footer>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="dnf-btn" data-test="tgt-close" @click="emit('close')">取消</button>
-        <button class="dnf-btn dnf-btn-primary" data-test="tgt-save" @click="emit('save', toTarget())">保存</button>
+        <DnfButton data-test="tgt-close" @click="emit('close')">取消</DnfButton>
+        <DnfButton tone="gold" data-test="tgt-save" @click="emit('save', toTarget())">保存</DnfButton>
       </div>
     </template>
   </n-modal>

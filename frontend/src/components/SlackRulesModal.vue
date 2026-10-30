@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import type { ClassType, SlackMetric, SlackRuleCriterion, SlackRuleExchange, SlackRuleSet } from '../types'
 
 const props = defineProps<{ open: boolean; rules: SlackRuleSet }>()
@@ -60,11 +61,11 @@ function submit() {
           </select>
           <input v-model.number="row.value" type="number" min="0" class="dnf-input"
                  :data-field="'criteria-value-' + i" />
-          <button v-if="criteria.length > 1" class="dnf-btn dnf-btn-sm" type="button"
-                  :data-act="'rm-criterion-' + i" @click="removeCriterion(i)">删除</button>
+          <DnfButton v-if="criteria.length > 1" class="dnf-btn-sm" type="button"
+                     :data-act="'rm-criterion-' + i" @click="removeCriterion(i)">删除</DnfButton>
         </div>
-        <button v-if="criteria.length < 20" class="dnf-btn dnf-btn-sm" type="button"
-                data-act="add-criterion" @click="addCriterion">＋ 添加一行</button>
+        <DnfButton v-if="criteria.length < 20" class="dnf-btn-sm" type="button"
+                   data-act="add-criterion" @click="addCriterion">＋ 添加一行</DnfButton>
       </div>
       <div class="slack-section">
         <div class="slack-sec-head"><b>兑换标准</b>
@@ -81,15 +82,15 @@ function submit() {
                  :data-field="'exchange-value-' + i" />
           <input v-model.number="row.count" type="number" min="1" class="dnf-input"
                  :data-field="'exchange-count-' + i" style="width:72px" />
-          <button v-if="exchange.length > 1" class="dnf-btn dnf-btn-sm" type="button"
-                  :data-act="'rm-exchange-' + i" @click="removeExchange(i)">删除</button>
+          <DnfButton v-if="exchange.length > 1" class="dnf-btn-sm" type="button"
+                     :data-act="'rm-exchange-' + i" @click="removeExchange(i)">删除</DnfButton>
         </div>
-        <button v-if="exchange.length < 20" class="dnf-btn dnf-btn-sm" type="button"
-                data-act="add-exchange" @click="addExchange">＋ 添加一行</button>
+        <DnfButton v-if="exchange.length < 20" class="dnf-btn-sm" type="button"
+                   data-act="add-exchange" @click="addExchange">＋ 添加一行</DnfButton>
       </div>
       <div class="slack-actions">
-        <button class="dnf-btn" data-act="clear" @click="clearAll">清空</button>
-        <button class="dnf-btn dnf-btn-primary" data-act="submit" @click="submit">提交</button>
+        <DnfButton data-act="clear" @click="clearAll">清空</DnfButton>
+        <DnfButton tone="gold" data-act="submit" @click="submit">提交</DnfButton>
       </div>
     </div>
   </n-modal>

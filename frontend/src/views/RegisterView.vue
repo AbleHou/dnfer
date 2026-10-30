@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NInput, NButton } from 'naive-ui'
+import { NInput } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { useAuthStore } from '../stores/auth'
 import { validateNickname } from '../utils/nickname'
 
@@ -40,7 +41,7 @@ async function submit() {
         <p v-if="nicknameError" class="form-error" style="margin:-6px 0 6px">{{ nicknameError }}</p>
         <div style="margin:10px 0"><n-input v-model:value="code" placeholder="注册码" /></div>
         <p v-if="error" class="form-error">{{ error }}</p>
-        <n-button type="primary" attr-type="submit" block :loading="loading">注册</n-button>
+        <DnfButton type="submit" tone="gold" style="width:100%" :loading="loading">注册</DnfButton>
       </form>
       <p style="margin-top:12px">已有账号？<router-link to="/login">登录</router-link></p>
     </div>

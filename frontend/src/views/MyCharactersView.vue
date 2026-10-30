@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
 import AdventurePartyModal from '../components/AdventurePartyModal.vue'
@@ -67,15 +68,15 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
     <div class="page-head">
       <h2>我的角色</h2>
       <div style="display:flex;align-items:center;gap:8px">
-        <button class="dnf-btn dnf-btn-primary" @click="startCreate">＋ 添加角色</button>
-        <button class="dnf-btn dnf-btn-sm" data-act="manage-parties"
-                @click="partyModalOpen = true">冒险团管理</button>
-        <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'type' }"
-                @click="sortMode = 'type'">按类型</button>
-        <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'fame' }"
-                @click="sortMode = 'fame'">按名望</button>
-        <button class="dnf-btn dnf-btn-sm" :class="{ 'dnf-btn-primary': sortMode === 'party' }"
-                @click="sortMode = 'party'">按冒险团</button>
+        <DnfButton tone="gold" @click="startCreate">＋ 添加角色</DnfButton>
+        <DnfButton class="dnf-btn-sm" data-act="manage-parties"
+                   @click="partyModalOpen = true">冒险团管理</DnfButton>
+        <DnfButton class="dnf-btn-sm" :tone="sortMode === 'type' ? 'gold' : 'blue'"
+                   @click="sortMode = 'type'">按类型</DnfButton>
+        <DnfButton class="dnf-btn-sm" :tone="sortMode === 'fame' ? 'gold' : 'blue'"
+                   @click="sortMode = 'fame'">按名望</DnfButton>
+        <DnfButton class="dnf-btn-sm" :tone="sortMode === 'party' ? 'gold' : 'blue'"
+                   @click="sortMode = 'party'">按冒险团</DnfButton>
       </div>
     </div>
 
@@ -99,8 +100,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
             </div>
           </div>
         </div>
-        <button class="dnf-btn dnf-btn-sm" @click.stop="startEdit(c)">编辑</button>
-        <button class="dnf-btn dnf-btn-sm dnf-btn-danger" @click.stop="remove(c)">删除</button>
+        <DnfButton class="dnf-btn-sm" @click.stop="startEdit(c)">编辑</DnfButton>
+        <DnfButton tone="orange" class="dnf-btn-sm" @click.stop="remove(c)">删除</DnfButton>
       </div>
       <CharacterForm v-if="showForm && editing?.id === c.id" :categories="categories" :editing="c"
                      @saved="onSaved" @cancel="onCancel" />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DnfButton } from '@dnftools/ui'
 import type { Character, Slot, Wave } from '../types'
 import RosterSlot from './RosterSlot.vue'
 import { SQUAD_NAMES } from '../lib/colors'
@@ -47,8 +48,8 @@ function dimText(d: SquadOverview['dims'][number], slack: boolean): string {
           <span style="color:var(--dnf-text-faint)">
             {{ sq.slots.filter(s => s.character_id != null).length }}/{{ sq.slots.length }}
           </span>
-          <button v-if="canEdit" class="dnf-btn dnf-btn-sm"
-                  :data-act="`edit-target-${sq.index}`" @click="emit('editTarget', sq.index)">目标</button>
+          <DnfButton v-if="canEdit" class="dnf-btn-sm"
+                     :data-act="`edit-target-${sq.index}`" @click="emit('editTarget', sq.index)">目标</DnfButton>
         </div>
         <div class="roster-squad-status"
              :class="sq.overview.slack || sq.overview.ok ? 'ok' : 'warn'">

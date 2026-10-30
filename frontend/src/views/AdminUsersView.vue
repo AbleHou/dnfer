@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
 import AdminUserCharactersModal from '../components/AdminUserCharactersModal.vue'
@@ -160,9 +161,9 @@ onMounted(() => {
           <option value="sun_buff">太阳增益</option>
           <option value="name">角色名</option>
         </select>
-        <button class="dnf-btn dnf-btn-sm" data-act="toggle-order" @click="toggleOrder">
+        <DnfButton class="dnf-btn-sm" data-act="toggle-order" @click="toggleOrder">
           {{ order === 'desc' ? '↓ 降序' : '↑ 升序' }}
-        </button>
+        </DnfButton>
         <span v-if="queryLoading" style="color:var(--dnf-text-faint)">加载中…</span>
       </div>
       <p v-if="queryError" class="form-error">{{ queryError }}</p>
@@ -184,8 +185,8 @@ onMounted(() => {
             <td>{{ c.class_type === '辅助' ? fmtNum(c.sun_buff) : '—' }}</td>
             <td>{{ c.adventure_party_name ?? '—' }}</td>
             <td>
-              <button class="dnf-btn dnf-btn-sm" :data-act="'manage-owner-' + c.owner_id"
-                      @click="openOwner(c)">{{ c.owner_nickname }}</button>
+              <DnfButton class="dnf-btn-sm" :data-act="'manage-owner-' + c.owner_id"
+                         @click="openOwner(c)">{{ c.owner_nickname }}</DnfButton>
             </td>
           </tr>
         </tbody>
@@ -198,8 +199,8 @@ onMounted(() => {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <input v-model="userQ" placeholder="搜索昵称/用户名" class="dnf-input" data-filter="user_q"
                @keyup.enter="loadUsers" />
-        <button class="dnf-btn dnf-btn-sm" data-act="user-search" @click="loadUsers">搜索</button>
-        <button class="dnf-btn dnf-btn-sm dnf-btn-primary" data-act="add-guest" @click="guestOpen = true">＋ 添加临时用户</button>
+        <DnfButton class="dnf-btn-sm" data-act="user-search" @click="loadUsers">搜索</DnfButton>
+        <DnfButton tone="gold" class="dnf-btn-sm" data-act="add-guest" @click="guestOpen = true">＋ 添加临时用户</DnfButton>
       </div>
       <p v-if="userError" class="form-error">{{ userError }}</p>
       <table class="dnf-table">
@@ -216,17 +217,17 @@ onMounted(() => {
             <td>{{ u.is_banned ? '已封禁' : '正常' }}</td>
             <td style="white-space:nowrap">
               <div style="display:flex;gap:8px">
-                <button class="dnf-btn dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</button>
-                <button v-if="!u.is_guest" class="dnf-btn dnf-btn-sm" :data-act="'reset-pw-' + u.id" @click="openResetPw(u)">改密</button>
+                <DnfButton class="dnf-btn-sm" :data-act="'manage-' + u.id" @click="openManage(u)">查看角色</DnfButton>
+                <DnfButton v-if="!u.is_guest" class="dnf-btn-sm" :data-act="'reset-pw-' + u.id" @click="openResetPw(u)">改密</DnfButton>
                 <template v-if="u.is_guest">
-                  <button class="dnf-btn dnf-btn-sm" :data-act="'convert-' + u.id" @click="openConvert(u)">转正</button>
-                  <button class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'delete-guest-' + u.id"
-                          @click="onDeleteGuest(u)">删除</button>
+                  <DnfButton class="dnf-btn-sm" :data-act="'convert-' + u.id" @click="openConvert(u)">转正</DnfButton>
+                  <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'delete-guest-' + u.id"
+                             @click="onDeleteGuest(u)">删除</DnfButton>
                 </template>
                 <template v-if="!u.is_admin">
-                  <button v-if="!u.is_banned" class="dnf-btn dnf-btn-sm dnf-btn-danger" :data-act="'ban-' + u.id"
-                          @click="toggleBan(u)">封禁</button>
-                  <button v-else class="dnf-btn dnf-btn-sm" :data-act="'unban-' + u.id" @click="toggleBan(u)">解封</button>
+                  <DnfButton v-if="!u.is_banned" tone="orange" class="dnf-btn-sm" :data-act="'ban-' + u.id"
+                             @click="toggleBan(u)">封禁</DnfButton>
+                  <DnfButton v-else class="dnf-btn-sm" :data-act="'unban-' + u.id" @click="toggleBan(u)">解封</DnfButton>
                 </template>
               </div>
             </td>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { VoteDetail } from '../types'
@@ -77,14 +78,14 @@ async function deleteVote() {
         {{ isOpen ? '进行中' : '已结束' }}</span>
       <span v-if="isMulti" class="dnf-badge">多选</span>
       <span class="vote-voters">{{ vote.total_voters }} 人已投</span>
-      <button v-if="isAdmin && isOpen" class="dnf-btn dnf-btn-sm" data-act="close" @click.stop="closeVote">关闭投票</button>
-      <button v-if="isAdmin" class="dnf-btn dnf-btn-sm dnf-btn-danger" data-act="delete" @click.stop="deleteVote">删除投票</button>
+      <DnfButton v-if="isAdmin && isOpen" class="dnf-btn-sm" data-act="close" @click.stop="closeVote">关闭投票</DnfButton>
+      <DnfButton v-if="isAdmin" tone="orange" class="dnf-btn-sm" data-act="delete" @click.stop="deleteVote">删除投票</DnfButton>
     </div>
     <div v-if="!collapsed" class="vote-body">
       <p v-if="vote.description" class="vote-desc">{{ vote.description }}</p>
       <div v-if="isOpen && !votedAnon && !vote.my_voted" class="vote-mask">
-        <button class="dnf-btn dnf-btn-sm" data-act="mask" @click="maskUp = !maskUp">
-          {{ maskUp ? '取消匿名' : '匿名投票' }}</button>
+        <DnfButton class="dnf-btn-sm" data-act="mask" @click="maskUp = !maskUp">
+          {{ maskUp ? '取消匿名' : '匿名投票' }}</DnfButton>
         <span v-if="maskUp" class="vote-note">匿名已开启：本次投票将记作匿名</span>
       </div>
       <ul class="vote-options">
@@ -104,8 +105,8 @@ async function deleteVote() {
       </ul>
       <p v-if="votedAnon" class="vote-note">你已匿名投票，本会话内无法修改或撤销</p>
       <p v-else-if="isOpen && vote.my_voted" class="vote-note">你已投票</p>
-      <button v-if="isOpen && !votedAnon && !vote.my_voted" class="dnf-btn dnf-btn-primary dnf-btn-sm vote-submit"
-              data-act="vote" @click="submitVote">投票</button>
+      <DnfButton v-if="isOpen && !votedAnon && !vote.my_voted" tone="gold" class="dnf-btn-sm vote-submit"
+                 data-act="vote" @click="submitVote">投票</DnfButton>
     </div>
   </div>
 </template>

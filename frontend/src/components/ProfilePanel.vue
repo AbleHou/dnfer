@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal, NInput } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { validateNickname } from '../utils/nickname'
@@ -59,10 +60,10 @@ async function onFileChange(e: Event) {
   <n-modal :show="props.open" preset="card" title="个人信息" style="width:min(360px,92vw)"
            @update:show="(s: boolean) => { if (!s) emit('close') }">
     <div v-if="auth.user" style="display:flex;flex-direction:column;gap:14px;align-items:center">
-      <button class="dnf-btn" style="padding:4px;border-radius:50%" title="点击更换头像"
-              :disabled="uploading" @click="fileInput?.click()">
+      <DnfButton style="padding:4px;border-radius:50%" title="点击更换头像"
+                 :disabled="uploading" @click="fileInput?.click()">
         <UserAvatar :nickname="auth.user.nickname" :avatar="auth.user.avatar" :size="72" />
-      </button>
+      </DnfButton>
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange">
       <div style="width:100%">
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">账号（登录用）</div>
@@ -74,9 +75,9 @@ async function onFileChange(e: Event) {
                  @keyup.enter="saveNickname" />
         <p v-if="nicknameError" class="form-error" style="margin:4px 0 0">{{ nicknameError }}</p>
       </div>
-      <button class="dnf-btn dnf-btn-primary save-nickname" style="width:100%"
-              :disabled="saving" @click="saveNickname">保存</button>
-      <button class="dnf-btn" data-act="change-pw" style="width:100%" @click="changePwOpen = true">修改密码</button>
+      <DnfButton tone="gold" class="save-nickname" style="width:100%"
+                 :disabled="saving" @click="saveNickname">保存</DnfButton>
+      <DnfButton data-act="change-pw" style="width:100%" @click="changePwOpen = true">修改密码</DnfButton>
     </div>
   </n-modal>
   <ChangePasswordModal v-if="changePwOpen" :open="changePwOpen" @close="() => changePwOpen = false" />

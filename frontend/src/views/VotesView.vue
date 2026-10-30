@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import type { VoteDetail, VoteListItem } from '../types'
@@ -29,8 +30,8 @@ onUnmounted(stopPolling)
   <div class="dnf-page">
     <div class="page-head">
       <h2 style="margin:0">群会议</h2>
-      <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-primary" data-act="create-toggle"
-              @click="showCreate = !showCreate">＋ 发起投票</button>
+      <DnfButton v-if="auth.isAdmin" tone="gold" data-act="create-toggle"
+                 @click="showCreate = !showCreate">＋ 发起投票</DnfButton>
     </div>
     <div class="vote-list">
       <VoteCard v-for="v in votes" :key="v.id" :vote="v" :is-admin="auth.isAdmin" @refresh="load" />

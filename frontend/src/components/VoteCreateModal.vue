@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { notifyError, notifySuccess } from '../lib/notify'
 import type { VoteDetail } from '../types'
@@ -52,15 +53,15 @@ async function create() {
       </label>
       <div v-for="(o, i) in options" :key="i" class="vote-opt-row">
         <input v-model="options[i]" :data-field="'opt-' + i" class="dnf-input" placeholder="选项" />
-        <button v-if="options.length > 2" class="dnf-btn dnf-btn-sm" type="button"
-                :data-act="'rm-opt-' + i" @click="removeOption(i)">删除</button>
+        <DnfButton v-if="options.length > 2" class="dnf-btn-sm" type="button"
+                   :data-act="'rm-opt-' + i" @click="removeOption(i)">删除</DnfButton>
       </div>
-      <button v-if="options.length < 20" class="dnf-btn dnf-btn-sm" type="button"
-              data-act="add-opt" @click="addOption">＋ 添加选项</button>
+      <DnfButton v-if="options.length < 20" class="dnf-btn-sm" type="button"
+                 data-act="add-opt" @click="addOption">＋ 添加选项</DnfButton>
       <p v-if="error" class="form-error">{{ error }}</p>
-      <button class="dnf-btn dnf-btn-primary" data-act="create" :disabled="busy" @click="create">
+      <DnfButton tone="gold" data-act="create" :disabled="busy" @click="create">
         {{ busy ? '创建中…' : '发起投票' }}
-      </button>
+      </DnfButton>
     </div>
   </n-modal>
 </template>

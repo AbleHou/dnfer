@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { NSelect, NDatePicker, NInput } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
@@ -81,8 +82,8 @@ async function onSignupSubmit(ids: number[]) {
   <div class="dnf-page">
     <div class="page-head">
       <h2 style="margin:0">攻坚列表</h2>
-      <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-primary" data-test="create-toggle"
-              @click="showCreate = !showCreate">＋ 发起攻坚</button>
+      <DnfButton v-if="auth.isAdmin" tone="gold" data-test="create-toggle"
+                 @click="showCreate = !showCreate">＋ 发起攻坚</DnfButton>
     </div>
 
     <div v-if="showCreate" class="dnf-panel create-form">
@@ -100,9 +101,9 @@ async function onSignupSubmit(ids: number[]) {
         <n-input data-test="name-input" v-model:value="name" placeholder="攻坚名称（默认副本名）" />
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
-      <button class="dnf-btn dnf-btn-primary" data-test="create-submit" :disabled="creating" @click="create">
+      <DnfButton tone="gold" data-test="create-submit" :disabled="creating" @click="create">
         {{ creating ? '创建中…' : '创建' }}
-      </button>
+      </DnfButton>
     </div>
 
     <div v-for="r in raids" :key="r.id" class="dnf-panel raid-card">
@@ -117,10 +118,10 @@ async function onSignupSubmit(ids: number[]) {
           已报名 {{ r.signup_count + 1 }} 人
         </span>
       </router-link>
-      <button v-if="!r.locked && !r.my_signed_up && !r.closed" class="dnf-btn dnf-btn-sm dnf-btn-primary"
-              data-test="signup" @click="onSignup(r)">报名</button>
+      <DnfButton v-if="!r.locked && !r.my_signed_up && !r.closed" tone="gold" class="dnf-btn-sm"
+                 data-test="signup" @click="onSignup(r)">报名</DnfButton>
       <span v-else-if="!r.locked && r.my_signed_up" class="dnf-badge dnf-badge-ok">已报名</span>
-      <button v-if="auth.isAdmin" class="dnf-btn dnf-btn-sm" @click="onDelete(r)">删除</button>
+      <DnfButton v-if="auth.isAdmin" class="dnf-btn-sm" @click="onDelete(r)">删除</DnfButton>
     </div>
     <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
     <SignupModal :open="!!signupTarget" mode="signup" :selected-ids="[]"

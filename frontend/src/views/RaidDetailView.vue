@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -24,6 +25,7 @@ import { computeSlack, slackCountByUser } from '../lib/slack'
 import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User, Wave } from '../types'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const store = useRaidStore()
 const rid = Number(route.params.id)
@@ -301,18 +303,17 @@ async function onGuestCreated(u: User, charCount: number) {
       </span>
       <span v-if="closed" class="dnf-badge dnf-badge-danger">已关闭</span>
       <span style="margin-left:auto;display:flex;gap:8px">
-        <router-link v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-sm" data-test="roster-link"
-                     style="text-decoration:none"
-                     :to="`/raids/${store.raid.id}/roster`">编队</router-link>
-        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-sm" data-test="slack-rules"
-                @click="showSlackRules = true">划水规则设置</button>
-        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</button>
-        <button v-if="auth.isAdmin && !closed" class="dnf-btn" data-test="lock-toggle"
-                @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</button>
-        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-primary" data-test="add-wave"
-                @click="onAddWave">＋ 添加一波</button>
-        <button v-if="auth.isAdmin && !closed" class="dnf-btn dnf-btn-danger" data-test="close-raid"
-                @click="onCloseRaid">关闭攻坚</button>
+        <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="roster-link"
+                   @click="router.push(`/raids/${store.raid.id}/roster`)">编队</DnfButton>
+        <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="slack-rules"
+                   @click="showSlackRules = true">划水规则设置</DnfButton>
+        <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</DnfButton>
+        <DnfButton v-if="auth.isAdmin && !closed" data-test="lock-toggle"
+                   @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</DnfButton>
+        <DnfButton v-if="auth.isAdmin && !closed" tone="gold" data-test="add-wave"
+                   @click="onAddWave">＋ 添加一波</DnfButton>
+        <DnfButton v-if="auth.isAdmin && !closed" tone="orange" data-test="close-raid"
+                   @click="onCloseRaid">关闭攻坚</DnfButton>
       </span>
     </div>
 
@@ -321,12 +322,12 @@ async function onGuestCreated(u: User, charCount: number) {
         <b>已报名</b>
         <span style="color:var(--dnf-text-faint)">{{ store.raid.signups.length }} 人（含团长）</span>
         <span style="margin-left:auto;display:flex;gap:8px">
-          <button v-if="!closed && !store.raid.locked && !mySignedUp" class="dnf-btn dnf-btn-sm dnf-btn-primary"
-                  data-test="signup" @click="openSignupModal">报名</button>
-          <button v-if="auth.isAdmin && !closed && !store.raid.locked" class="dnf-btn dnf-btn-sm"
-                  data-test="signup-plus" @click="showMemberPicker = true">＋</button>
-          <button v-if="auth.isAdmin && !closed && !store.raid.locked" class="dnf-btn dnf-btn-sm"
-                  data-test="add-guest" @click="guestOpen = true">添加临时选手</button>
+          <DnfButton v-if="!closed && !store.raid.locked && !mySignedUp" tone="gold" class="dnf-btn-sm"
+                     data-test="signup" @click="openSignupModal">报名</DnfButton>
+          <DnfButton v-if="auth.isAdmin && !closed && !store.raid.locked" class="dnf-btn-sm"
+                     data-test="signup-plus" @click="showMemberPicker = true">＋</DnfButton>
+          <DnfButton v-if="auth.isAdmin && !closed && !store.raid.locked" class="dnf-btn-sm"
+                     data-test="add-guest" @click="guestOpen = true">添加临时选手</DnfButton>
         </span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
@@ -346,13 +347,13 @@ async function onGuestCreated(u: User, charCount: number) {
               <span v-if="s.user.is_guest" class="dnf-badge" style="margin-left:4px">临时</span>
               <span class="signup-count">{{ placedCount(s) }}/{{ s.characters.length }}<template v-if="(slackCounts[s.user.id] ?? 0) > 0"> · 划水 {{ slackCounts[s.user.id] }}</template></span>
             </button>
-            <button v-if="!closed && s.user.id === auth.user?.id && !store.raid.locked"
-                    class="dnf-btn dnf-btn-sm" data-act="manage-chars"
-                    @click="openManageSignup">角色变更</button>
-            <button v-if="auth.isAdmin && !closed && s.created_at !== null"
-                    class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="onCancelUser(s)">取消报名</button>
-            <button v-else-if="!closed && s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
-                    class="dnf-btn dnf-btn-sm dnf-btn-danger" @click="onCancelSelf">取消报名</button>
+            <DnfButton v-if="!closed && s.user.id === auth.user?.id && !store.raid.locked"
+                       class="dnf-btn-sm" data-act="manage-chars"
+                       @click="openManageSignup">角色变更</DnfButton>
+            <DnfButton v-if="auth.isAdmin && !closed && s.created_at !== null"
+                       tone="orange" class="dnf-btn-sm" @click="onCancelUser(s)">取消报名</DnfButton>
+            <DnfButton v-else-if="!closed && s.created_at !== null && s.user.id === auth.user?.id && !store.raid.locked"
+                       tone="orange" class="dnf-btn-sm" @click="onCancelSelf">取消报名</DnfButton>
           </div>
         </template>
       </div>
@@ -360,7 +361,7 @@ async function onGuestCreated(u: User, charCount: number) {
 
     <div v-if="movingSlot" class="move-hint" style="display:flex;align-items:center;gap:10px;margin:10px 0">
       <span style="color:var(--dnf-gold-hi)">移动中：{{ movingSlot.owner_nickname }}（{{ movingSlot.character_name }}）→ 点击目标格</span>
-      <button class="dnf-btn dnf-btn-sm" @click="cancel()">取消移动（Esc）</button>
+      <DnfButton class="dnf-btn-sm" @click="cancel()">取消移动（Esc）</DnfButton>
     </div>
 
     <WaveSection v-for="w in store.raid.waves" :key="w.id"
@@ -397,8 +398,8 @@ async function onGuestCreated(u: User, charCount: number) {
       </div>
       <template #footer>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="dnf-btn" @click="showEditRaid = false">取消</button>
-          <button class="dnf-btn dnf-btn-primary" data-test="save-raid" @click="onSaveRaid">保存</button>
+          <DnfButton @click="showEditRaid = false">取消</DnfButton>
+          <DnfButton tone="gold" data-test="save-raid" @click="onSaveRaid">保存</DnfButton>
         </div>
       </template>
     </n-modal>
@@ -425,10 +426,10 @@ async function onGuestCreated(u: User, charCount: number) {
     <n-modal :show="showParallelModal" preset="card" title="并行到哪一波？" style="width:min(360px,92vw)"
              @update:show="(s: boolean) => { if (!s) parallelizeWave = null }">
       <div style="display:flex;flex-direction:column;gap:8px">
-        <button v-for="t in otherWaves" :key="t.id" class="dnf-btn"
-                :data-test="`parallel-target-${t.id}`" @click="onParallelTo(t)">
+        <DnfButton v-for="t in otherWaves" :key="t.id"
+                   :data-test="`parallel-target-${t.id}`" @click="onParallelTo(t)">
           {{ waveLabel(t) }}
-        </button>
+        </DnfButton>
       </div>
     </n-modal>
   </div>

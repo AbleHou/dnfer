@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { NModal } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import type { Slot } from '../types'
 
 const props = defineProps<{ open: boolean; slot: Slot | null }>()
@@ -22,13 +23,13 @@ const emit = defineEmits<{
       </p>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="dnf-btn" @click="slot && emit('replace', slot)">换人</button>
-      <button class="dnf-btn" @click="slot && emit('pickUp', slot)">拿起移动</button>
-      <button class="dnf-btn dnf-btn-danger" @click="slot && emit('remove', slot)">撤下</button>
+      <DnfButton @click="slot && emit('replace', slot)">换人</DnfButton>
+      <DnfButton @click="slot && emit('pickUp', slot)">拿起移动</DnfButton>
+      <DnfButton tone="orange" @click="slot && emit('remove', slot)">撤下</DnfButton>
     </div>
     <template #footer>
       <div style="display:flex;justify-content:flex-end">
-        <button class="dnf-btn" @click="emit('close')">关闭</button>
+        <DnfButton @click="emit('close')">关闭</DnfButton>
       </div>
     </template>
   </n-modal>

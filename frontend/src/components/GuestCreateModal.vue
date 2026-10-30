@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
+import { DnfButton } from '@dnftools/ui'
 import { api } from '../api/client'
 import { jobGenderTitle } from '../lib/job'
 import { notifyError, notifySuccess } from '../lib/notify'
@@ -82,7 +83,7 @@ async function submit() {
       <div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <span style="color:var(--dnf-text-muted);font-size:12px">角色</span>
-          <button type="button" class="dnf-btn dnf-btn-sm" data-act="add-row" @click="addRow">＋ 添加角色</button>
+          <DnfButton type="button" class="dnf-btn-sm" data-act="add-row" @click="addRow">＋ 添加角色</DnfButton>
         </div>
         <div v-for="(r, i) in rows" :key="i" class="guest-row" :data-test="`guest-row-${i}`">
           <input v-model="r.name" class="dnf-input" data-field="char-name" placeholder="角色名" style="flex:1;min-width:90px" />
@@ -99,15 +100,15 @@ async function submit() {
             <input v-model.number="r.buff" type="number" class="dnf-input" data-field="buff" placeholder="增益量" style="width:90px" />
             <input v-model.number="r.sun" type="number" class="dnf-input" data-field="sun" placeholder="太阳" style="width:90px" />
           </template>
-          <button type="button" class="dnf-btn dnf-btn-sm dnf-btn-danger" data-act="remove-row" @click="removeRow(i)">×</button>
+          <DnfButton type="button" tone="orange" class="dnf-btn-sm" data-act="remove-row" @click="removeRow(i)">×</DnfButton>
         </div>
         <p v-if="props.requireCharacter && !rows.length" style="color:var(--dnf-text-faint);font-size:12px;margin:4px 0 0">
           排表占位需要至少一个角色
         </p>
       </div>
       <p v-if="error" class="form-error" style="margin:0">{{ error }}</p>
-      <button class="dnf-btn dnf-btn-primary" data-act="submit" :disabled="saving"
-              @click="submit">{{ saving ? '创建中…' : '创建' }}</button>
+      <DnfButton tone="gold" data-act="submit" :disabled="saving"
+                 @click="submit">{{ saving ? '创建中…' : '创建' }}</DnfButton>
     </div>
   </n-modal>
 </template>

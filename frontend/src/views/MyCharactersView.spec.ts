@@ -201,12 +201,12 @@ describe('MyCharactersView job picker', () => {
     await flushPromises()
     const typeBtn = wrapper.findAll('button').find(b => b.text() === '按类型')!
     const fameBtn = wrapper.findAll('button').find(b => b.text() === '按名望')!
-    expect(typeBtn.classes()).toContain('dnf-btn-primary')
-    expect(fameBtn.classes()).not.toContain('dnf-btn-primary')
+    expect(typeBtn.attributes('data-tone')).toBe('gold')
+    expect(fameBtn.attributes('data-tone')).toBe('blue')
     await fameBtn.trigger('click')
     await nextTick()
-    expect(fameBtn.classes()).toContain('dnf-btn-primary')
-    expect(typeBtn.classes()).not.toContain('dnf-btn-primary')
+    expect(fameBtn.attributes('data-tone')).toBe('gold')
+    expect(typeBtn.attributes('data-tone')).toBe('blue')
   })
 
   it('角色卡与职业选择器显示男女双版性别后缀', async () => {
@@ -291,11 +291,11 @@ describe('MyCharactersView job picker', () => {
     await flushPromises()
     const typeBtn = wrapper.findAll('button').find(b => b.text() === '按类型')!
     const partyBtn = wrapper.findAll('button').find(b => b.text() === '按冒险团')!
-    expect(typeBtn.classes()).toContain('dnf-btn-primary')
-    expect(partyBtn.classes()).not.toContain('dnf-btn-primary')
+    expect(typeBtn.attributes('data-tone')).toBe('gold')
+    expect(partyBtn.attributes('data-tone')).toBe('blue')
     await partyBtn.trigger('click')
     await nextTick()
-    expect(partyBtn.classes()).toContain('dnf-btn-primary')
-    expect(typeBtn.classes()).not.toContain('dnf-btn-primary')
+    expect(partyBtn.attributes('data-tone')).toBe('gold')
+    expect(typeBtn.attributes('data-tone')).toBe('blue')
   })
 })
