@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { NSelect, NDatePicker, NInput } from 'naive-ui'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
@@ -110,17 +110,17 @@ async function onSignupSubmit(ids: number[]) {
       <router-link :to="`/raids/${r.id}`" class="raid-link">
         <span class="raid-name">{{ r.name }}</span>
         <span class="raid-meta">{{ r.dungeon_name }} · {{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
-        <span class="dnf-badge" :class="r.closed || r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
+        <DnfBadge :class="r.closed || r.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
           {{ r.closed || r.locked ? '已锁定' : '未锁定' }}
-        </span>
-        <span v-if="r.closed" class="dnf-badge dnf-badge-danger">已关闭</span>
+        </DnfBadge>
+        <DnfBadge v-if="r.closed" class="dnf-badge-danger">已关闭</DnfBadge>
         <span class="raid-meta" style="color:var(--dnf-text-faint)">
           已报名 {{ r.signup_count + 1 }} 人
         </span>
       </router-link>
       <DnfButton v-if="!r.locked && !r.my_signed_up && !r.closed" tone="gold" class="dnf-btn-sm"
                  data-test="signup" @click="onSignup(r)">报名</DnfButton>
-      <span v-else-if="!r.locked && r.my_signed_up" class="dnf-badge dnf-badge-ok">已报名</span>
+      <DnfBadge v-else-if="!r.locked && r.my_signed_up" class="dnf-badge-ok">已报名</DnfBadge>
       <DnfButton v-if="auth.isAdmin" class="dnf-btn-sm" @click="onDelete(r)">删除</DnfButton>
     </DnfFrame>
     <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>

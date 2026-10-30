@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
 import { NModal, NSwitch } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -221,7 +221,7 @@ onBeforeUnmount(() => {
     <div class="page-head" style="flex-wrap:wrap;gap:10px">
       <DnfButton class="dnf-btn-sm" @click="router.push(`/raids/${rid}`)">← 返回</DnfButton>
       <h2 style="margin:0">{{ store.raid.name }} · 编队</h2>
-      <span v-if="store.raid?.closed" class="dnf-badge dnf-badge-danger">攻坚已关闭，仅查看</span>
+      <DnfBadge v-if="store.raid?.closed" class="dnf-badge-danger">攻坚已关闭，仅查看</DnfBadge>
       <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
         <span v-if="canEdit" style="display:flex;align-items:center;gap:6px">
           推荐 <n-switch data-test="recommend-switch" :value="recommendOn"

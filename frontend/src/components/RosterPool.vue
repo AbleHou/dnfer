@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { DnfButton } from '@dnftools/ui'
+import { DnfBadge, DnfButton } from '@dnftools/ui'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import { sortByPower } from '../lib/roster'
@@ -125,7 +125,7 @@ function cPos(cid: number): CharPlacement | undefined { return props.charPlaceme
           <span v-if="g.pos.groupId != null" class="pos-group">{{ g.pos.groupIndex }}团</span>
           <span :class="`pos-team-${g.pos.squadIndex}`">{{ squadName(g.pos.squadIndex) }}</span>
           <span v-if="g.pos.duty" :class="`pos-duty-${dutyClass(g.pos.duty)}`">{{ g.pos.duty }}</span>
-        </span><span v-if="g.user.is_guest" class="dnf-badge" style="margin-left:6px">临时</span>
+        </span><DnfBadge v-if="g.user.is_guest" style="margin-left:6px">临时</DnfBadge>
       </div>
       <div v-if="!collapsed.has(g.user.id)">
         <div v-for="p in g.parties" :key="p.id ?? '__u'" class="pool-party" data-test="pool-party">

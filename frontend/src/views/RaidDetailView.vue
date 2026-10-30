@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -298,10 +298,10 @@ async function onGuestCreated(u: User, charCount: number) {
       <h2 style="margin:0">{{ store.raid.name }}</h2>
       <span v-if="store.raid.dungeon_name" style="color:var(--dnf-text-muted)">{{ store.raid.dungeon_name }}</span>
       <span style="color:var(--dnf-text-faint)">{{ store.raid.size }} 人 · {{ formatDateTime(store.raid.starts_at) }}</span>
-      <span class="dnf-badge" :class="closed || store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
+      <DnfBadge :class="closed || store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
         {{ closed || store.raid.locked ? '已锁定' : '未锁定' }}
-      </span>
-      <span v-if="closed" class="dnf-badge dnf-badge-danger">已关闭</span>
+      </DnfBadge>
+      <DnfBadge v-if="closed" class="dnf-badge-danger">已关闭</DnfBadge>
       <span style="margin-left:auto;display:flex;gap:8px">
         <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="roster-link"
                    @click="router.push(`/raids/${store.raid.id}/roster`)">编队</DnfButton>
@@ -338,13 +338,13 @@ async function onGuestCreated(u: User, charCount: number) {
               <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
             </button>
             <span>{{ s.user.nickname }}</span>
-            <span class="dnf-badge dnf-badge-ok">团长</span>
+            <DnfBadge class="dnf-badge-ok">团长</DnfBadge>
           </div>
           <div v-else class="signup-group">
             <button class="avatar-btn signup-user" @click="memberModalUser = s.user">
               <UserAvatar :nickname="s.user.nickname" :avatar="s.user.avatar" :size="24" />
               <span class="signup-nick">{{ s.user.nickname }}</span>
-              <span v-if="s.user.is_guest" class="dnf-badge" style="margin-left:4px">临时</span>
+              <DnfBadge v-if="s.user.is_guest" style="margin-left:4px">临时</DnfBadge>
               <span class="signup-count">{{ placedCount(s) }}/{{ s.characters.length }}<template v-if="(slackCounts[s.user.id] ?? 0) > 0"> · 划水 {{ slackCounts[s.user.id] }}</template></span>
             </button>
             <DnfButton v-if="!closed && s.user.id === auth.user?.id && !store.raid.locked"

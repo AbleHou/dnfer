@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { jobIcon, handleIconError as onIconError } from '../lib/job'
+import { DnfBadge } from '@dnftools/ui'
 import type { Slot } from '../types'
 import DutySelect from './DutySelect.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -59,7 +60,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
         <span v-if="slot.job_title" style="color:var(--dnf-text-muted);font-size:12px;margin-left:6px">{{ slot.job_title }}</span>
         <DutySelect v-if="editable" :class-type="slot.character_class!" :model-value="slot.duty"
                     @click.stop @update:model-value="(d) => emit('duty', slot, d)" />
-        <span v-else class="dnf-badge" style="font-size:11px;color:var(--dnf-gold-hi);border-color:var(--dnf-gold-deep)">{{ slot.duty }}</span>
+        <DnfBadge v-else style="font-size:11px;color:var(--dnf-gold-hi);border-color:var(--dnf-gold-deep)">{{ slot.duty }}</DnfBadge>
       </div>
       <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
         {{ attrs }}

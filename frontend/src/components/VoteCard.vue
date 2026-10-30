@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { VoteDetail } from '../types'
@@ -74,9 +74,9 @@ async function deleteVote() {
     <div class="vote-head" @click="collapsed = !collapsed">
       <span class="vote-caret">{{ collapsed ? '▸' : '▾' }}</span>
       <strong class="vote-title">{{ vote.title }}</strong>
-      <span class="dnf-badge" :class="isOpen ? 'dnf-badge-ok' : 'dnf-badge-danger'">
-        {{ isOpen ? '进行中' : '已结束' }}</span>
-      <span v-if="isMulti" class="dnf-badge">多选</span>
+      <DnfBadge :class="isOpen ? 'dnf-badge-ok' : 'dnf-badge-danger'">
+        {{ isOpen ? '进行中' : '已结束' }}</DnfBadge>
+      <DnfBadge v-if="isMulti">多选</DnfBadge>
       <span class="vote-voters">{{ vote.total_voters }} 人已投</span>
       <DnfButton v-if="isAdmin && isOpen" class="dnf-btn-sm" data-act="close" @click.stop="closeVote">关闭投票</DnfButton>
       <DnfButton v-if="isAdmin" tone="orange" class="dnf-btn-sm" data-act="delete" @click.stop="deleteVote">删除投票</DnfButton>

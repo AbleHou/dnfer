@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
 import AdminUserCharactersModal from '../components/AdminUserCharactersModal.vue'
@@ -210,7 +210,7 @@ onMounted(() => {
         </thead>
         <tbody>
           <tr v-for="u in users" :key="u.id">
-            <td>{{ u.nickname }}<span v-if="u.is_guest" class="dnf-badge" style="margin-left:6px">临时</span></td>
+            <td>{{ u.nickname }}<DnfBadge v-if="u.is_guest" style="margin-left:6px">临时</DnfBadge></td>
             <td>{{ u.username }}</td>
             <td>{{ u.is_admin ? '是' : '否' }}</td>
             <td>{{ u.character_count }}</td>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { jobIcon, handleIconError as onIconError } from '../lib/job'
+import { DnfBadge } from '@dnftools/ui'
 import type { Slot } from '../types'
 import DutySelect from './DutySelect.vue'
 
@@ -43,9 +44,9 @@ function onCellClick() {
              style="width:18px;height:18px;margin-left:6px;vertical-align:middle">
         <DutySelect v-if="canEdit" :class-type="slot.character_class!" :model-value="slot.duty"
                     @click.stop @update:model-value="(d) => emit('duty', slot, d)" />
-        <span v-else class="dnf-badge" style="font-size:11px;color:var(--dnf-gold-hi);border-color:var(--dnf-gold-deep)">
+        <DnfBadge v-else style="font-size:11px;color:var(--dnf-gold-hi);border-color:var(--dnf-gold-deep)">
           {{ slot.duty }}
-        </span>
+        </DnfBadge>
       </div>
       <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
         {{ attrs }}
