@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NConfigProvider, NDropdown } from 'naive-ui'
-import { DnfDialogProvider, DnfMessageProvider } from '@dnftools/ui'
+import { DnfProvider, DnfDropdownMenu, DnfDialogProvider, DnfMessageProvider } from '@dnftools/ui'
+import type { DnfMenuItem } from '@dnftools/ui'
 import { useAuthStore } from './stores/auth'
 import { dialogs, messages } from './lib/notify'
 import UserAvatar from './components/UserAvatar.vue'
@@ -12,31 +12,31 @@ const auth = useAuthStore()
 const router = useRouter()
 const profileOpen = ref(false)
 
-// naive-ui 2.45 未在包根导出 DropdownMixedOption，回退为 any[]（唯一一处）
-const menuOptions = computed<any[]>(() => [
-  { label: '攻坚列表', key: 'raids' },
-  { label: '我的角色', key: 'characters' },
-  { label: '群会议', key: 'votes' },
-  ...(auth.isAdmin ? [{ label: '管理', key: 'admin' }] : []),
-  { type: 'divider', key: 'd1' },
-  { label: '退出', key: 'logout' },
+// computed 保持响应式：登录/登出后 isAdmin 变化时菜单实时更新
+const menuItems = computed<DnfMenuItem[]>(() => [
+  { value: 'raids', label: '攻坚列表' },
+  { value: 'characters', label: '我的角色' },
+  { value: 'votes', label: '群会议' },
+  ...(auth.isAdmin ? [{ value: 'admin', label: '管理' }] : []),
+  { separator: true, value: '__sep', label: '' },
+  { value: 'logout', label: '退出' },
 ])
 
 function logout() {
   auth.logout()
   router.push('/login')
 }
-function onMenuSelect(key: string) {
-  if (key === 'logout') { logout(); return }
-  const path = ({ raids: '/', characters: '/characters', votes: '/votes', admin: '/admin' } as Record<string, string>)[key]
+function onMenuSelect(item: DnfMenuItem) {
+  if (item.value === 'logout') { logout(); return }
+  const path = ({ raids: '/', characters: '/characters', votes: '/votes', admin: '/admin' } as Record<string, string>)[item.value]
   if (path) router.push(path)
 }
 </script>
 
 <template>
-  <DnfDialogProvider :service="dialogs">
-    <DnfMessageProvider :service="messages">
-      <n-config-provider>
+  <DnfProvider>
+    <DnfDialogProvider :service="dialogs">
+      <DnfMessageProvider :service="messages">
         <nav v-if="auth.user" class="dnf-nav">
           <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
           <router-link to="/" class="nav-link">攻坚列表</router-link>
@@ -50,14 +50,14 @@ function onMenuSelect(key: string) {
               <span class="nav-username">{{ auth.user?.nickname }}</span>
             </button>
             <a href="#" class="nav-exit" @click.prevent="logout">退出</a>
-            <n-dropdown :options="menuOptions" @select="onMenuSelect">
-              <button class="hamburger" aria-label="菜单">☰</button>
-            </n-dropdown>
+            <DnfDropdownMenu :items="menuItems" @select="onMenuSelect">
+              <template #trigger><button class="hamburger" aria-label="菜单">☰</button></template>
+            </DnfDropdownMenu>
           </span>
           <ProfilePanel :open="profileOpen" @close="profileOpen = false" />
         </nav>
         <router-view :key="$route.fullPath" />
-      </n-config-provider>
-    </DnfMessageProvider>
-  </DnfDialogProvider>
+      </DnfMessageProvider>
+    </DnfDialogProvider>
+  </DnfProvider>
 </template>
