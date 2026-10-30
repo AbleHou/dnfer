@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
-import { NModal, NSwitch } from 'naive-ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfSwitch } from '@dnftools/ui'
+import { NModal } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -224,8 +224,8 @@ onBeforeUnmount(() => {
       <DnfBadge v-if="store.raid?.closed" class="dnf-badge-danger">攻坚已关闭，仅查看</DnfBadge>
       <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
         <span v-if="canEdit" style="display:flex;align-items:center;gap:6px">
-          推荐 <n-switch data-test="recommend-switch" :value="recommendOn"
-                        @update:value="toggleRecommend" size="small" />
+          推荐 <DnfSwitch data-test="recommend-switch" :model-value="recommendOn"
+                         @update:model-value="toggleRecommend" />
         </span>
       </span>
     </div>
