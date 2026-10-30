@@ -73,12 +73,6 @@ a { color: var(--dnf-gold-hi); }
 .dnf-badge-ok { color: var(--dnf-ok); border-color: var(--dnf-ok); }
 .dnf-badge-danger { color: var(--dnf-danger); border-color: var(--dnf-danger); }
 
-/* 原生 select（Task 3.1 换 DnfSelect 后删除） */
-.dnf-select {
-  background: var(--dnf-panel-inner); border: 2px solid var(--dnf-gold-deep);
-  color: var(--dnf-text); border-radius: 6px; padding: 7px 10px; font-size: 14px;
-}
-.dnf-select:focus { outline: none; border-color: var(--dnf-gold); }
 /* DnfInput 壳内原生 input 填充壳宽：壳 display:inline-flex，input 默认不伸张，
    否则 flex:1 / width 布局下会出现「框宽、输入区窄」的视觉回退 */
 .dnf-input-shell > input { flex: 1; min-width: 0; width: 100%; }
