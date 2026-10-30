@@ -2,8 +2,10 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NConfigProvider, NDropdown } from 'naive-ui'
+import { DnfDialogProvider, DnfMessageProvider } from '@dnftools/ui'
 import { useAuthStore } from './stores/auth'
 import { useTheme } from './composables/useTheme'
+import { dialogs, messages } from './lib/notify'
 import UserAvatar from './components/UserAvatar.vue'
 import ProfilePanel from './components/ProfilePanel.vue'
 
@@ -34,30 +36,34 @@ function onMenuSelect(key: string) {
 </script>
 
 <template>
-  <n-config-provider :theme="naiveTheme" :theme-overrides="naiveOverrides">
-    <nav v-if="auth.user" class="dnf-nav">
-      <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
-      <router-link to="/" class="nav-link">攻坚列表</router-link>
-      <router-link to="/characters" class="nav-link">我的角色</router-link>
-      <router-link to="/votes" class="nav-link">群会议</router-link>
-      <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">管理</router-link>
-      <span class="nav-right">
-        <button class="nav-user" :title="theme === 'dark' ? '切换到亮色' : '切换到暗色'"
-                data-act="theme-toggle" @click="toggleTheme">
-          <span style="font-size:18px;line-height:1">{{ theme === 'dark' ? '☀' : '☾' }}</span>
-        </button>
-        <button class="nav-user" title="个人信息" @click="profileOpen = true">
-          <UserAvatar v-if="auth.user" :nickname="auth.user.nickname"
-                      :avatar="auth.user.avatar" :size="26" />
-          <span class="nav-username">{{ auth.user?.nickname }}</span>
-        </button>
-        <a href="#" class="nav-exit" @click.prevent="logout">退出</a>
-        <n-dropdown :options="menuOptions" @select="onMenuSelect">
-          <button class="hamburger" aria-label="菜单">☰</button>
-        </n-dropdown>
-      </span>
-      <ProfilePanel :open="profileOpen" @close="profileOpen = false" />
-    </nav>
-    <router-view :key="$route.fullPath" />
-  </n-config-provider>
+  <DnfDialogProvider :service="dialogs">
+    <DnfMessageProvider :service="messages">
+      <n-config-provider :theme="naiveTheme" :theme-overrides="naiveOverrides">
+        <nav v-if="auth.user" class="dnf-nav">
+          <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
+          <router-link to="/" class="nav-link">攻坚列表</router-link>
+          <router-link to="/characters" class="nav-link">我的角色</router-link>
+          <router-link to="/votes" class="nav-link">群会议</router-link>
+          <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">管理</router-link>
+          <span class="nav-right">
+            <button class="nav-user" :title="theme === 'dark' ? '切换到亮色' : '切换到暗色'"
+                    data-act="theme-toggle" @click="toggleTheme">
+              <span style="font-size:18px;line-height:1">{{ theme === 'dark' ? '☀' : '☾' }}</span>
+            </button>
+            <button class="nav-user" title="个人信息" @click="profileOpen = true">
+              <UserAvatar v-if="auth.user" :nickname="auth.user.nickname"
+                          :avatar="auth.user.avatar" :size="26" />
+              <span class="nav-username">{{ auth.user?.nickname }}</span>
+            </button>
+            <a href="#" class="nav-exit" @click.prevent="logout">退出</a>
+            <n-dropdown :options="menuOptions" @select="onMenuSelect">
+              <button class="hamburger" aria-label="菜单">☰</button>
+            </n-dropdown>
+          </span>
+          <ProfilePanel :open="profileOpen" @close="profileOpen = false" />
+        </nav>
+        <router-view :key="$route.fullPath" />
+      </n-config-provider>
+    </DnfMessageProvider>
+  </DnfDialogProvider>
 </template>

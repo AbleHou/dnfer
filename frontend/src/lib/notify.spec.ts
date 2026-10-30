@@ -1,44 +1,37 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { darkTheme, lightTheme } from 'naive-ui'
 
-// 拦截 createDiscreteApi，捕获传给它的 configProviderProps，避免真实渲染离散 API
-const createDiscreteApiMock = vi.hoisted(() => vi.fn())
-vi.mock('naive-ui', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('naive-ui')>()
-  return { ...actual, createDiscreteApi: createDiscreteApiMock }
+// 服务无法在无 Provider 下真实渲染，mock createDnfDialog/createDnfMessage
+const dialogServiceMock = vi.hoisted(() => ({ confirm: vi.fn(), alert: vi.fn(), open: vi.fn() }))
+const messageServiceMock = vi.hoisted(() => ({
+  success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn(), loading: vi.fn(), open: vi.fn(),
+}))
+vi.mock('@dnftools/ui', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@dnftools/ui')>()
+  return {
+    ...actual,
+    createDnfDialog: () => dialogServiceMock,
+    createDnfMessage: () => messageServiceMock,
+  }
 })
-
-let capturedConfig: unknown = null
 
 beforeEach(() => {
-  localStorage.clear()
-  delete document.documentElement.dataset.theme
   vi.resetModules()
-  capturedConfig = null
-  createDiscreteApiMock.mockReset()
-  createDiscreteApiMock.mockImplementation((_includes: unknown, opts: { configProviderProps?: unknown }) => {
-    capturedConfig = opts?.configProviderProps
-    return { message: {}, dialog: {} }
-  })
+  vi.clearAllMocks()
 })
 
-it('configProviderProps 是响应式 Ref：主题切换后 theme/themeOverrides 随之变化', async () => {
-  await import('../lib/notify')
-  const { useTheme } = await import('../composables/useTheme')
-  const { theme, toggleTheme } = useTheme()
+it('confirmDialog：action==="confirm" 解析为 true，否则 false', async () => {
+  dialogServiceMock.confirm.mockResolvedValue({ action: 'confirm', reason: 'confirm' })
+  const { confirmDialog } = await import('../lib/notify')
+  await expect(confirmDialog({ content: 'x' })).resolves.toBe(true)
 
-  // capturedConfig 是传入的 computed（Ref<ConfigProviderProps>），非普通对象
-  expect(typeof capturedConfig).toBe('object')
-  expect(capturedConfig).toHaveProperty('value')
-  expect((capturedConfig as { value: { theme: unknown } }).value.theme).toBe(darkTheme)
-
-  toggleTheme()
-  expect(theme.value).toBe('light')
-  expect((capturedConfig as { value: { theme: unknown } }).value.theme).toBe(lightTheme)
+  dialogServiceMock.confirm.mockResolvedValue({ action: 'cancel', reason: 'cancel' })
+  await expect(confirmDialog({ content: 'x' })).resolves.toBe(false)
 })
 
-it('默认暗色下 configProviderProps.theme 为 darkTheme', async () => {
-  await import('../lib/notify')
-  expect((capturedConfig as { value: { theme: unknown } }).value.theme).toBe(darkTheme)
+it('notifyError/Success/Warning 转发到 message service 对应方法', async () => {
+  const { notifyError, notifySuccess, notifyWarning } = await import('../lib/notify')
+  notifyError('e'); expect(messageServiceMock.error).toHaveBeenCalledWith('e')
+  notifySuccess('s'); expect(messageServiceMock.success).toHaveBeenCalledWith('s')
+  notifyWarning('w'); expect(messageServiceMock.warning).toHaveBeenCalledWith('w')
 })
