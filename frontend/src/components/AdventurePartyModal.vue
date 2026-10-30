@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { AdventureParty } from '../types'
@@ -77,8 +77,8 @@ async function remove(p: AdventureParty) {
       <p v-if="error" class="form-error">{{ error }}</p>
       <p v-if="!loading && !parties.length" style="color:var(--dnf-text-faint)">还没有冒险团</p>
 
-      <div v-for="p in parties" :key="p.id" class="dnf-panel party-row" :data-party-id="p.id"
-           style="padding:12px;margin:8px 0;display:flex;align-items:center;gap:12px">
+      <DnfFrame v-for="p in parties" :key="p.id" surface="panel" class="party-row" :data-party-id="p.id"
+                style="padding:12px;margin:8px 0;display:flex;align-items:center;gap:12px">
         <template v-if="renamingId === p.id">
           <input v-model="renameName" class="dnf-input" data-act="party-rename-input"
                  style="flex:1" />
@@ -96,7 +96,7 @@ async function remove(p: AdventureParty) {
                      :disabled="p.character_count > 0 || parties.length <= 1"
                      @click="remove(p)">删除</DnfButton>
         </template>
-      </div>
+      </DnfFrame>
 
       <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
         <input v-model="createName" class="dnf-input" data-act="party-create-input"

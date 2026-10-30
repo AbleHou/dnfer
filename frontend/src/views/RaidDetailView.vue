@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -317,7 +317,7 @@ async function onGuestCreated(u: User, charCount: number) {
       </span>
     </div>
 
-    <div class="dnf-panel" style="margin:10px 0;padding:12px">
+    <DnfFrame surface="panel" style="margin:10px 0;padding:12px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <b>已报名</b>
         <span style="color:var(--dnf-text-faint)">{{ store.raid.signups.length }} 人（含团长）</span>
@@ -357,7 +357,7 @@ async function onGuestCreated(u: User, charCount: number) {
           </div>
         </template>
       </div>
-    </div>
+    </DnfFrame>
 
     <div v-if="movingSlot" class="move-hint" style="display:flex;align-items:center;gap:10px;margin:10px 0">
       <span style="color:var(--dnf-gold-hi)">移动中：{{ movingSlot.owner_nickname }}（{{ movingSlot.character_name }}）→ 点击目标格</span>

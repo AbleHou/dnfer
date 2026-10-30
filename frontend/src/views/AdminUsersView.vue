@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
 import AdminUserCharactersModal from '../components/AdminUserCharactersModal.vue'
@@ -140,7 +140,7 @@ onMounted(() => {
 
     <n-tabs v-model:value="activeTab">
       <n-tab-pane name="query" tab="角色查询" display-directive="show">
-        <section class="dnf-panel dnf-section">
+        <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select v-model="classType" class="dnf-select" data-filter="class_type">
           <option value="">全部类别</option>
@@ -192,10 +192,10 @@ onMounted(() => {
         </tbody>
       </table>
       <p style="color:var(--dnf-text-faint)">共 {{ total }} 个角色</p>
-        </section>
+        </DnfFrame>
       </n-tab-pane>
       <n-tab-pane name="users" tab="账号管理" display-directive="show">
-        <section class="dnf-panel dnf-section">
+        <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <input v-model="userQ" placeholder="搜索昵称/用户名" class="dnf-input" data-filter="user_q"
                @keyup.enter="loadUsers" />
@@ -234,7 +234,7 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
-        </section>
+        </DnfFrame>
       </n-tab-pane>
     </n-tabs>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { Dungeon } from '../types'
@@ -51,7 +51,7 @@ async function delDungeon(d: Dungeon) {
   <div class="dnf-page">
     <AdminNav />
     <h2>副本管理</h2>
-    <section class="dnf-panel dnf-section">
+    <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input v-model="dgName" placeholder="副本名称" class="dnf-input" />
         <select v-model.number="dgSize" class="dnf-select">
@@ -77,6 +77,6 @@ async function delDungeon(d: Dungeon) {
           </tr>
         </tbody>
       </table>
-    </section>
+    </DnfFrame>
   </div>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
 import AdventurePartyModal from '../components/AdventurePartyModal.vue'
@@ -86,8 +86,8 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
                    @saved="onSaved" @cancel="onCancel" />
 
     <template v-for="c in sorted" :key="c.id">
-      <div class="dnf-panel" style="padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px"
-           @click="onCardClick">
+      <DnfFrame surface="panel" style="padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px"
+                @click="onCardClick">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
           <div>
@@ -102,7 +102,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
         </div>
         <DnfButton class="dnf-btn-sm" @click.stop="startEdit(c)">编辑</DnfButton>
         <DnfButton tone="orange" class="dnf-btn-sm" @click.stop="remove(c)">删除</DnfButton>
-      </div>
+      </DnfFrame>
       <CharacterForm v-if="showForm && editing?.id === c.id" :categories="categories" :editing="c"
                      @saved="onSaved" @cancel="onCancel" />
     </template>

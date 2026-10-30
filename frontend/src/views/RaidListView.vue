@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { NSelect, NDatePicker, NInput } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
@@ -86,7 +86,7 @@ async function onSignupSubmit(ids: number[]) {
                  @click="showCreate = !showCreate">＋ 发起攻坚</DnfButton>
     </div>
 
-    <div v-if="showCreate" class="dnf-panel create-form">
+    <DnfFrame v-if="showCreate" surface="panel" class="create-form">
       <div style="margin:8px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <n-select data-test="dungeon-select" style="flex:1;min-width:220px"
                   v-model:value="dungeonId" :options="dungeonOptions" placeholder="选择副本"
@@ -104,9 +104,9 @@ async function onSignupSubmit(ids: number[]) {
       <DnfButton tone="gold" data-test="create-submit" :disabled="creating" @click="create">
         {{ creating ? '创建中…' : '创建' }}
       </DnfButton>
-    </div>
+    </DnfFrame>
 
-    <div v-for="r in raids" :key="r.id" class="dnf-panel raid-card">
+    <DnfFrame v-for="r in raids" :key="r.id" surface="panel" class="raid-card">
       <router-link :to="`/raids/${r.id}`" class="raid-link">
         <span class="raid-name">{{ r.name }}</span>
         <span class="raid-meta">{{ r.dungeon_name }} · {{ r.size }} 人 · {{ r.wave_count }} 波 · {{ formatDateTime(r.starts_at) }}</span>
@@ -122,7 +122,7 @@ async function onSignupSubmit(ids: number[]) {
                  data-test="signup" @click="onSignup(r)">报名</DnfButton>
       <span v-else-if="!r.locked && r.my_signed_up" class="dnf-badge dnf-badge-ok">已报名</span>
       <DnfButton v-if="auth.isAdmin" class="dnf-btn-sm" @click="onDelete(r)">删除</DnfButton>
-    </div>
+    </DnfFrame>
     <p v-if="!raids.length" style="color:var(--dnf-text-faint)">还没有攻坚，管理员可点击「＋ 发起攻坚」</p>
     <SignupModal :open="!!signupTarget" mode="signup" :selected-ids="[]"
                  @close="signupTarget = null" @submit="onSignupSubmit" />
@@ -141,7 +141,7 @@ async function onSignupSubmit(ids: number[]) {
   text-decoration: none;
   cursor: pointer;
 }
-/* 悬浮「选中」：默认 .dnf-panel 边框已是金色，hover 提亮 + 外发光以区分 */
+/* 悬浮「选中」：DnfFrame panel 已自带金色边框，hover 提亮 + 外发光以区分 */
 .raid-card:hover {
   border-color: var(--dnf-gold-hi);
   box-shadow: inset 0 0 0 1px var(--dnf-gold-deep), 0 0 14px rgba(255,213,74,.55), 0 4px 12px rgba(0,0,0,.5);

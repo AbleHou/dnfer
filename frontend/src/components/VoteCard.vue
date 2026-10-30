@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { VoteDetail } from '../types'
@@ -70,7 +70,7 @@ async function deleteVote() {
 </script>
 
 <template>
-  <div class="dnf-panel vote-card">
+  <DnfFrame surface="panel" class="vote-card">
     <div class="vote-head" @click="collapsed = !collapsed">
       <span class="vote-caret">{{ collapsed ? '▸' : '▾' }}</span>
       <strong class="vote-title">{{ vote.title }}</strong>
@@ -108,7 +108,7 @@ async function deleteVote() {
       <DnfButton v-if="isOpen && !votedAnon && !vote.my_voted" tone="gold" class="dnf-btn-sm vote-submit"
                  data-act="vote" @click="submitVote">投票</DnfButton>
     </div>
-  </div>
+  </DnfFrame>
 </template>
 
 <style scoped>

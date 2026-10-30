@@ -112,7 +112,7 @@ describe('MyCharactersView job picker', () => {
     const editBtns = wrapper.findAll('button').filter(b => b.text() === '编辑')
     await editBtns[0].trigger('click')
     await flushPromises()
-    const panels = wrapper.findAll('.dnf-panel')
+    const panels = wrapper.findAllComponents({ name: 'DnfFrame' })
     const cardIdx = panels.findIndex(p => p.text().includes('剑魂'))
     const next = panels[cardIdx + 1]
     expect(next.classes()).toContain('create-form')
@@ -133,8 +133,8 @@ describe('MyCharactersView job picker', () => {
     await editBtn!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('编辑角色')  // 编辑框已打开
-    // 点卡片（编辑按钮所在外层 .dnf-panel）→ 关闭编辑框
-    const card = wrapper.findAll('.dnf-panel').find(p => p.text().includes('剑魂'))!
+    // 点卡片（编辑按钮所在外层 DnfFrame）→ 关闭编辑框
+    const card = wrapper.findAllComponents({ name: 'DnfFrame' }).find(p => p.text().includes('剑魂'))!
     await card.trigger('click')
     await flushPromises()
     expect(wrapper.text()).not.toContain('编辑角色')
@@ -157,7 +157,7 @@ describe('MyCharactersView job picker', () => {
     await flushPromises()
     await wrapper.find('button').trigger('click')          // 添加角色
     await flushPromises()
-    const panels = wrapper.findAll('.dnf-panel')
+    const panels = wrapper.findAllComponents({ name: 'DnfFrame' })
     expect(panels[0].classes()).toContain('create-form')
     expect(panels[0].text()).toContain('添加角色')
     expect(panels[1].text()).toContain('剑魂')
@@ -179,7 +179,7 @@ describe('MyCharactersView job picker', () => {
     ])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    const names = wrapper.findAll('.dnf-panel b').map(b => b.text())
+    const names = wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())
     expect(names).toEqual(['鬼泣', '剑魂', '奶'])   // 输出(名望降序) → 辅助
   })
 
@@ -189,11 +189,11 @@ describe('MyCharactersView job picker', () => {
     ])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    expect(wrapper.findAll('.dnf-panel b').map(b => b.text())).toEqual(['鬼泣', '剑魂', '奶'])
+    expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())).toEqual(['鬼泣', '剑魂', '奶'])
     const fameBtn = wrapper.findAll('button').find(b => b.text() === '按名望')!
     await fameBtn.trigger('click')
     await nextTick()
-    expect(wrapper.findAll('.dnf-panel b').map(b => b.text())).toEqual(['鬼泣', '奶', '剑魂'])
+    expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())).toEqual(['鬼泣', '奶', '剑魂'])
   })
 
   it('highlights the active sort mode button', async () => {
@@ -282,7 +282,7 @@ describe('MyCharactersView job picker', () => {
     const partyBtn = wrapper.findAll('button').find(b => b.text() === '按冒险团')!
     await partyBtn.trigger('click')
     await nextTick()
-    expect(wrapper.findAll('.dnf-panel b').map(b => b.text()))
+    expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text()))
       .toEqual(['甲奶', '甲输出', '乙输出', '无团奶'])
   })
 

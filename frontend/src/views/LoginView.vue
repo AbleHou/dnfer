@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NInput } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -22,7 +22,7 @@ async function submit() {
 
 <template>
   <div class="auth-wrap">
-    <div class="dnf-panel auth-card">
+    <DnfFrame surface="panel" class="auth-card">
       <h2 style="margin-top:0">登录</h2>
       <form @submit.prevent="submit">
         <div style="margin:10px 0"><n-input v-model:value="username" placeholder="账号" /></div>
@@ -31,6 +31,6 @@ async function submit() {
         <DnfButton type="submit" tone="gold" style="width:100%" :loading="loading">登录</DnfButton>
       </form>
       <p style="margin-top:12px">还没有账号？<router-link to="/register">凭注册码注册</router-link></p>
-    </div>
+    </DnfFrame>
   </div>
 </template>

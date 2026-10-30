@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import type { CodeItem } from '../types'
 import AdminNav from '../components/AdminNav.vue'
@@ -30,7 +30,7 @@ async function genCode() {
   <div class="dnf-page">
     <AdminNav />
     <h2>邀请码管理</h2>
-    <section class="dnf-panel dnf-section">
+    <DnfFrame surface="panel" class="dnf-section">
       <h3>生成注册码</h3>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <label class="form-label" style="width:auto"><input type="checkbox" v-model="singleUse" /> 一次性</label>
@@ -50,6 +50,6 @@ async function genCode() {
           </tr>
         </tbody>
       </table>
-    </section>
+    </DnfFrame>
   </div>
 </template>

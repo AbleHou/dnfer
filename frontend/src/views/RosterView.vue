@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { NModal, NSwitch } from 'naive-ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -245,12 +245,12 @@ onBeforeUnmount(() => {
         </DnfButton>
       </span>
     </div>
-    <div v-if="showUnplaced" class="dnf-panel" style="margin-bottom:10px;padding:10px" data-test="unplaced-list">
+    <DnfFrame v-if="showUnplaced" surface="panel" style="margin-bottom:10px;padding:10px" data-test="unplaced-list">
       <div v-for="s in roundUnplacedUsers" :key="s.user.id">
         {{ s.user.nickname }}（可用 {{ s.characters.length }} 角色）
       </div>
       <div v-if="!roundUnplacedUsers.length" style="color:var(--dnf-text-faint)">本波全部已排 ✓</div>
-    </div>
+    </DnfFrame>
 
     <!-- 拿起提示 -->
     <div v-if="holding" class="move-hint" style="display:flex;align-items:center;gap:10px;margin:8px 0">

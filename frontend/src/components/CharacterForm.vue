@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import { categoryIcon, jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import type { AdventureParty, Character, JobCategory, JobChild } from '../types'
@@ -62,7 +62,7 @@ async function save() {
 </script>
 
 <template>
-  <div class="dnf-panel create-form">
+  <DnfFrame surface="panel" class="create-form">
     <h3>{{ editing ? '编辑角色' : '添加角色' }}</h3>
     <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
       <label for="char-name" class="form-label">角色名：</label>
@@ -133,5 +133,5 @@ async function save() {
       <DnfButton tone="gold" :disabled="saving" data-act="save" @click="save">{{ saving ? '保存中…' : '保存' }}</DnfButton>
       <DnfButton @click="emit('cancel')">取消</DnfButton>
     </div>
-  </div>
+  </DnfFrame>
 </template>

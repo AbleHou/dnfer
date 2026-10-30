@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { DnfFrame } from '@dnftools/ui'
 import type { Wave } from '../types'
 import SlotCell from './SlotCell.vue'
 import { SQUAD_NAMES } from '../lib/colors'
@@ -40,7 +41,7 @@ const waveLabel = computed(() =>
 </script>
 
 <template>
-  <div class="dnf-panel" style="margin:20px 0;padding:14px">
+  <DnfFrame surface="panel" style="margin:20px 0;padding:14px">
     <div class="wave-head">
       <b class="dnf-title">{{ waveLabel }}</b>
       <span style="margin-left:auto;display:flex;gap:12px;align-items:center">
@@ -70,5 +71,5 @@ const waveLabel = computed(() =>
         </div>
       </div>
     </div>
-  </div>
+  </DnfFrame>
 </template>

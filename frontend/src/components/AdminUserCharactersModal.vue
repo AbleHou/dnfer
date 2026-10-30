@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfFrame } from '@dnftools/ui'
 import { api } from '../api/client'
 import CharacterCard from './CharacterCard.vue'
 import CharacterForm from './CharacterForm.vue'
@@ -71,12 +71,12 @@ async function remove(c: Character) {
 
       <template v-else>
         <p v-if="!loading && !characters.length" style="color:var(--dnf-text-faint)">还没有角色</p>
-        <div v-for="c in characters" :key="c.id"
-             class="dnf-panel" style="padding:12px;margin:8px 0;display:flex;align-items:center;gap:12px">
+        <DnfFrame v-for="c in characters" :key="c.id" surface="panel"
+                  style="padding:12px;margin:8px 0;display:flex;align-items:center;gap:12px">
           <div style="flex:1"><CharacterCard :character="c" :placement="null" readonly /></div>
           <DnfButton class="dnf-btn-sm" :data-act="'edit-'+c.id" @click="startEdit(c)">编辑</DnfButton>
           <DnfButton tone="orange" class="dnf-btn-sm" :data-act="'del-'+c.id" @click="remove(c)">删除</DnfButton>
-        </div>
+        </DnfFrame>
       </template>
     </div>
   </n-modal>
