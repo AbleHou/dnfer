@@ -10,6 +10,6 @@ export function notifySuccess(content: string): void { messages.success(content)
 
 export function confirmDialog(options: { title?: string; content: string }): Promise<boolean> {
   return dialogs
-    .confirm({ title: options.title ?? '确认', content: options.content, confirmLabel: '确定', cancelLabel: '取消' })
+    .confirm({ title: options.title ?? '确认', content: options.content, confirmLabel: '确定', cancelLabel: '取消', modal: true })
     .then((r) => r.action === 'confirm')
 }

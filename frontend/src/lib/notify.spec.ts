@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, expect, it, vi } from 'vitest'
 
 // 服务无法在无 Provider 下真实渲染，mock createDnfDialog/createDnfMessage
 const dialogServiceMock = vi.hoisted(() => ({ confirm: vi.fn(), alert: vi.fn(), open: vi.fn() }))
@@ -17,7 +17,7 @@ vi.mock('@dnftools/ui', async (importOriginal) => {
 
 beforeEach(() => {
   vi.resetModules()
-  vi.clearAllMocks()
+  vi.resetAllMocks()
 })
 
 it('confirmDialog：action==="confirm" 解析为 true，否则 false', async () => {
@@ -27,6 +27,19 @@ it('confirmDialog：action==="confirm" 解析为 true，否则 false', async () 
 
   dialogServiceMock.confirm.mockResolvedValue({ action: 'cancel', reason: 'cancel' })
   await expect(confirmDialog({ content: 'x' })).resolves.toBe(false)
+})
+
+it('confirmDialog：转发 title/content/confirmLabel/cancelLabel/modal 给 dialogs.confirm', async () => {
+  dialogServiceMock.confirm.mockResolvedValue({ action: 'confirm', reason: 'confirm' })
+  const { confirmDialog } = await import('../lib/notify')
+  await confirmDialog({ title: '删除攻坚', content: '确认删除？' })
+  expect(dialogServiceMock.confirm).toHaveBeenCalledWith({
+    title: '删除攻坚',
+    content: '确认删除？',
+    confirmLabel: '确定',
+    cancelLabel: '取消',
+    modal: true,
+  })
 })
 
 it('notifyError/Success/Warning 转发到 message service 对应方法', async () => {
