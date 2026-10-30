@@ -18,4 +18,8 @@ if (typeof window !== 'undefined') {
   if (!Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = () => {}
   }
+  // DnfTabs 组件在 onMounted 里读 document.fonts.ready（jsdom 无 FontFaceSet）
+  if (!(document as any).fonts) {
+    ;(document as any).fonts = { ready: Promise.resolve() }
+  }
 }

@@ -207,12 +207,13 @@ describe('AdminUsersView', () => {
   it('默认激活角色查询 tab，可切换到账号管理 tab', async () => {
     const wrapper = mount(AdminUsersView, { global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } } })
     await flushPromises()
-    // 默认激活「角色查询」tab（naive 激活 tab 按钮带 n-tabs-tab--active 类）
-    expect(wrapper.find('.n-tabs-tab--active').text()).toContain('角色查询')
-    const usersTab = wrapper.findAll('.n-tabs-tab').find((t) => t.text().includes('账号管理'))
+    // 默认激活「角色查询」tab（DnfTabs 激活 tab 按钮带 data-state="active"）
+    expect(wrapper.find('.dnf-tab[data-state="active"]').text()).toContain('角色查询')
+    const usersTab = wrapper.findAll('.dnf-tab').find((t) => t.text().includes('账号管理'))
     expect(usersTab).toBeTruthy()
-    await usersTab!.trigger('click')
+    // reka-ui TabsTrigger 在 mousedown 上激活（非 click）
+    await usersTab!.trigger('mousedown')
     await flushPromises()
-    expect(wrapper.find('.n-tabs-tab--active').text()).toContain('账号管理')   // 切到「账号管理」tab
+    expect(wrapper.find('.dnf-tab[data-state="active"]').text()).toContain('账号管理')   // 切到「账号管理」tab
   })
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfSelect, DnfTable } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfSelect, DnfTable, DnfTabs } from '@dnftools/ui'
 import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
@@ -11,10 +11,12 @@ import GuestConvertModal from '../components/GuestConvertModal.vue'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
 import { jobGenderTitle } from '../lib/job'
 import type { AdminCharacterRow, AdminUser, CharacterQueryResult, JobCategory, User } from '../types'
-import { NTabs, NTabPane } from 'naive-ui'
-
 // ---- tab 切换（角色查询 / 账号管理）----
 const activeTab = ref<'query' | 'users'>('query')   // 默认「角色查询」
+const tabs = [
+  { value: 'query', label: '角色查询' },
+  { value: 'users', label: '账号管理' },
+]
 
 // ---- 角色查询区 ----
 const queryItems = ref<AdminCharacterRow[]>([])
@@ -182,8 +184,8 @@ onMounted(() => {
     <AdminNav />
     <h2>用户管理</h2>
 
-    <n-tabs v-model:value="activeTab">
-      <n-tab-pane name="query" tab="角色查询" display-directive="show">
+    <DnfTabs v-model="activeTab" :tabs="tabs">
+      <section v-show="activeTab === 'query'">
         <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <DnfSelect :options="classTypeOptions" :model-value="classType || ALL_FILTER"
@@ -218,8 +220,8 @@ onMounted(() => {
       </DnfTable>
       <p style="color:var(--dnf-text-faint)">共 {{ total }} 个角色</p>
         </DnfFrame>
-      </n-tab-pane>
-      <n-tab-pane name="users" tab="账号管理" display-directive="show">
+      </section>
+      <section v-show="activeTab === 'users'">
         <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <DnfInput v-model="userQ" placeholder="搜索昵称/用户名" data-filter="user_q"
@@ -250,8 +252,8 @@ onMounted(() => {
         </template>
       </DnfTable>
         </DnfFrame>
-      </n-tab-pane>
-    </n-tabs>
+      </section>
+    </DnfTabs>
 
     <AdminUserCharactersModal v-if="modalOpen" :open="modalOpen" :user="modalUser"
                               @close="onModalClose" />
