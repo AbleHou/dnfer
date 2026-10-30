@@ -17,8 +17,8 @@ describe('RosterTargetModal', () => {
   it('已有目标预填输入框', async () => {
     const w = await mountModal({ outputs: { count: 2, simMin: 20000, simMax: 25000 },
       mainHeal: { buffMin: 45000 }, sunHeal: { count: 1 } })
-    expect((w.find('[data-test="tgt-out-count"] input').element as HTMLInputElement).value).toBe('2')
-    expect((w.find('[data-test="tgt-sim-min"] input').element as HTMLInputElement).value).toBe('20000')
+    expect((w.find('[data-test="tgt-out-count"] input').element as HTMLInputElement).getAttribute('aria-valuenow')).toBe('2')
+    expect((w.find('[data-test="tgt-sim-min"] input').element as HTMLInputElement).getAttribute('aria-valuenow')).toBe('20000')
   })
   it('保存 emit 规范化后的 target', async () => {
     const w = await mountModal({})
@@ -54,11 +54,11 @@ describe('RosterTargetModal', () => {
     const saved = w.emitted('save')?.[0]?.[0] as SquadTarget
     expect(saved.slack).toBe(true)
   })
-  it('预填后清空 → 保存省略该字段', async () => {
+  it('清空输入框回退最近有限值（DnfNumberInput 不产生 null），保存仍写入该字段', async () => {
     const w = await mountModal({ outputs: { simMin: 20000 } })
     await w.find('[data-test="tgt-sim-min"] input').setValue('')
     await w.find('[data-test="tgt-save"]').trigger('click')
     const saved = w.emitted('save')?.[0]?.[0] as SquadTarget
-    expect(saved.outputs).toBeUndefined()
+    expect(saved.outputs?.simMin).toBe(20000)
   })
 })

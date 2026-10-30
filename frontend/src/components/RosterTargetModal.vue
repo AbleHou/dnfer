@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { NModal, NInputNumber, NCheckbox } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { NModal } from 'naive-ui'
+import { DnfButton, DnfCheckbox, DnfNumberInput } from '@dnftools/ui'
 import type { SquadTarget } from '../lib/roster'
 
 const props = defineProps<{ open: boolean; squadLabel: string; target: SquadTarget | null }>()
@@ -46,18 +46,18 @@ function toTarget(): SquadTarget {
            @update:show="(s: boolean) => { if (!s) emit('close') }">
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="tgt-row"><span class="tgt-label">输出个数</span>
-        <n-input-number v-model:value="draft.outCount" data-test="tgt-out-count" :min="0" style="width:90px" /></div>
+        <DnfNumberInput :model-value="draft.outCount ?? 0" @update:model-value="v => draft.outCount = v" :min="0" data-test="tgt-out-count" style="width:90px" /></div>
       <div class="tgt-row"><span class="tgt-label">总模拟伤害下限</span>
-        <n-input-number v-model:value="draft.simMin" data-test="tgt-sim-min" :min="0" style="width:140px" /></div>
+        <DnfNumberInput :model-value="draft.simMin ?? 0" @update:model-value="v => draft.simMin = v" :min="0" data-test="tgt-sim-min" style="width:140px" /></div>
       <div class="tgt-row"><span class="tgt-label">总模拟伤害上限</span>
-        <n-input-number v-model:value="draft.simMax" data-test="tgt-sim-max" :min="0" style="width:140px" /></div>
+        <DnfNumberInput :model-value="draft.simMax ?? 0" @update:model-value="v => draft.simMax = v" :min="0" data-test="tgt-sim-max" style="width:140px" /></div>
       <div class="tgt-row"><span class="tgt-label">主奶增益下限</span>
-        <n-input-number v-model:value="draft.buffMin" data-test="tgt-buff-min" :min="0" style="width:140px" /></div>
+        <DnfNumberInput :model-value="draft.buffMin ?? 0" @update:model-value="v => draft.buffMin = v" :min="0" data-test="tgt-buff-min" style="width:140px" /></div>
       <div class="tgt-row"><span class="tgt-label">主奶增益上限</span>
-        <n-input-number v-model:value="draft.buffMax" data-test="tgt-buff-max" :min="0" style="width:140px" /></div>
+        <DnfNumberInput :model-value="draft.buffMax ?? 0" @update:model-value="v => draft.buffMax = v" :min="0" data-test="tgt-buff-max" style="width:140px" /></div>
       <div class="tgt-row"><span class="tgt-label">太阳奶个数</span>
-        <n-input-number v-model:value="draft.sunCount" data-test="tgt-sun-count" :min="0" style="width:90px" /></div>
-      <n-checkbox v-model:checked="draft.slack" data-test="tgt-slack">划水豁免（不计较输出/奶量）</n-checkbox>
+        <DnfNumberInput :model-value="draft.sunCount ?? 0" @update:model-value="v => draft.sunCount = v" :min="0" data-test="tgt-sun-count" style="width:90px" /></div>
+      <DnfCheckbox :model-value="draft.slack" @update:model-value="v => draft.slack = v === true" data-test="tgt-slack">划水豁免（不计较输出/奶量）</DnfCheckbox>
     </div>
     <template #footer>
       <div style="display:flex;gap:8px;justify-content:flex-end">
