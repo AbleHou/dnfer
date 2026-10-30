@@ -36,6 +36,25 @@ describe('CharacterPickerModal admin mode', () => {
     expect(wrapper.text()).not.toContain('剑魂')
   })
 
+  it('管理员模式渲染玩家搜索输入，按昵称过滤下拉选项（filterable 降级）', async () => {
+    apiMock.get.mockImplementation(async (url: string) => {
+      if (url === '/api/admin/characters') return [playerA, mine]
+      return []
+    })
+    const wrapper = mount(CharacterPickerModal, {
+      props: { open: true, adminMode: true, signupUserIds: [1, 9] },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    const search = wrapper.find('[data-test="player-search"]')
+    expect(search.exists()).toBe(true)
+    await search.setValue('小红')
+    await flushPromises()
+    // DnfSelect 无 filterable，搜索能力降级为上方输入框按昵称过滤 options
+    const playerSel = wrapper.findComponent({ name: 'DnfSelect' })
+    expect(playerSel.props('options').map((o: any) => o.value)).toEqual([1])
+  })
+
   it('切换玩家后列出该玩家角色', async () => {
     apiMock.get.mockImplementation(async (url: string) => {
       if (url === '/api/admin/characters') return [playerA, mine]
@@ -46,8 +65,8 @@ describe('CharacterPickerModal admin mode', () => {
       global: { stubs: { teleport: true } }, // NModal teleports to body; stub renders content inline
     })
     await flushPromises()
-    // 沿用仓库既有模式（RaidListView.spec.ts）：通过 Select 组件实例 $emit update:value
-    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', playerA.user.id)
+    // 沿用仓库既有模式（RaidListView.spec.ts）：通过 DnfSelect 组件实例 $emit update:modelValue
+    await wrapper.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', playerA.user.id)
     await flushPromises()
     expect(wrapper.text()).toContain('剑魂')
     expect(wrapper.text()).toContain('极诣·剑魂')
@@ -123,7 +142,7 @@ describe('CharacterPickerModal signupCharsByUser', () => {
       global: { stubs: { teleport: true } },
     })
     await flushPromises()
-    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', playerB.user.id)
+    await wrapper.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', playerB.user.id)
     await flushPromises()
     expect(wrapper.text()).toContain('奶2')
     expect(wrapper.text()).not.toContain('剑魂')
@@ -153,7 +172,7 @@ describe('CharacterPickerModal grayByUser', () => {
   it('切换玩家后按该玩家灰色 id 灰显', async () => {
     const wrapper = setup({ 1: [11] })
     await flushPromises()
-    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', playerA.user.id)
+    await wrapper.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', playerA.user.id)
     await flushPromises()
     const grayed = wrapper.find('.char-pick.grayed')
     expect(grayed.exists()).toBe(true)

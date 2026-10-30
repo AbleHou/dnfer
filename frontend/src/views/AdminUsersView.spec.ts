@@ -36,9 +36,11 @@ describe('AdminUsersView', () => {
   it('角色查询带筛选与排序参数', async () => {
     const wrapper = mount(AdminUsersView, { global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } } })
     await flushPromises()
-    await wrapper.find('[data-filter="class_type"]').setValue('辅助')
+    // DnfSelect 是 div+reka-ui 弹层，原生 setValue 失效；按契约层驱动 update:modelValue 事件
+    const selects = wrapper.findAllComponents({ name: 'DnfSelect' })
+    await selects.find(s => s.attributes('data-filter') === 'class_type')!.vm.$emit('update:modelValue', '辅助')
     await wrapper.find('[data-filter="keyword"]').setValue('剑')
-    await wrapper.find('[data-filter="sort"]').setValue('buff_amount')
+    await selects.find(s => s.attributes('data-filter') === 'sort')!.vm.$emit('update:modelValue', 'buff_amount')
     await flushPromises()
     const qcalls = apiMock.get.mock.calls.filter((c: any[]) => String(c[0]).includes('/query'))
     const lastCall = qcalls[qcalls.length - 1]
@@ -105,7 +107,8 @@ describe('AdminUsersView', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('太阳增益')      // 表头
     expect(wrapper.text()).toContain('3000')          // 查询行数值
-    await wrapper.find('[data-filter="sort"]').setValue('sun_buff')
+    const sortSel = wrapper.findAllComponents({ name: 'DnfSelect' }).find(s => s.attributes('data-filter') === 'sort')
+    await sortSel!.vm.$emit('update:modelValue', 'sun_buff')
     await flushPromises()
     const qcalls = apiMock.get.mock.calls.filter((c: any[]) => String(c[0]).includes('/query'))
     expect(String(qcalls[qcalls.length - 1][0])).toContain('sort=sun_buff')

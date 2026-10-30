@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import SlackRulesModal from './SlackRulesModal.vue'
 import type { SlackRuleSet } from '../types'
 
@@ -24,9 +24,12 @@ describe('SlackRulesModal', () => {
   })
   it('职业切换后数值下拉选项变化（辅助无 fame）', async () => {
     const w = mountModal(true)
-    const job = w.find('[data-field="criteria-job-0"]')
-    await job.setValue('辅助')
-    const opts = w.findAll<HTMLOptionElement>('[data-field="criteria-metric-0"] option').map(o => o.element.value)
+    // DnfSelect 是 div+reka-ui 弹层：契约层驱动 update:modelValue + 断言 metric 的 options prop
+    const jobSel = w.findAllComponents({ name: 'DnfSelect' }).find(s => s.attributes('data-field') === 'criteria-job-0')
+    jobSel!.vm.$emit('update:modelValue', '辅助')
+    await flushPromises()
+    const metricSel = w.findAllComponents({ name: 'DnfSelect' }).find(s => s.attributes('data-field') === 'criteria-metric-0')
+    const opts = (metricSel!.props('options') as { value: string }[]).map(o => o.value)
     expect(opts).toEqual(['buff_amount', 'sun_buff'])
   })
   it('添加/删除行与清空', async () => {

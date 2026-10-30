@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { NSelect, NDatePicker, NInput } from 'naive-ui'
-import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
+import { NDatePicker, NInput } from 'naive-ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfSelect } from '@dnftools/ui'
+import type { DnfValue } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime } from '../utils/datetime'
@@ -14,7 +15,7 @@ const auth = useAuthStore()
 const raids = ref<RaidListItem[]>([])
 const showCreate = ref(false)
 const name = ref('')
-const dungeonId = ref<number | null>(null)
+const dungeonId = ref<number | undefined>(undefined)
 const startsAt = ref<string | null>(null)
 const dungeons = ref<Dungeon[]>([])
 const sizeLocked = ref<number | null>(null)
@@ -30,8 +31,10 @@ async function load() {
 }
 onMounted(load)
 
-function onDungeonChange(v: number | null) {
-  const d = dungeons.value.find(x => x.id === v)
+function onDungeonChange(v: DnfValue | undefined) {
+  const id = typeof v === 'number' ? v : undefined
+  dungeonId.value = id
+  const d = dungeons.value.find(x => x.id === id)
   sizeLocked.value = d ? d.size : null
   if (d && !name.value) name.value = d.name
 }
@@ -47,7 +50,7 @@ async function create() {
       dungeon_id: dungeonId.value,
       starts_at: startsAt.value,
     })
-    showCreate.value = false; name.value = ''; dungeonId.value = null
+    showCreate.value = false; name.value = ''; dungeonId.value = undefined
     startsAt.value = null; sizeLocked.value = null
     await load()
   } catch (e: any) { error.value = e.message }
@@ -88,9 +91,9 @@ async function onSignupSubmit(ids: number[]) {
 
     <DnfFrame v-if="showCreate" surface="panel" class="create-form">
       <div style="margin:8px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <n-select data-test="dungeon-select" style="flex:1;min-width:220px"
-                  v-model:value="dungeonId" :options="dungeonOptions" placeholder="选择副本"
-                  @update:value="onDungeonChange" />
+        <DnfSelect data-test="dungeon-select" style="flex:1;min-width:220px"
+                   :model-value="dungeonId" :options="dungeonOptions" placeholder="选择副本"
+                   label="选择副本" @update:model-value="onDungeonChange" />
         <span v-if="sizeLocked" style="color:var(--dnf-text-muted)">规模锁定：{{ sizeLocked }} 人</span>
       </div>
       <div style="margin:8px 0">

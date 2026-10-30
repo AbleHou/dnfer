@@ -82,8 +82,10 @@ describe('CharacterForm', () => {
     apiMock.post.mockResolvedValue({})
     const wrapper = mount(CharacterForm, { props: { categories, editing: null } })
     await flushPromises()
-    const sel = wrapper.find('[data-act="adventure-party"]').element as HTMLSelectElement
-    expect(sel.value).toBe('1')
+    // DnfSelect 是 div 弹层，收窄到契约层：触发按钮显示首团名 + v-model 绑定经 update:modelValue 驱动
+    const party = wrapper.find('[data-act="adventure-party"]')
+    expect(party.exists()).toBe(true)
+    expect(party.text()).toContain('甲的冒险团')
     await fillAndSave(wrapper)
     expect(apiMock.post.mock.calls[0][1].adventure_party_id).toBe(1)
   })
@@ -102,8 +104,10 @@ describe('CharacterForm', () => {
       adventure_party_id: 2, adventure_party_name: '奶爸团' }
     const wrapper = mount(CharacterForm, { props: { categories, editing } })
     await flushPromises()
-    const sel = wrapper.find('[data-act="adventure-party"]').element as HTMLSelectElement
-    expect(sel.value).toBe('2')
+    // 编辑态回填：触发按钮显示当前团名（adventure_party_id=2 → 奶爸团）
+    const party = wrapper.find('[data-act="adventure-party"]')
+    expect(party.exists()).toBe(true)
+    expect(party.text()).toContain('奶爸团')
   })
 
   it('admin baseUrl 时请求该用户的团列表', async () => {

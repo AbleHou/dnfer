@@ -52,7 +52,8 @@ describe('GuestCreateModal', () => {
     await w.find('[data-act="add-row"]').trigger('click')
     const row = w.find('[data-test="guest-row-0"]')
     await row.find('[data-field="char-name"]').setValue('剑魂')
-    await row.find('[data-field="job"]').setValue('weapon_master')
+    // DnfSelect 是 div 弹层，setValue 失效；契约层驱动 update:modelValue
+    await row.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', 'weapon_master')
     await flushPromises()
     await row.find('[data-field="fame"]').setValue('100')
     await row.find('[data-field="damage"]').setValue('2000')
@@ -85,7 +86,7 @@ describe('GuestCreateModal', () => {
     await w.find('[data-act="add-row"]').trigger('click')
     const row = w.find('[data-test="guest-row-0"]')
     await row.find('[data-field="char-name"]').setValue('奶')
-    await row.find('[data-field="job"]').setValue('crusader_male')
+    await row.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', 'crusader_male')
     await flushPromises()
     await row.find('[data-field="buff"]').setValue('46000')
     await row.find('[data-field="sun"]').setValue('3000')

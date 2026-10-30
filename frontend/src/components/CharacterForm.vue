@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfInput, DnfSelect } from '@dnftools/ui'
 import { api } from '../api/client'
 import { categoryIcon, jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import type { AdventureParty, Character, JobCategory, JobChild } from '../types'
@@ -32,6 +32,11 @@ const selectedCat = ref<JobCategory | null>(
 const selectedJob = ref<JobChild | null>(
   selectedCat.value?.children.find(ch => ch.name === props.editing?.job_name) ?? null)
 const isSupport = computed(() => selectedJob.value?.class_type === '辅助')
+const partyOptions = computed(() =>
+  parties.value.map(p => ({ value: p.id, label: p.name })))
+function onPartyChange(v: unknown) {
+  form.value.adventure_party_id = typeof v === 'number' ? v : null
+}
 const error = ref('')
 const saving = ref(false)
 
@@ -102,10 +107,9 @@ async function save() {
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
       <label for="char-party" class="form-label">冒险团：</label>
-      <select id="char-party" v-model.number="form.adventure_party_id" class="dnf-select"
-              style="flex:1" data-act="adventure-party">
-        <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
-      </select>
+      <DnfSelect id="char-party" :model-value="form.adventure_party_id ?? undefined"
+                 :options="partyOptions" style="flex:1" data-act="adventure-party" label="冒险团"
+                 @update:model-value="onPartyChange" />
     </div>
     <template v-if="selectedJob">
       <template v-if="!isSupport">

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfInput, DnfSelect } from '@dnftools/ui'
+import type { DnfValue } from '@dnftools/ui'
 import type { ClassType, SlackMetric, SlackRuleCriterion, SlackRuleExchange, SlackRuleSet } from '../types'
 
 const props = defineProps<{ open: boolean; rules: SlackRuleSet }>()
@@ -35,6 +36,22 @@ function removeExchange(i: number) { exchange.value.splice(i, 1) }
 function onJobChange(row: { class_type: ClassType; metric: SlackMetric }) {
   if (!METRICS[row.class_type].some(m => m.value === row.metric)) row.metric = METRICS[row.class_type][0].value
 }
+const classTypeOptions = [
+  { value: '输出', label: '输出' },
+  { value: '辅助', label: '辅助' },
+]
+function metricOptions(ct: ClassType) {
+  return METRICS[ct].map(m => ({ value: m.value, label: m.label }))
+}
+function onClassTypeChange(row: { class_type: ClassType; metric: SlackMetric }, v: DnfValue | undefined) {
+  if (v === '输出' || v === '辅助') {
+    row.class_type = v
+    onJobChange(row)
+  }
+}
+function onMetricChange(row: { metric: SlackMetric }, v: DnfValue | undefined) {
+  if (typeof v === 'string') row.metric = v as SlackMetric
+}
 function clearAll() { criteria.value = []; exchange.value = [] }
 function submit() {
   emit('submit', {
@@ -52,13 +69,12 @@ function submit() {
         <div class="slack-sec-head"><b>划水名望</b>
           <span class="slack-sec-hint">数值小于输入值的角色视为划水</span></div>
         <div v-for="(row, i) in criteria" :key="i" class="slack-row">
-          <select v-model="row.class_type" class="dnf-select" :data-field="'criteria-job-' + i"
-                  @change="onJobChange(row)">
-            <option value="输出">输出</option><option value="辅助">辅助</option>
-          </select>
-          <select v-model="row.metric" class="dnf-select" :data-field="'criteria-metric-' + i">
-            <option v-for="m in METRICS[row.class_type]" :key="m.value" :value="m.value">{{ m.label }}</option>
-          </select>
+          <DnfSelect :options="classTypeOptions" :model-value="row.class_type"
+                     :data-field="'criteria-job-' + i" label="类别"
+                     @update:model-value="v => onClassTypeChange(row, v)" />
+          <DnfSelect :options="metricOptions(row.class_type)" :model-value="row.metric"
+                     :data-field="'criteria-metric-' + i" label="指标"
+                     @update:model-value="v => onMetricChange(row, v)" />
           <DnfInput :model-value="row.value?.toString() ?? ''"
                      @update:model-value="v => row.value = v ? Number(v) : 0"
                      type="number" min="0" :data-field="'criteria-value-' + i" />
@@ -72,13 +88,12 @@ function submit() {
         <div class="slack-sec-head"><b>兑换标准</b>
           <span class="slack-sec-hint">数值大于输入值的角色可兑换对应划水位</span></div>
         <div v-for="(row, i) in exchange" :key="i" class="slack-row">
-          <select v-model="row.class_type" class="dnf-select" :data-field="'exchange-job-' + i"
-                  @change="onJobChange(row)">
-            <option value="输出">输出</option><option value="辅助">辅助</option>
-          </select>
-          <select v-model="row.metric" class="dnf-select" :data-field="'exchange-metric-' + i">
-            <option v-for="m in METRICS[row.class_type]" :key="m.value" :value="m.value">{{ m.label }}</option>
-          </select>
+          <DnfSelect :options="classTypeOptions" :model-value="row.class_type"
+                     :data-field="'exchange-job-' + i" label="类别"
+                     @update:model-value="v => onClassTypeChange(row, v)" />
+          <DnfSelect :options="metricOptions(row.class_type)" :model-value="row.metric"
+                     :data-field="'exchange-metric-' + i" label="指标"
+                     @update:model-value="v => onMetricChange(row, v)" />
           <DnfInput :model-value="row.value?.toString() ?? ''"
                      @update:model-value="v => row.value = v ? Number(v) : 0"
                      type="number" min="0" :data-field="'exchange-value-' + i" />

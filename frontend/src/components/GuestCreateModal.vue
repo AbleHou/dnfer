@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfInput, DnfSelect } from '@dnftools/ui'
 import { api } from '../api/client'
 import { jobGenderTitle } from '../lib/job'
 import { notifyError, notifySuccess } from '../lib/notify'
@@ -20,6 +20,12 @@ const username = ref('')
 const rows = ref<Row[]>([])
 const categories = ref<JobCategory[]>([])
 const flatJobs = computed(() => categories.value.flatMap((c) => c.children))
+// 注意：reka-ui 的 SelectItem value 不能为空字符串，「选择职业」占位用哨兵值
+const JOB_PLACEHOLDER = '__none__'
+const jobOptions = computed(() => [
+  { value: JOB_PLACEHOLDER, label: '选择职业' },
+  ...flatJobs.value.map(j => ({ value: j.name, label: jobGenderTitle(j.name, j.title) })),
+])
 const error = ref('')
 const saving = ref(false)
 
@@ -87,10 +93,9 @@ async function submit() {
         </div>
         <div v-for="(r, i) in rows" :key="i" class="guest-row" :data-test="`guest-row-${i}`">
           <DnfInput v-model="r.name" data-field="char-name" placeholder="角色名" style="flex:1;min-width:90px" />
-          <select v-model="r.job_name" class="dnf-select" data-field="job" style="max-width:140px">
-            <option value="">选择职业</option>
-            <option v-for="j in flatJobs" :key="j.name" :value="j.name">{{ jobGenderTitle(j.name, j.title) }}</option>
-          </select>
+          <DnfSelect :options="jobOptions" :model-value="r.job_name || JOB_PLACEHOLDER"
+                     data-field="job" label="职业" style="max-width:140px"
+                     @update:model-value="v => r.job_name = typeof v === 'string' && v !== JOB_PLACEHOLDER ? v : ''" />
           <DnfInput :model-value="r.fame?.toString() ?? ''"
                      @update:model-value="v => r.fame = v ? Number(v) : null"
                      type="number" data-field="fame" placeholder="名望" style="width:80px" />

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfTable } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfSelect, DnfTable } from '@dnftools/ui'
 import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
@@ -29,6 +29,27 @@ const queryLoading = ref(false)
 const queryError = ref('')
 const categories = ref<JobCategory[]>([])
 const flatJobs = computed(() => categories.value.flatMap((c) => c.children))
+
+// ---- 查询筛选下拉（DnfSelect options）----
+// 注意：reka-ui 的 SelectItem value 不能为空字符串（'' 保留给清空语义），「全部」用哨兵值
+const ALL_FILTER = '__all__'
+const classTypeOptions = [
+  { value: ALL_FILTER, label: '全部类别' },
+  { value: '输出', label: '输出' },
+  { value: '辅助', label: '辅助' },
+]
+const jobOptions = computed(() => [
+  { value: ALL_FILTER, label: '全部职业' },
+  ...flatJobs.value.map(j => ({ value: j.name, label: jobGenderTitle(j.name, j.title) })),
+])
+const sortOptions = [
+  { value: 'fame', label: '名望' },
+  { value: 'simulated_damage', label: '模拟伤害' },
+  { value: 'sustained_dps', label: '持续输出' },
+  { value: 'buff_amount', label: '增益量' },
+  { value: 'sun_buff', label: '太阳增益' },
+  { value: 'name', label: '角色名' },
+]
 
 const queryKey = computed(() =>
   [classType.value, jobName.value, keyword.value, owner.value, sort.value, order.value].join('\x00'))
@@ -165,25 +186,17 @@ onMounted(() => {
       <n-tab-pane name="query" tab="角色查询" display-directive="show">
         <DnfFrame surface="panel" class="dnf-section">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select v-model="classType" class="dnf-select" data-filter="class_type">
-          <option value="">全部类别</option>
-          <option value="输出">输出</option>
-          <option value="辅助">辅助</option>
-        </select>
-        <select v-model="jobName" class="dnf-select" data-filter="job">
-          <option value="">全部职业</option>
-          <option v-for="j in flatJobs" :key="j.id" :value="j.name">{{ jobGenderTitle(j.name, j.title) }}</option>
-        </select>
+        <DnfSelect :options="classTypeOptions" :model-value="classType || ALL_FILTER"
+                   data-filter="class_type" label="类别筛选" style="width:120px"
+                   @update:model-value="v => classType = typeof v === 'string' && v !== ALL_FILTER ? v : ''" />
+        <DnfSelect :options="jobOptions" :model-value="jobName || ALL_FILTER"
+                   data-filter="job" label="职业筛选" style="width:150px"
+                   @update:model-value="v => jobName = typeof v === 'string' && v !== ALL_FILTER ? v : ''" />
         <DnfInput v-model="keyword" placeholder="角色名" data-filter="keyword" />
         <DnfInput v-model="owner" placeholder="归属玩家" data-filter="owner" />
-        <select v-model="sort" class="dnf-select" data-filter="sort">
-          <option value="fame">名望</option>
-          <option value="simulated_damage">模拟伤害</option>
-          <option value="sustained_dps">持续输出</option>
-          <option value="buff_amount">增益量</option>
-          <option value="sun_buff">太阳增益</option>
-          <option value="name">角色名</option>
-        </select>
+        <DnfSelect :options="sortOptions" :model-value="sort" data-filter="sort"
+                   label="排序" style="width:120px"
+                   @update:model-value="v => sort = typeof v === 'string' ? v : ''" />
         <DnfButton class="dnf-btn-sm" data-act="toggle-order" @click="toggleOrder">
           {{ order === 'desc' ? '↓ 降序' : '↑ 升序' }}
         </DnfButton>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NSelect } from 'naive-ui'
+import { DnfSelect } from '@dnftools/ui'
 import { dutyOptions } from '../lib/duty'
 import type { ClassType, Duty } from '../types'
 
@@ -11,6 +11,6 @@ const options = computed(() => dutyOptions(props.classType).map(v => ({ label: v
 </script>
 
 <template>
-  <n-select size="small" :options="options" :value="modelValue"
-            @update:value="(v) => emit('update:modelValue', v as Duty)" />
+  <DnfSelect :options="options" :model-value="modelValue ?? undefined" label="职责"
+             @update:model-value="(v) => emit('update:modelValue', v as Duty)" />
 </template>

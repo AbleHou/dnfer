@@ -62,7 +62,7 @@ describe('RaidListView create form', () => {
     const wrapper = mount(RaidListView, { global: { plugins: [pinia], stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
     await wrapper.find('[data-test="create-toggle"]').trigger('click')
-    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', 7)
+    await wrapper.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', 7)
     await flushPromises()
 
     const nameInput = wrapper.findAllComponents({ name: 'Input' })
