@@ -524,7 +524,7 @@ git commit -m "feat: 面板换 DnfFrame 贴图底板"
 
 **Files:**
 - Modify: 使用 `dnf-badge` 的视图/组件（RaidList / RaidDetail / Roster / MyCharacters / AdminUsers 等，用 grep 定位）
-- Delete: `frontend/src/styles/dnf.css` 中 `.dnf-badge*` 规则
+- Modify: `frontend/src/styles/dnf.css`（**保留** `.dnf-badge` 基类与 `.dnf-badge-danger`/`.dnf-badge-ok` 颜色规则，Task 4.2 才清理）
 
 映射规则（**DnfBadge 无 `tone` prop**，仅有 `quality`/`variant`/`count`/`label`，已核实 `badge/DnfBadge.vue.d.ts`）：
 - 状态色徽章（已锁定/未锁定/已关闭/已报名）→ `<DnfBadge class="dnf-badge-danger">已锁定</DnfBadge>` / `<DnfBadge class="dnf-badge-ok">未锁定</DnfBadge>`——DnfBadge 根节点渲染 `class="dnf-badge"`，`data-test`/自定义 class 会合并；**`dnf.css` 中 `.dnf-badge-danger`/`.dnf-badge-ok` 两个颜色规则保留**（库无状态色等价物）。
