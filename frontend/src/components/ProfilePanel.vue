@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal, NInput } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { NModal } from 'naive-ui'
+import { DnfButton, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { validateNickname } from '../utils/nickname'
@@ -71,8 +71,8 @@ async function onFileChange(e: Event) {
       </div>
       <div style="width:100%">
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">昵称</div>
-        <n-input v-model:value="nickname" type="text" placeholder="昵称（中文/字母/数字）"
-                 @keyup.enter="saveNickname" />
+        <DnfInput v-model="nickname" type="text" placeholder="昵称（中文/字母/数字）"
+                  @keyup.enter="saveNickname" />
         <p v-if="nicknameError" class="form-error" style="margin:4px 0 0">{{ nicknameError }}</p>
       </div>
       <DnfButton tone="gold" class="save-nickname" style="width:100%"

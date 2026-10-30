@@ -65,9 +65,9 @@ describe('RaidListView create form', () => {
     await wrapper.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', 7)
     await flushPromises()
 
-    const nameInput = wrapper.findAllComponents({ name: 'Input' })
-      .find(c => c.attributes('data-test') === 'name-input')
-    expect(nameInput?.props('value')).toBe('巴卡尔')
+    const nameInput = wrapper.findAllComponents({ name: 'DnfInput' })
+      .find(c => c.find('[data-test="name-input"]').exists())
+    expect(nameInput?.props('modelValue')).toBe('巴卡尔')
     expect(wrapper.text()).toContain('规模锁定：16 人')
   })
 

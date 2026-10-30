@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { NDatePicker, NInput } from 'naive-ui'
-import { DnfBadge, DnfButton, DnfFrame, DnfSelect } from '@dnftools/ui'
+import { NDatePicker } from 'naive-ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfSelect } from '@dnftools/ui'
 import type { DnfValue } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -101,7 +101,7 @@ async function onSignupSubmit(ids: number[]) {
                        :actions="null" clearable update-value-on-close placeholder="发起时间" v-model:formatted-value="startsAt" />
       </div>
       <div style="margin:8px 0">
-        <n-input data-test="name-input" v-model:value="name" placeholder="攻坚名称（默认副本名）" />
+        <DnfInput data-test="name-input" v-model="name" placeholder="攻坚名称（默认副本名）" />
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
       <DnfButton tone="gold" data-test="create-submit" :disabled="creating" @click="create">

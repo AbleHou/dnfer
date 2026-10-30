@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfBadge, DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -20,7 +20,7 @@ import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
 import GuestCreateModal from '../components/GuestCreateModal.vue'
-import { NDatePicker, NInput, NModal } from 'naive-ui'
+import { NDatePicker, NModal } from 'naive-ui'
 import { computeSlack, slackCountByUser } from '../lib/slack'
 import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User, Wave } from '../types'
 
@@ -388,7 +388,7 @@ async function onGuestCreated(u: User, charCount: number) {
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <div style="margin-bottom:4px">名称</div>
-          <n-input v-model:value="editName" data-test="edit-name" />
+          <DnfInput v-model="editName" data-test="edit-name" />
         </div>
         <div>
           <div style="margin-bottom:4px">时间</div>

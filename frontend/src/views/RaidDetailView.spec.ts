@@ -240,7 +240,7 @@ describe('RaidDetailView enhance', () => {
     await flushPromises()
     await wrapper.find('[data-test="edit-raid"]').trigger('click')
     await flushPromises()
-    await wrapper.find('[data-test="edit-name"] input').setValue('新名字')
+    await wrapper.find('[data-test="edit-name"]').setValue('新名字')
     await wrapper.find('[data-test="save-raid"]').trigger('click')
     await flushPromises()
     expect(apiMock.put).toHaveBeenCalledWith('/api/raids/1', { name: '新名字', starts_at: '2026-09-20T14:00:00' })

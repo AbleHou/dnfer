@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NInput } from 'naive-ui'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -25,8 +24,8 @@ async function submit() {
     <DnfFrame surface="panel" class="auth-card">
       <h2 style="margin-top:0">登录</h2>
       <form @submit.prevent="submit">
-        <div style="margin:10px 0"><n-input v-model:value="username" placeholder="账号" /></div>
-        <div style="margin:10px 0"><n-input v-model:value="password" type="password" placeholder="密码" /></div>
+        <div style="margin:10px 0"><DnfInput v-model="username" placeholder="账号" /></div>
+        <div style="margin:10px 0"><DnfInput v-model="password" type="password" placeholder="密码" /></div>
         <p v-if="error" class="form-error">{{ error }}</p>
         <DnfButton type="submit" tone="gold" style="width:100%" :loading="loading">登录</DnfButton>
       </form>

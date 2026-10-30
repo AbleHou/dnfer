@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NInput } from 'naive-ui'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
 import { useAuthStore } from '../stores/auth'
 import { validateNickname } from '../utils/nickname'
 
@@ -35,11 +34,11 @@ async function submit() {
     <DnfFrame surface="panel" class="auth-card">
       <h2 style="margin-top:0">注册</h2>
       <form @submit.prevent="submit">
-        <div style="margin:10px 0"><n-input v-model:value="username" placeholder="账号（登录用）" /></div>
-        <div style="margin:10px 0"><n-input v-model:value="password" type="password" placeholder="密码（≥6位）" /></div>
-        <div style="margin:10px 0"><n-input v-model:value="nickname" placeholder="群昵称（中文/字母/数字）" /></div>
+        <div style="margin:10px 0"><DnfInput v-model="username" placeholder="账号（登录用）" /></div>
+        <div style="margin:10px 0"><DnfInput v-model="password" type="password" placeholder="密码（≥6位）" /></div>
+        <div style="margin:10px 0"><DnfInput v-model="nickname" placeholder="群昵称（中文/字母/数字）" /></div>
         <p v-if="nicknameError" class="form-error" style="margin:-6px 0 6px">{{ nicknameError }}</p>
-        <div style="margin:10px 0"><n-input v-model:value="code" placeholder="注册码" /></div>
+        <div style="margin:10px 0"><DnfInput v-model="code" placeholder="注册码" /></div>
         <p v-if="error" class="form-error">{{ error }}</p>
         <DnfButton type="submit" tone="gold" style="width:100%" :loading="loading">注册</DnfButton>
       </form>
