@@ -738,7 +738,7 @@ git commit -m "feat: 下拉选择换 DnfSelect"
 - Modify: `frontend/src/components/ProfilePanel.vue`（NInput）
 - Modify: `frontend/src/views/RaidListView.vue`（创建表单 `name` 的 NInput）
 - Modify: `frontend/src/views/RaidDetailView.vue`（编辑表单 `editName` 的 NInput，约 390 行，与 NDatePicker 同一表单）
-- Test: `frontend/src/views/RaidListView.spec.ts`
+- Test: `frontend/src/views/RaidListView.spec.ts`、`frontend/src/views/RaidDetailView.spec.ts`（DnfInput 把 data-test 透传到原生 input 上，原 `find('[data-test="edit-name"] input')` 嵌套选择器失效，需改 `find('[data-test="edit-name"]')`）
 
 映射规则：
 - `<n-input v-model:value="x" placeholder="…" />` → `<DnfInput v-model="x" placeholder="…" />`
