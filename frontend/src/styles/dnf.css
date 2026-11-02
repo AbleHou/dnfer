@@ -31,6 +31,9 @@ h3:not(.dnf-title):not(.dnf-window-title):not(.dnf-drawer-title) {
   color: var(--dnf-gold-hi);
   letter-spacing: 1px;
 }
+/* 窗口/弹窗标题字号：库 .dnf-window-title 用 font:inherit 跟随应用基础字号（未设则 16px 默认），
+   固定为 14px 与 demo 页一致；其余字体属性仍继承 */
+.dnf-window-title { font-size: 14px; }
 a { color: var(--dnf-gold-hi); }
 
 /* 库 .dnf-frame 只设 border-width/color 无 border-style（假设消费方有 preflight），补上 */
