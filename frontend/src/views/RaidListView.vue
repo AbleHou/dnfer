@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { NDatePicker } from 'naive-ui'
 import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfSelect } from '@dnftools/ui'
 import type { DnfValue } from '@dnftools/ui'
 import { api } from '../api/client'
@@ -17,6 +16,11 @@ const showCreate = ref(false)
 const name = ref('')
 const dungeonId = ref<number | undefined>(undefined)
 const startsAt = ref<string | null>(null)
+// startsAt 保留 ISO 字符串（发后端）；startsAtLocal 是 datetime-local 的本地值（YYYY-MM-DDTHH:mm）
+const startsAtLocal = computed<string>({
+  get: () => startsAt.value ? startsAt.value.slice(0, 16) : '',
+  set: (v) => { startsAt.value = v ? `${v}:00` : null },
+})
 const dungeons = ref<Dungeon[]>([])
 const sizeLocked = ref<number | null>(null)
 const error = ref('')
@@ -97,8 +101,8 @@ async function onSignupSubmit(ids: number[]) {
         <span v-if="sizeLocked" style="color:var(--dnf-text-muted)">规模锁定：{{ sizeLocked }} 人</span>
       </div>
       <div style="margin:8px 0">
-        <n-date-picker data-test="starts-at" type="datetime" value-format="yyyy-MM-dd'T'HH:mm:ss"
-                       :actions="null" clearable update-value-on-close placeholder="发起时间" v-model:formatted-value="startsAt" />
+        <input type="datetime-local" data-test="starts-at" class="dnf-datetime"
+               v-model="startsAtLocal" placeholder="发起时间" style="width:100%" />
       </div>
       <div style="margin:8px 0">
         <DnfInput data-test="name-input" v-model="name" placeholder="攻坚名称（默认副本名）" />

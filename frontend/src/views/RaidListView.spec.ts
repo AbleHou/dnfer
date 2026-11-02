@@ -71,7 +71,7 @@ describe('RaidListView create form', () => {
     expect(wrapper.text()).toContain('规模锁定：16 人')
   })
 
-  it('keeps the selected start time after the datetime panel closes', async () => {
+  it('发起时间用原生 datetime-local 输入，v-model 双向绑定补 :00 提交', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
@@ -81,15 +81,18 @@ describe('RaidListView create form', () => {
     await flushPromises()
     await wrapper.find('[data-test="create-toggle"]').trigger('click')
 
-    const dp: any = wrapper.findComponent({ name: 'DatePicker' }).vm
-    const ts = new Date('2026-09-20T14:00:00').getTime()
-    // 复现 datetime 面板：点选日期只更新 pending，随后面板关闭才提交。
-    dp.handleTriggerClick({})
-    dp.handlePanelUpdateValue(ts, false)
-    dp.handlePanelClose(false)
-    await flushPromises()
+    const input = wrapper.find('input[data-test="starts-at"]')
+    expect(input.exists()).toBe(true)
+    expect(input.attributes('type')).toBe('datetime-local')
 
-    expect(dp.formattedValue).toBe('2026-09-20T14:00:00')
+    // v-model 绑定：输入本地值（无秒）→ startsAt 补 :00，提交时带完整 ISO 秒
+    await wrapper.findComponent({ name: 'DnfSelect' }).vm.$emit('update:modelValue', 7)
+    await input.setValue('2026-09-20T14:00')
+    await wrapper.find('[data-test="create-submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/raids', {
+      name: '巴卡尔', dungeon_id: 7, starts_at: '2026-09-20T14:00:00',
+    })
   })
 
   it('does not fetch dungeons for non-admin members', async () => {

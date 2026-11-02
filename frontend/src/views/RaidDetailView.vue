@@ -20,7 +20,7 @@ import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
 import GuestCreateModal from '../components/GuestCreateModal.vue'
-import { NDatePicker, NModal } from 'naive-ui'
+import { NModal } from 'naive-ui'
 import { computeSlack, slackCountByUser } from '../lib/slack'
 import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User, Wave } from '../types'
 
@@ -49,6 +49,11 @@ const showSlackRules = ref(false)
 const showEditRaid = ref(false)
 const editName = ref('')
 const editStartsAt = ref<string | null>(null)
+// editStartsAt 保留 ISO 字符串（发后端）；editStartsAtLocal 是 datetime-local 的本地值（YYYY-MM-DDTHH:mm）
+const editStartsAtLocal = computed<string>({
+  get: () => editStartsAt.value ? editStartsAt.value.slice(0, 16) : '',
+  set: (v) => { editStartsAt.value = v ? `${v}:00` : null },
+})
 const showSignupModal = ref(false)
 const signupMode = ref<'signup' | 'manage'>('signup')
 const signupSelected = ref<number[]>([])
@@ -392,8 +397,8 @@ async function onGuestCreated(u: User, charCount: number) {
         </div>
         <div>
           <div style="margin-bottom:4px">时间</div>
-          <n-date-picker v-model:formatted-value="editStartsAt" type="datetime"
-                         value-format="yyyy-MM-dd'T'HH:mm:ss" style="width:100%" />
+          <input type="datetime-local" class="dnf-datetime"
+                 v-model="editStartsAtLocal" style="width:100%" />
         </div>
       </div>
       <template #footer>

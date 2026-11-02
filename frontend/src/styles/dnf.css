@@ -76,6 +76,15 @@ a { color: var(--dnf-gold-hi); }
 /* DnfInput 壳内原生 input 填充壳宽：壳 display:inline-flex，input 默认不伸张，
    否则 flex:1 / width 布局下会出现「框宽、输入区窄」的视觉回退 */
 .dnf-input-shell > input { flex: 1; min-width: 0; width: 100%; }
+
+/* 原生 datetime-local 输入皮肤（替代 NDatePicker；复用原 .dnf-input 视觉，Task 4.2 清理时保留） */
+.dnf-datetime {
+  background: var(--dnf-panel-inner); border: 2px solid var(--dnf-gold-deep);
+  color: var(--dnf-text); border-radius: 6px; padding: 7px 10px; font-size: 14px;
+  font-family: inherit; box-sizing: border-box;
+}
+.dnf-datetime:focus { outline: none; border-color: var(--dnf-gold); }
+.dnf-datetime::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
 .form-label { width: 80px; flex-shrink: 0; color: var(--dnf-text-muted); }
 .form-error { color: #ff8a80; }
 
