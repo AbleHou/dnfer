@@ -21,9 +21,12 @@ body {
   color: #f6f8f4;
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
-/* 库的 DnfTitle 默认渲染 h3（class=dnf-title，弹窗/窗口标题），
-   用 :not(.dnf-title) 排除，避免页面级衬线金色标题覆盖库的标题样式 */
-h1:not(.dnf-title), h2:not(.dnf-title), h3:not(.dnf-title) {
+/* 库的弹窗/窗口/抽屉标题由 reka-ui DialogTitle 渲染为 h2（class=dnf-window-title /
+   dnf-drawer-title），独立 DnfTitle 渲染 h3（class=dnf-title）。这些类都不能被
+   页面级衬线金色标题规则覆盖，否则标题会被盖成衬线+字距、与窗口不搭 */
+h1:not(.dnf-title):not(.dnf-window-title):not(.dnf-drawer-title),
+h2:not(.dnf-title):not(.dnf-window-title):not(.dnf-drawer-title),
+h3:not(.dnf-title):not(.dnf-window-title):not(.dnf-drawer-title) {
   font-family: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
   color: var(--dnf-gold-hi);
   letter-spacing: 1px;
