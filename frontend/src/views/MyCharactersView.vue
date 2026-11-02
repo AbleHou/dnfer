@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { DnfButton, DnfFrame } from '@dnftools/ui'
+import { DnfButton, DnfFrame, DnfSelect } from '@dnftools/ui'
 import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
 import AdventurePartyModal from '../components/AdventurePartyModal.vue'
@@ -17,6 +17,11 @@ const partyModalOpen = ref(false)
 
 type SortMode = 'type' | 'fame' | 'party'
 const sortMode = ref<SortMode>('type')
+const sortOptions: { value: SortMode; label: string }[] = [
+  { value: 'type', label: '按类型' },
+  { value: 'fame', label: '按名望' },
+  { value: 'party', label: '按冒险团' },
+]
 const TYPE_RANK: Record<Character['class_type'], number> = { 输出: 0, 辅助: 1 }
 
 const sorted = computed(() =>
@@ -68,15 +73,12 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
     <div class="page-head">
       <h2>我的角色</h2>
       <div style="display:flex;align-items:center;gap:8px">
-        <DnfButton tone="gold" @click="startCreate">＋ 添加角色</DnfButton>
+        <DnfButton tone="gold" class="dnf-btn-sm" @click="startCreate">＋ 添加角色</DnfButton>
         <DnfButton class="dnf-btn-sm" data-act="manage-parties"
                    @click="partyModalOpen = true">冒险团管理</DnfButton>
-        <DnfButton class="dnf-btn-sm" :tone="sortMode === 'type' ? 'gold' : 'blue'"
-                   @click="sortMode = 'type'">按类型</DnfButton>
-        <DnfButton class="dnf-btn-sm" :tone="sortMode === 'fame' ? 'gold' : 'blue'"
-                   @click="sortMode = 'fame'">按名望</DnfButton>
-        <DnfButton class="dnf-btn-sm" :tone="sortMode === 'party' ? 'gold' : 'blue'"
-                   @click="sortMode = 'party'">按冒险团</DnfButton>
+        <DnfSelect :model-value="sortMode" :options="sortOptions" label="排序"
+                   data-act="sort-select" style="width:130px"
+                   @update:model-value="(v) => sortMode = v as SortMode" />
       </div>
     </div>
 

@@ -64,7 +64,7 @@ async function delDungeon(d: Dungeon) {
     <AdminNav />
     <h2>副本管理</h2>
     <DnfFrame surface="panel" class="dnf-section">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <DnfInput v-model="dgName" placeholder="副本名称" />
         <DnfSelect :model-value="dgSize" :options="sizeOptions" label="人数"
                    @update:model-value="onSizeChange" />

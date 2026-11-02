@@ -187,7 +187,7 @@ onMounted(() => {
     <DnfTabs v-model="activeTab" :tabs="tabs">
       <section v-show="activeTab === 'query'">
         <DnfFrame surface="panel" class="dnf-section">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <DnfSelect :options="classTypeOptions" :model-value="classType || ALL_FILTER"
                    data-filter="class_type" label="类别筛选" style="width:120px"
                    @update:model-value="v => classType = typeof v === 'string' && v !== ALL_FILTER ? v : ''" />

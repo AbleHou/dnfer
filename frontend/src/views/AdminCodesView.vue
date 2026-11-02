@@ -39,7 +39,7 @@ async function genCode() {
     <h2>邀请码管理</h2>
     <DnfFrame surface="panel" class="dnf-section">
       <h3>生成注册码</h3>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <label class="form-label" style="width:auto"><input type="checkbox" v-model="singleUse" /> 一次性</label>
         <DnfInput :model-value="expireDays.toString()" type="number" min="0"
                    placeholder="有效期(天,0=不限)"

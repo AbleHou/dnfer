@@ -312,11 +312,11 @@ async function onGuestCreated(u: User, charCount: number) {
         <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="slack-rules"
                    @click="showSlackRules = true">划水规则设置</DnfButton>
         <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</DnfButton>
-        <DnfButton v-if="auth.isAdmin && !closed" data-test="lock-toggle"
+        <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="lock-toggle"
                    @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</DnfButton>
-        <DnfButton v-if="auth.isAdmin && !closed" tone="gold" data-test="add-wave"
+        <DnfButton v-if="auth.isAdmin && !closed" tone="gold" class="dnf-btn-sm" data-test="add-wave"
                    @click="onAddWave">＋ 添加一波</DnfButton>
-        <DnfButton v-if="auth.isAdmin && !closed" tone="orange" data-test="close-raid"
+        <DnfButton v-if="auth.isAdmin && !closed" tone="orange" class="dnf-btn-sm" data-test="close-raid"
                    @click="onCloseRaid">关闭攻坚</DnfButton>
       </span>
     </div>

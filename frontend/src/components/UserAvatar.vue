@@ -1,21 +1,32 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { DnfAvatar } from '@dnftools/ui'
+import { computed, ref, watch } from 'vue'
+import { avatarBackground, avatarFallbackChar } from '../lib/avatar'
 
 const props = defineProps<{ nickname: string; avatar: string | null; size?: number }>()
-// 对外契约不变（nickname/avatar/size），内部映射到 DnfAvatar 的 src/label/size
 const size = computed(() => props.size ?? 28)
-const src = computed(() => props.avatar ?? undefined)
-const label = computed(() => props.nickname)
+const fallback = computed(() => avatarFallbackChar(props.nickname))
+const bg = computed(() => avatarBackground(props.nickname))
+// 图片加载失败（如头像被删除后 URL 失效）→ 回退到首字符占位
+const failed = ref(false)
+watch(() => props.avatar, () => { failed.value = false })
+function onImgError() { failed.value = true }
 </script>
 
 <template>
-  <DnfAvatar :src="src" :label="label" :size="size" class="user-avatar" />
+  <span class="user-avatar" :style="{
+    width: size + 'px', height: size + 'px',
+    background: bg, fontSize: Math.max(10, Math.round(size / 2)) + 'px',
+  }">
+    <img v-if="avatar && !failed" :src="avatar" :alt="nickname" @error="onImgError">
+    <span v-else class="user-avatar-fallback">{{ fallback }}</span>
+  </span>
 </template>
 
 <style scoped>
 .user-avatar {
-  /* 小尺寸头像在 flex 行内容易被压缩，保持与旧自绘头像一致 */
-  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  color: #fff; line-height: 1; user-select: none;
 }
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 </style>

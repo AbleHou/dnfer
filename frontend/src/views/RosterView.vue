@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfIconButton, DnfSwitch } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfIcon, DnfIconButton, DnfSwitch } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -218,7 +218,10 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="store.raid" class="dnf-page">
     <div class="page-head" style="flex-wrap:wrap;gap:10px">
-      <DnfButton class="dnf-btn-sm" @click="router.push(`/raids/${rid}`)">← 返回</DnfButton>
+      <DnfButton skin="text" @click="router.push(`/raids/${rid}`)">
+        <template #icon><DnfIcon name="npc-back" state="auto" /></template>
+        返回
+      </DnfButton>
       <h2 style="margin:0">{{ store.raid.name }} · 编队</h2>
       <DnfBadge v-if="store.raid?.closed" class="dnf-badge-danger">攻坚已关闭，仅查看</DnfBadge>
       <span style="margin-left:auto;display:flex;gap:8px;align-items:center">

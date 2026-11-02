@@ -183,30 +183,30 @@ describe('MyCharactersView job picker', () => {
     expect(names).toEqual(['鬼泣', '剑魂', '奶'])   // 输出(名望降序) → 辅助
   })
 
-  it('toggling 按名望 reorders by fame desc', async () => {
+  it('排序下拉切到「按名望」后按 fame 降序', async () => {
     apiMock.get.mockResolvedValueOnce([
       mk(1, '剑魂', '输出', 100), mk(2, '奶', '辅助', 200), mk(3, '鬼泣', '输出', 300),
     ])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
     expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())).toEqual(['鬼泣', '剑魂', '奶'])
-    const fameBtn = wrapper.findAll('button').find(b => b.text() === '按名望')!
-    await fameBtn.trigger('click')
+    const sort = wrapper.findComponent({ name: 'DnfSelect' })
+    await sort.vm.$emit('update:modelValue', 'fame')
     await nextTick()
     expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())).toEqual(['鬼泣', '奶', '剑魂'])
   })
 
-  it('highlights the active sort mode button', async () => {
+  it('排序下拉切换排序模式（默认按类型）', async () => {
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    const typeBtn = wrapper.findAll('button').find(b => b.text() === '按类型')!
-    const fameBtn = wrapper.findAll('button').find(b => b.text() === '按名望')!
-    expect(typeBtn.attributes('data-tone')).toBe('gold')
-    expect(fameBtn.attributes('data-tone')).toBe('blue')
-    await fameBtn.trigger('click')
+    const sort = wrapper.findComponent({ name: 'DnfSelect' })
+    expect(sort.props('modelValue')).toBe('type')
+    await sort.vm.$emit('update:modelValue', 'fame')
     await nextTick()
-    expect(fameBtn.attributes('data-tone')).toBe('gold')
-    expect(typeBtn.attributes('data-tone')).toBe('blue')
+    expect(sort.props('modelValue')).toBe('fame')
+    await sort.vm.$emit('update:modelValue', 'party')
+    await nextTick()
+    expect(sort.props('modelValue')).toBe('party')
   })
 
   it('角色卡与职业选择器显示男女双版性别后缀', async () => {
@@ -279,23 +279,17 @@ describe('MyCharactersView job picker', () => {
     ])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    const partyBtn = wrapper.findAll('button').find(b => b.text() === '按冒险团')!
-    await partyBtn.trigger('click')
+    const sort = wrapper.findComponent({ name: 'DnfSelect' })
+    await sort.vm.$emit('update:modelValue', 'party')
     await nextTick()
     expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text()))
       .toEqual(['甲奶', '甲输出', '乙输出', '无团奶'])
   })
 
-  it('按冒险团按钮激活高亮（按类型高亮取消）', async () => {
+  it('排序下拉默认按类型（sortMode=type）', async () => {
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    const typeBtn = wrapper.findAll('button').find(b => b.text() === '按类型')!
-    const partyBtn = wrapper.findAll('button').find(b => b.text() === '按冒险团')!
-    expect(typeBtn.attributes('data-tone')).toBe('gold')
-    expect(partyBtn.attributes('data-tone')).toBe('blue')
-    await partyBtn.trigger('click')
-    await nextTick()
-    expect(partyBtn.attributes('data-tone')).toBe('gold')
-    expect(typeBtn.attributes('data-tone')).toBe('blue')
+    const sort = wrapper.findComponent({ name: 'DnfSelect' })
+    expect(sort.props('modelValue')).toBe('type')
   })
 })

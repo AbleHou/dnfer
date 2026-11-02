@@ -59,10 +59,11 @@ async function onFileChange(e: Event) {
   <DnfDialog :open="props.open" title="个人信息" width="min(360px,92vw)" modal close-on-outside
              @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div v-if="auth.user" style="display:flex;flex-direction:column;gap:14px;align-items:center">
-      <DnfButton style="padding:4px;border-radius:50%" title="点击更换头像"
-                 :disabled="uploading" @click="fileInput?.click()">
+      <button type="button" title="点击更换头像"
+              style="border:0;background:none;padding:0;cursor:pointer;border-radius:50%"
+              :disabled="uploading" @click="fileInput?.click()">
         <UserAvatar :nickname="auth.user.nickname" :avatar="auth.user.avatar" :size="72" />
-      </DnfButton>
+      </button>
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange">
       <div style="width:100%">
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">账号（登录用）</div>
