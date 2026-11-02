@@ -32,10 +32,11 @@ function onCellClick() {
   if (props.moveMode) { emit('moveTo', props.slot); return }
   if (manageable.value) emit('manage', props.slot)
 }
-const attrs = computed(() => {
+// fame 值单独渲染（与图标绑成不换行单元），fameRest 是其后「· 模拟/增益…」部分
+const fameRest = computed(() => {
   const s = props.slot
-  if (s.character_class === '输出') return `${s.fame ?? '暂无'} · 模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
-  if (s.character_class === '辅助') return `${s.fame ?? '暂无'} · 增益 ${fmtBuff(s.buff_amount)} · 太阳 ${fmtBuff(s.sun_buff)}`
+  if (s.character_class === '输出') return ` · 模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
+  if (s.character_class === '辅助') return ` · 增益 ${fmtBuff(s.buff_amount)} · 太阳 ${fmtBuff(s.sun_buff)}`
   return ''
 })
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
@@ -61,10 +62,12 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
                     @click.stop @update:model-value="(d) => emit('duty', slot, d)" />
         <DnfBadge v-else style="font-size:11px;color:var(--dnf-gold-hi);border-color:var(--dnf-gold-deep)">{{ slot.duty }}</DnfBadge>
       </div>
-      <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px;display:flex;align-items:center;gap:3px">
-        <template v-if="attrs">
-          <DnfIcon name="fame" :width="12" :height="12" style="flex-shrink:0" />
-          <span>{{ attrs }}</span>
+      <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
+        <template v-if="fameRest">
+          <span style="white-space:nowrap;display:inline-flex;align-items:center;gap:2px">
+            <DnfIcon name="fame" :width="12" :height="12" />
+            <span>{{ slot.fame ?? '暂无' }}</span>
+          </span>{{ fameRest }}
         </template>
         <a v-if="editable" href="#" style="margin-left:8px;color:var(--dnf-danger)"
            @click.prevent.stop="emit('remove', slot)">撤下</a>

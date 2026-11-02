@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { DnfProvider, DnfDropdownMenu, DnfDialogProvider, DnfMessageProvider } from '@dnftools/ui'
+import { DnfProvider, DnfDropdownMenu, DnfDialogProvider, DnfIcon, DnfMessageProvider } from '@dnftools/ui'
 import type { DnfMenuItem } from '@dnftools/ui'
 import { useAuthStore } from './stores/auth'
 import { dialogs, messages } from './lib/notify'
@@ -39,10 +39,18 @@ function onMenuSelect(item: DnfMenuItem) {
       <DnfMessageProvider :service="messages">
         <nav v-if="auth.user" class="dnf-nav">
           <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
-          <router-link to="/" class="nav-link">攻坚列表</router-link>
-          <router-link to="/characters" class="nav-link">我的角色</router-link>
-          <router-link to="/votes" class="nav-link">群会议</router-link>
-          <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">管理</router-link>
+          <router-link to="/" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+            <DnfIcon name="hud-scroll" />攻坚列表
+          </router-link>
+          <router-link to="/characters" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+            <DnfIcon name="hud-character" />我的角色
+          </router-link>
+          <router-link to="/votes" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+            <DnfIcon name="hud-bell" />群会议
+          </router-link>
+          <router-link v-if="auth.isAdmin" to="/admin" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+            <DnfIcon name="hud-grid" />管理
+          </router-link>
           <span class="nav-right">
             <button class="nav-user" title="个人信息" @click="profileOpen = true">
               <UserAvatar v-if="auth.user" :nickname="auth.user.nickname"

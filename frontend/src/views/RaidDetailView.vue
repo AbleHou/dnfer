@@ -328,7 +328,9 @@ async function onGuestCreated(u: User, charCount: number) {
         <DnfButton v-if="auth.isAdmin && !closed" tone="gold" class="dnf-btn-sm" data-test="add-wave"
                    @click="onAddWave">＋ 添加一波</DnfButton>
         <DnfButton v-if="auth.isAdmin && !closed" tone="orange" class="dnf-btn-sm" data-test="close-raid"
-                   @click="onCloseRaid">关闭攻坚</DnfButton>
+                   @click="onCloseRaid">
+          <template #icon><DnfIcon name="npc-close" /></template>关闭攻坚
+        </DnfButton>
       </span>
     </div>
 
