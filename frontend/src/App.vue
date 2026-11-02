@@ -46,7 +46,7 @@ function onMenuSelect(item: DnfMenuItem) {
             <DnfIcon name="hud-character" />我的角色
           </router-link>
           <router-link to="/votes" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
-            <DnfIcon name="hud-bell" />群会议
+            <DnfIcon name="info-bell" />群会议
           </router-link>
           <router-link v-if="auth.isAdmin" to="/admin" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
             <DnfIcon name="hud-grid" />管理
