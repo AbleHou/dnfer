@@ -9,11 +9,20 @@
 - **UI 全面升级 @dnftools/ui**：以 DNF 游戏贴图组件库替换 naive-ui 与自绘样式（全量迁移、只留暗色、分阶段落地）。前端依赖 naive-ui 移除，组件库 `@dnftools/ui`（vendored 内置）全量接管——弹窗/消息（createDnfDialog/createDnfMessage）、按钮/面板/徽章/表格/输入/下拉/标签页/开关/数值/日期等全部换成 DNF 游戏贴图皮肤
 - **只保留暗色主题**：删除亮色主题与切换（含 FOUC 防闪脚本与 naive 覆写），回归单一 DNF 鎏金暗色风格
 - **攻坚创建/编辑日期时间选择器**：换原生 `datetime-local`
+- **导航/详情/编队页图标化**：导航栏加 hud 系列图标（攻坚列表 hud-scroll、我的角色 hud-character、群会议 info-bell、管理 hud-settings）；攻坚详情顶部按钮配 npc 系列图标（编队 npc-group / 划水规则 npc-people / 修改 npc-pen / 锁定解锁 npc-lock·npc-unlock / 关闭攻坚 npc-close），副本名前加 source-dungeon 图标
+- **格子名望改图标**：攻坚详情波格与编队总览页的「名望」文字改为 fame 图标，图标与名望值绑成不换行单元，数值再长也不脱离
+- **我的角色排序改下拉**：排序从三个按钮改为 `DnfSelect` 下拉（按类型 / 按名望 / 按冒险团），仅保留「添加角色 / 冒险团管理」两按钮
+- **头像恢复用户名生成**：无头像用户显示哈希底色 + 昵称首字符头像（替换组件库无图时的一抹黑），导航/成员列表/个人信息弹框一致
+- **编队角色池工具栏**：展开/收起改为 `option-caret-down/up` 图标按钮、添加临时用户改 `friend-invite` 图标，搜索框不再被挤窄
+- **二次确认框**：恢复「取消 / 确定」双按钮（右上角 x / 外部点击 / Esc 关闭仍解析为取消）
+- **弹窗/窗口标题修复**：去掉页面级 `h1/h2/h3` 规则对库标题的覆盖（衬线+字距），恢复库鎏金样式并固定 14px 字号
 
 ### 工程
 
 - 前端依赖 naive-ui 移除、组件库 `@dnftools/ui` vendored 内置并接入别名与样式；`App.vue` 根组件换 `DnfProvider` + `DnfDropdownMenu` 导航；`notify` 适配层换 `createDnfDialog`/`createDnfMessage`（签名不变）；`dnf.css` 裁剪已替换类与库重复变量
-- 后端零改动，全量前端测试 376 例通过、`npm run build`（vue-tsc + vite）通过
+- **主 chunk 拆分**：`vite manualChunks` 把 `@dnftools/ui`（含 617KB 内联贴图）与 reka-ui/vue/vueuse 拆成独立、内容哈希稳定可缓存的 chunk，主入口 chunk 从约 1MB 降到 13.5KB（gzip 5.6KB），重部署只重下小的应用 chunk
+- 管理页（角色查询 / 注册码 / 副本）表格与上方筛选区加间距；角色池搜索框 `flex` 保底宽度、按钮不收缩
+- 后端零改动，全量前端测试 378 例通过、`npm run build`（vue-tsc + vite）通过
 
 ## [v1.18.2] - 2026-10-26
 
