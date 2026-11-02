@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfInput } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfIcon, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -300,7 +300,9 @@ async function onGuestCreated(u: User, charCount: number) {
   <div v-if="store.raid" class="dnf-page">
     <div class="page-head" style="flex-wrap:wrap;gap:10px">
       <h2 style="margin:0">{{ store.raid.name }}</h2>
-      <span v-if="store.raid.dungeon_name" style="color:var(--dnf-text-muted)">{{ store.raid.dungeon_name }}</span>
+      <span v-if="store.raid.dungeon_name" style="color:var(--dnf-text-muted);display:inline-flex;align-items:center;gap:4px">
+        <DnfIcon name="source-dungeon" />{{ store.raid.dungeon_name }}
+      </span>
       <span style="color:var(--dnf-text-faint)">{{ store.raid.size }} 人 · {{ formatDateTime(store.raid.starts_at) }}</span>
       <DnfBadge :class="closed || store.raid.locked ? 'dnf-badge-danger' : 'dnf-badge-ok'">
         {{ closed || store.raid.locked ? '已锁定' : '未锁定' }}
@@ -308,12 +310,21 @@ async function onGuestCreated(u: User, charCount: number) {
       <DnfBadge v-if="closed" class="dnf-badge-danger">已关闭</DnfBadge>
       <span style="margin-left:auto;display:flex;gap:8px">
         <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="roster-link"
-                   @click="router.push(`/raids/${store.raid.id}/roster`)">编队</DnfButton>
+                   @click="router.push(`/raids/${store.raid.id}/roster`)">
+          <template #icon><DnfIcon name="npc-group" /></template>编队
+        </DnfButton>
         <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="slack-rules"
-                   @click="showSlackRules = true">划水规则设置</DnfButton>
-        <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">修改</DnfButton>
+                   @click="showSlackRules = true">
+          <template #icon><DnfIcon name="npc-people" /></template>划水规则
+        </DnfButton>
+        <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="edit-raid" @click="openEditRaid">
+          <template #icon><DnfIcon name="npc-pen" /></template>修改
+        </DnfButton>
         <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="lock-toggle"
-                   @click="onToggleLock">{{ store.raid.locked ? '解锁' : '锁定' }}</DnfButton>
+                   @click="onToggleLock">
+          <template #icon><DnfIcon :name="store.raid.locked ? 'npc-unlock' : 'npc-lock'" /></template>
+          {{ store.raid.locked ? '解锁' : '锁定' }}
+        </DnfButton>
         <DnfButton v-if="auth.isAdmin && !closed" tone="gold" class="dnf-btn-sm" data-test="add-wave"
                    @click="onAddWave">＋ 添加一波</DnfButton>
         <DnfButton v-if="auth.isAdmin && !closed" tone="orange" class="dnf-btn-sm" data-test="close-raid"
