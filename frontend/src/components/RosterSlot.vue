@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { jobIcon, handleIconError as onIconError } from '../lib/job'
-import { DnfBadge } from '@dnftools/ui'
+import { DnfBadge, DnfIcon } from '@dnftools/ui'
 import type { Slot } from '../types'
 import DutySelect from './DutySelect.vue'
 
@@ -21,8 +21,8 @@ const emit = defineEmits<{
 const occupied = computed(() => props.slot.character_id != null)
 const attrs = computed(() => {
   const s = props.slot
-  if (s.character_class === '输出') return `名望 ${s.fame ?? '暂无'} · 模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
-  if (s.character_class === '辅助') return `名望 ${s.fame ?? '暂无'} · 增益 ${fmtBuff(s.buff_amount)} · 太阳 ${fmtBuff(s.sun_buff)}`
+  if (s.character_class === '输出') return `${s.fame ?? '暂无'} · 模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
+  if (s.character_class === '辅助') return `${s.fame ?? '暂无'} · 增益 ${fmtBuff(s.buff_amount)} · 太阳 ${fmtBuff(s.sun_buff)}`
   return ''
 })
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
@@ -48,8 +48,11 @@ function onCellClick() {
           {{ slot.duty }}
         </DnfBadge>
       </div>
-      <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px">
-        {{ attrs }}
+      <div style="color:var(--dnf-text-faint);font-size:12px;margin-top:2px;display:flex;align-items:center;gap:3px">
+        <template v-if="attrs">
+          <DnfIcon name="fame" :width="12" :height="12" style="flex-shrink:0" />
+          <span>{{ attrs }}</span>
+        </template>
         <template v-if="canEdit">
           <a href="#" style="margin-left:8px;color:var(--dnf-danger)"
              data-act="roster-remove" @click.prevent.stop="emit('remove', slot)">撤下</a>

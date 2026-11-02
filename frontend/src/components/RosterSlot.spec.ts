@@ -39,7 +39,7 @@ describe('RosterSlot', () => {
   it('已占格显示 owner/角色名/名望/数值', () => {
     const w = mountSlot({ slot: filledSlot })
     expect(w.text()).toContain('队员'); expect(w.text()).toContain('剑魂')
-    expect(w.text()).toContain('名望 5000 · 模拟 12000亿')
+    expect(w.text()).toContain('5000 · 模拟 12000亿')
     expect(w.text()).toContain('12000')
   })
   it('已占格 canEdit 时显示撤下与拿起', () => {
@@ -48,7 +48,7 @@ describe('RosterSlot', () => {
   })
   it('已占辅助格显示名望/增益且无 亿 单位', () => {
     const w = mountSlot({ slot: healSlot })
-    expect(w.text()).toContain('名望 8000 · 增益 46000')
+    expect(w.text()).toContain('8000 · 增益 46000')
     expect(w.text()).not.toContain('46000亿')
   })
   it('撤下点击 emit remove', async () => {
