@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { DnfBadge, DnfButton, DnfInput } from '@dnftools/ui'
+import { DnfBadge, DnfIconButton, DnfInput } from '@dnftools/ui'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
 import { SQUAD_NAMES } from '../lib/colors'
 import { sortByPower } from '../lib/roster'
@@ -113,10 +113,10 @@ function cPos(cid: number): CharPlacement | undefined { return props.charPlaceme
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:0 2px">
       <DnfInput v-model="query" data-act="pool-search" placeholder="按用户名搜索"
                 style="flex:1 1 150px;min-width:120px" />
-      <DnfButton class="dnf-btn-sm" title="全部展开" data-act="pool-expand-all"
-                 style="flex:none" @click="expandAll">▾▾</DnfButton>
-      <DnfButton class="dnf-btn-sm" title="全部收起" data-act="pool-collapse-all"
-                 style="flex:none" @click="collapseAll">▴▴</DnfButton>
+      <DnfIconButton label="全部展开" icon="option-caret-down" title="全部展开"
+                     data-act="pool-expand-all" @click="expandAll" />
+      <DnfIconButton label="全部收起" icon="option-caret-up" title="全部收起"
+                     data-act="pool-collapse-all" @click="collapseAll" />
       <slot name="toolbar-extra" />
     </div>
     <div v-for="g in visibleGroups" :key="g.user.id" class="pool-user" data-test="pool-user">

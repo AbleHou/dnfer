@@ -21,7 +21,9 @@ body {
   color: #f6f8f4;
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
-h1, h2, h3 {
+/* 库的 DnfTitle 默认渲染 h3（class=dnf-title，弹窗/窗口标题），
+   用 :not(.dnf-title) 排除，避免页面级衬线金色标题覆盖库的标题样式 */
+h1:not(.dnf-title), h2:not(.dnf-title), h3:not(.dnf-title) {
   font-family: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
   color: var(--dnf-gold-hi);
   letter-spacing: 1px;

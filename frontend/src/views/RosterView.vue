@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfSwitch } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfIconButton, DnfSwitch } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -276,8 +276,8 @@ onBeforeUnmount(() => {
                   :char-placement="charPlacement" :current-round="currentRound"
                   @pick="onPick">
         <template #toolbar-extra>
-          <DnfButton v-if="canEdit && !store.raid.locked" class="dnf-btn-sm"
-                     style="flex:none" data-test="add-guest" @click="guestOpen = true">＋临时</DnfButton>
+          <DnfIconButton v-if="canEdit && !store.raid.locked" label="添加临时用户" icon="friend-invite"
+                         title="添加临时用户" data-test="add-guest" @click="guestOpen = true" />
         </template>
       </RosterPool>
     </DnfDialog>

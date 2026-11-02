@@ -189,10 +189,12 @@ describe('RosterPool', () => {
     await head.trigger('click')
     expect(w.find('[data-act="pool-char-30"]').exists()).toBe(false)  // 收起
   })
-  it('工具栏：展开/收起按钮为双箭头图标，搜索框带边框类', () => {
+  it('工具栏：展开/收起为图标按钮（option-caret），搜索框带边框类', () => {
     const w = mountPool()
-    expect(w.find('[data-act="pool-expand-all"]').text()).toContain('▾▾')
-    expect(w.find('[data-act="pool-collapse-all"]').text()).toContain('▴▴')
+    expect(w.find('[data-act="pool-expand-all"]').attributes('aria-label')).toBe('全部展开')
+    expect(w.find('[data-act="pool-collapse-all"]').attributes('aria-label')).toBe('全部收起')
+    expect(w.find('[data-act="pool-expand-all"]').attributes('data-icon')).toBe('option-caret-down')
+    expect(w.find('[data-act="pool-collapse-all"]').attributes('data-icon')).toBe('option-caret-up')
     expect(w.find('[data-act="pool-search"]').classes()).toContain('dnf-input')
   })
 })
