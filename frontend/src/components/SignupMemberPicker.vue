@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
+import { DnfDialog } from '@dnftools/ui'
 import { api } from '../api/client'
 import UserAvatar from './UserAvatar.vue'
 import SignupModal from './SignupModal.vue'
@@ -53,8 +53,8 @@ async function onSubmit(ids: number[]) {
 </script>
 
 <template>
-  <n-modal :show="open" preset="card" title="帮成员报名" style="width:min(360px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open" title="帮成员报名" width="min(360px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="max-height:60vh;overflow:auto">
       <p v-if="loadFailed" style="color:var(--dnf-text-faint)">加载失败，请重试</p>
       <p v-else-if="loading" style="color:var(--dnf-text-faint)">加载中…</p>
@@ -67,7 +67,7 @@ async function onSubmit(ids: number[]) {
     <SignupModal :open="!!pickUser" mode="signup" :selected-ids="[]"
                  :characters-url="pickUser ? `/api/admin/users/${pickUser.id}/characters` : '/api/me/characters'"
                  @close="pickUser = null" @submit="onSubmit" />
-  </n-modal>
+  </DnfDialog>
 </template>
 
 <style scoped>

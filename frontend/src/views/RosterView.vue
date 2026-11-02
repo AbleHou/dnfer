@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfBadge, DnfButton, DnfFrame, DnfSwitch } from '@dnftools/ui'
-import { NModal } from 'naive-ui'
+import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfSwitch } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -269,8 +268,8 @@ onBeforeUnmount(() => {
 
     <button class="roster-fab" data-test="pool-fab" title="打开角色池" @click="poolOpen = true">选人</button>
 
-    <n-modal :show="poolOpen" preset="card" title="角色池" style="width:min(380px,92vw)"
-             @update:show="(s: boolean) => { if (!s) poolOpen = false }">
+    <DnfDialog :open="poolOpen" title="角色池" width="min(380px,92vw)" modal close-on-outside
+               @update:open="(s: boolean) => { if (!s) poolOpen = false }">
       <RosterPool :signups="store.raid.signups" :blocked-char-ids="blockedCharIds"
                   :slack-char-ids="slackCharIds" :recommend="recommend" :holding-id="holding?.id ?? null"
                   :can-edit="canEdit" :round-user-pos="roundUserPos"
@@ -281,7 +280,7 @@ onBeforeUnmount(() => {
                      data-test="add-guest" @click="guestOpen = true">＋临时</DnfButton>
         </template>
       </RosterPool>
-    </n-modal>
+    </DnfDialog>
 
     <RosterTargetModal :open="targetModal.open"
                        :squad-label="SQUAD_NAMES[targetModal.squadIndex] ?? `队${targetModal.squadIndex + 1}`"

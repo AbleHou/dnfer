@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput, DnfSelect } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfInput, DnfSelect } from '@dnftools/ui'
 import type { DnfValue } from '@dnftools/ui'
 import type { ClassType, SlackMetric, SlackRuleCriterion, SlackRuleExchange, SlackRuleSet } from '../types'
 
@@ -62,8 +61,8 @@ function submit() {
 </script>
 
 <template>
-  <n-modal :show="open" preset="card" title="划水规则设置" style="width:min(560px,94vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open" title="划水规则设置" width="min(560px,94vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div class="slack-form">
       <div class="slack-section">
         <div class="slack-sec-head"><b>划水名望</b>
@@ -111,7 +110,7 @@ function submit() {
         <DnfButton tone="gold" data-act="submit" @click="submit">提交</DnfButton>
       </div>
     </div>
-  </n-modal>
+  </DnfDialog>
 </template>
 
 <style scoped>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DnfBadge, DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfDialog, DnfFrame, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useRaidStore, applyEvent } from '../stores/raid'
@@ -20,7 +20,6 @@ import MemberCharactersModal from '../components/MemberCharactersModal.vue'
 import SignupMemberPicker from '../components/SignupMemberPicker.vue'
 import SignupModal from '../components/SignupModal.vue'
 import GuestCreateModal from '../components/GuestCreateModal.vue'
-import { NModal } from 'naive-ui'
 import { computeSlack, slackCountByUser } from '../lib/slack'
 import type { Character, CharacterPlacement, Duty, RaidSignup, SlackRuleSet, Slot, User, Wave } from '../types'
 
@@ -388,8 +387,8 @@ async function onGuestCreated(u: User, charCount: number) {
                           :placed="placed" :gray-by-user="grayByUser"
                           @close="pickSlot = null" @select="onSelectCharacter" />
 
-    <n-modal :show="showEditRaid" preset="card" title="修改攻坚" style="width:min(360px,92vw)"
-             @update:show="(s: boolean) => { if (!s) showEditRaid = false }">
+    <DnfDialog :open="showEditRaid" title="修改攻坚" width="min(360px,92vw)" modal close-on-outside
+               @update:open="(s: boolean) => { if (!s) showEditRaid = false }">
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <div style="margin-bottom:4px">名称</div>
@@ -407,7 +406,7 @@ async function onGuestCreated(u: User, charCount: number) {
           <DnfButton tone="gold" data-test="save-raid" @click="onSaveRaid">保存</DnfButton>
         </div>
       </template>
-    </n-modal>
+    </DnfDialog>
 
     <MemberCharactersModal :open="memberModalUser != null" :rid="rid" :user="memberModalUser"
                            :placed="placed" :gray-ids="memberModalUser ? (grayByUser[memberModalUser.id] ?? []) : []"
@@ -428,15 +427,15 @@ async function onGuestCreated(u: User, charCount: number) {
     <SlackRulesModal :open="showSlackRules" :rules="store.raid.slack_rules"
                      @close="showSlackRules = false" @submit="onSlackRulesSubmit" />
 
-    <n-modal :show="showParallelModal" preset="card" title="并行到哪一波？" style="width:min(360px,92vw)"
-             @update:show="(s: boolean) => { if (!s) parallelizeWave = null }">
+    <DnfDialog :open="showParallelModal" title="并行到哪一波？" width="min(360px,92vw)" modal close-on-outside
+               @update:open="(s: boolean) => { if (!s) parallelizeWave = null }">
       <div style="display:flex;flex-direction:column;gap:8px">
         <DnfButton v-for="t in otherWaves" :key="t.id"
                    :data-test="`parallel-target-${t.id}`" @click="onParallelTo(t)">
           {{ waveLabel(t) }}
         </DnfButton>
       </div>
-    </n-modal>
+    </DnfDialog>
   </div>
 </template>
 

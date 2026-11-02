@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfDialog } from '@dnftools/ui'
 import type { Slot } from '../types'
 
 const props = defineProps<{ open: boolean; slot: Slot | null }>()
@@ -13,8 +12,8 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <n-modal :show="open" preset="card" title="角色操作" style="width:min(340px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open" title="角色操作" width="min(340px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div v-if="slot" style="margin-bottom:12px;color:var(--dnf-text-muted)">
       <b style="color:var(--dnf-text)">{{ slot.owner_nickname }}</b>
       （{{ slot.character_name }} · {{ slot.duty }}）
@@ -32,5 +31,5 @@ const emit = defineEmits<{
         <DnfButton @click="emit('close')">关闭</DnfButton>
       </div>
     </template>
-  </n-modal>
+  </DnfDialog>
 </template>

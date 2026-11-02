@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { validatePassword } from '../utils/password'
 import { notifyError, notifySuccess } from '../lib/notify'
@@ -40,8 +39,8 @@ async function submit() {
 </script>
 
 <template>
-  <n-modal :show="props.open" preset="card" title="临时用户转正" style="width:min(360px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="props.open" title="临时用户转正" width="min(360px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="display:flex;flex-direction:column;gap:14px">
       <div style="color:var(--dnf-text-muted);font-size:12px">
         为 {{ props.user?.nickname }}（{{ props.user?.username }}）设置用户名与密码，转正后可自行登录
@@ -63,5 +62,5 @@ async function submit() {
       <DnfButton tone="gold" data-act="submit" :disabled="saving"
                  @click="submit">{{ saving ? '转正中…' : '确认转正' }}</DnfButton>
     </div>
-  </n-modal>
+  </DnfDialog>
 </template>

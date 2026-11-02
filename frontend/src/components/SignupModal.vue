@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton } from '@dnftools/ui'
+import { DnfButton, DnfDialog } from '@dnftools/ui'
 import { api } from '../api/client'
 import type { Character } from '../types'
 import { jobIcon, handleIconError as onIconError, jobGenderTitle } from '../lib/job'
@@ -68,10 +67,10 @@ function submit() {
 </script>
 
 <template>
-  <n-modal :show="open" preset="card"
-           :title="mode === 'signup' ? '报名选角色' : '管理报名角色'"
-           style="width:min(420px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open"
+             :title="mode === 'signup' ? '报名选角色' : '管理报名角色'"
+             width="min(420px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="max-height:60vh;overflow:auto">
       <p v-if="loading" style="color:var(--dnf-text-faint)">加载中…</p>
       <p v-else-if="!characters.length" style="color:var(--dnf-text-faint)">
@@ -105,7 +104,7 @@ function submit() {
         <DnfButton v-else @click="emit('close')">关闭</DnfButton>
       </div>
     </template>
-  </n-modal>
+  </DnfDialog>
 </template>
 
 <style scoped>

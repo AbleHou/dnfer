@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { validatePassword } from '../utils/password'
 import { notifyError, notifySuccess } from '../lib/notify'
@@ -35,8 +34,8 @@ async function submit() {
 </script>
 
 <template>
-  <n-modal :show="props.open" preset="card" title="重置密码" style="width:min(360px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="props.open" title="重置密码" width="min(360px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="display:flex;flex-direction:column;gap:14px">
       <div style="color:var(--dnf-text-muted);font-size:12px">
         为 {{ props.user?.nickname }}（{{ props.user?.username }}）设置新密码
@@ -54,5 +53,5 @@ async function submit() {
       <DnfButton tone="gold" data-act="submit" :disabled="saving"
                  @click="submit">确认重置</DnfButton>
     </div>
-  </n-modal>
+  </DnfDialog>
 </template>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { validateNickname } from '../utils/nickname'
@@ -57,8 +56,8 @@ async function onFileChange(e: Event) {
 </script>
 
 <template>
-  <n-modal :show="props.open" preset="card" title="个人信息" style="width:min(360px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="props.open" title="个人信息" width="min(360px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div v-if="auth.user" style="display:flex;flex-direction:column;gap:14px;align-items:center">
       <DnfButton style="padding:4px;border-radius:50%" title="点击更换头像"
                  :disabled="uploading" @click="fileInput?.click()">
@@ -79,6 +78,6 @@ async function onFileChange(e: Event) {
                  :disabled="saving" @click="saveNickname">保存</DnfButton>
       <DnfButton data-act="change-pw" style="width:100%" @click="changePwOpen = true">修改密码</DnfButton>
     </div>
-  </n-modal>
+  </DnfDialog>
   <ChangePasswordModal v-if="changePwOpen" :open="changePwOpen" @close="() => changePwOpen = false" />
 </template>

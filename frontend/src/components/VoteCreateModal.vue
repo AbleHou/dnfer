@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput, DnfTextarea } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfInput, DnfTextarea } from '@dnftools/ui'
 import { api } from '../api/client'
 import { notifyError, notifySuccess } from '../lib/notify'
 import type { VoteDetail } from '../types'
@@ -42,8 +41,8 @@ async function create() {
 </script>
 
 <template>
-  <n-modal :show="open" preset="card" title="发起投票" style="width:480px"
-           @update:show="(v: boolean) => { if (!v) emit('close') }">
+  <DnfDialog :open="open" title="发起投票" width="480px" modal close-on-outside
+             @update:open="(v: boolean) => { if (!v) emit('close') }">
     <div class="vote-form">
       <DnfInput v-model="title" data-field="title" placeholder="标题" />
       <DnfTextarea v-model="description" data-field="desc" rows="2"
@@ -63,7 +62,7 @@ async function create() {
         {{ busy ? '创建中…' : '发起投票' }}
       </DnfButton>
     </div>
-  </n-modal>
+  </DnfDialog>
 </template>
 
 <style scoped>

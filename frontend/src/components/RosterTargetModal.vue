@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfCheckbox, DnfNumberInput } from '@dnftools/ui'
+import { DnfButton, DnfCheckbox, DnfDialog, DnfNumberInput } from '@dnftools/ui'
 import type { SquadTarget } from '../lib/roster'
 
 const props = defineProps<{ open: boolean; squadLabel: string; target: SquadTarget | null }>()
@@ -42,8 +41,8 @@ function toTarget(): SquadTarget {
 </script>
 
 <template>
-  <n-modal :show="open" preset="card" :title="`${squadLabel} 编队目标`" style="width:min(380px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open" :title="`${squadLabel} 编队目标`" width="min(380px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="tgt-row"><span class="tgt-label">输出个数</span>
         <DnfNumberInput :model-value="draft.outCount ?? 0" @update:model-value="v => draft.outCount = v" :min="0" data-test="tgt-out-count" style="width:90px" /></div>
@@ -65,7 +64,7 @@ function toTarget(): SquadTarget {
         <DnfButton tone="gold" data-test="tgt-save" @click="emit('save', toTarget())">保存</DnfButton>
       </div>
     </template>
-  </n-modal>
+  </DnfDialog>
 </template>
 
 <style scoped>

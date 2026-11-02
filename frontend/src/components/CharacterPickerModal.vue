@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput, DnfSelect } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfInput, DnfSelect } from '@dnftools/ui'
 import type { DnfValue } from '@dnftools/ui'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -67,8 +66,8 @@ function onDutyChange(v: DnfValue | undefined) {
 </script>
 
 <template>
-  <n-modal :show="open" preset="card" title="选择角色" style="width:min(420px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open" title="选择角色" width="min(420px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="max-height:60vh;overflow:auto">
       <p v-if="adminMode && !players.length" style="color:var(--dnf-text-faint)">还没有人报名</p>
       <template v-else-if="adminMode">
@@ -95,5 +94,5 @@ function onDutyChange(v: DnfValue | undefined) {
         <DnfButton v-if="selected" tone="gold" @click="confirmPick">确定</DnfButton>
       </div>
     </template>
-  </n-modal>
+  </DnfDialog>
 </template>

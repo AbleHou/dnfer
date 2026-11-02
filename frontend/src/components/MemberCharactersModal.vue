@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
+import { DnfDialog } from '@dnftools/ui'
 import { api } from '../api/client'
 import CharacterCard from './CharacterCard.vue'
 import type { Character, CharacterPlacement, PlayerCharacters, User } from '../types'
@@ -35,17 +35,17 @@ watch(() => [props.open, props.user?.id, props.characters] as const, async ([ope
 </script>
 
 <template>
-  <n-modal :show="open" preset="card"
-           :title="user ? `${user.nickname} 的角色` : ''"
-           style="width:min(420px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open"
+             :title="user ? `${user.nickname} 的角色` : ''"
+             width="min(420px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <p v-if="(slackCount ?? 0) > 0" class="slack-count">划水 {{ slackCount }}</p>
     <div style="max-height:60vh;overflow:auto">
       <p v-if="!loading && !characters.length" style="color:var(--dnf-text-faint)">还没有角色</p>
       <CharacterCard v-for="c in characters" :key="c.id" :character="c"
                      :placement="placed[c.id] ?? null" :grayed="grayIds?.includes(c.id) ?? false" readonly />
     </div>
-  </n-modal>
+  </DnfDialog>
 </template>
 
 <style scoped>

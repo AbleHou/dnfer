@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfFrame, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { AdventureParty } from '../types'
@@ -70,9 +69,8 @@ async function remove(p: AdventureParty) {
 </script>
 
 <template>
-  <n-modal :show="open" preset="card" title="冒险团管理"
-           style="width:min(560px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="open" title="冒险团管理" width="min(560px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="max-height:70vh;overflow:auto">
       <p v-if="error" class="form-error">{{ error }}</p>
       <p v-if="!loading && !parties.length" style="color:var(--dnf-text-faint)">还没有冒险团</p>
@@ -105,5 +103,5 @@ async function remove(p: AdventureParty) {
                    @click="create">创建</DnfButton>
       </div>
     </div>
-  </n-modal>
+  </DnfDialog>
 </template>

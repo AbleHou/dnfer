@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import { DnfButton, DnfInput, DnfSelect } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfInput, DnfSelect } from '@dnftools/ui'
 import { api } from '../api/client'
 import { jobGenderTitle } from '../lib/job'
 import { notifyError, notifySuccess } from '../lib/notify'
@@ -72,8 +71,8 @@ async function submit() {
 </script>
 
 <template>
-  <n-modal :show="props.open" preset="card" title="添加临时选手" style="width:min(520px,92vw)"
-           @update:show="(s: boolean) => { if (!s) emit('close') }">
+  <DnfDialog :open="props.open" title="添加临时选手" width="min(520px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="display:flex;flex-direction:column;gap:12px">
       <div style="color:var(--dnf-text-muted);font-size:12px">
         临时选手无需注册，由管理员代建账号与角色，可直接排表占位
@@ -125,7 +124,7 @@ async function submit() {
       <DnfButton tone="gold" data-act="submit" :disabled="saving"
                  @click="submit">{{ saving ? '创建中…' : '创建' }}</DnfButton>
     </div>
-  </n-modal>
+  </DnfDialog>
 </template>
 
 <style scoped>
