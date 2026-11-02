@@ -21,23 +21,23 @@ beforeEach(() => {
 })
 
 it('confirmDialog：action==="confirm" 解析为 true，否则 false', async () => {
-  dialogServiceMock.confirm.mockResolvedValue({ action: 'confirm', reason: 'confirm' })
+  dialogServiceMock.open.mockReturnValue({ result: Promise.resolve({ action: 'confirm', reason: 'confirm' }) })
   const { confirmDialog } = await import('../lib/notify')
   await expect(confirmDialog({ content: 'x' })).resolves.toBe(true)
 
-  dialogServiceMock.confirm.mockResolvedValue({ action: 'cancel', reason: 'cancel' })
+  dialogServiceMock.open.mockReturnValue({ result: Promise.resolve({ action: 'close', reason: 'close-button' }) })
   await expect(confirmDialog({ content: 'x' })).resolves.toBe(false)
 })
 
-it('confirmDialog：转发 title/content/confirmLabel/cancelLabel/modal 给 dialogs.confirm', async () => {
-  dialogServiceMock.confirm.mockResolvedValue({ action: 'confirm', reason: 'confirm' })
+it('confirmDialog：open() 只传确认按钮（showCancel:false），转发 title/content/confirmLabel/modal', async () => {
+  dialogServiceMock.open.mockReturnValue({ result: Promise.resolve({ action: 'confirm', reason: 'confirm' }) })
   const { confirmDialog } = await import('../lib/notify')
   await confirmDialog({ title: '删除攻坚', content: '确认删除？' })
-  expect(dialogServiceMock.confirm).toHaveBeenCalledWith({
+  expect(dialogServiceMock.open).toHaveBeenCalledWith({
     title: '删除攻坚',
     content: '确认删除？',
     confirmLabel: '确定',
-    cancelLabel: '取消',
+    showCancel: false,
     modal: true,
   })
 })

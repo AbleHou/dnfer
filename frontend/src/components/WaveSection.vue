@@ -43,7 +43,7 @@ const waveLabel = computed(() =>
 <template>
   <DnfFrame surface="panel" style="margin:20px 0;padding:14px">
     <div class="wave-head">
-      <b class="dnf-title">{{ waveLabel }}</b>
+      <b class="wave-title">{{ waveLabel }}</b>
       <span style="margin-left:auto;display:flex;gap:12px;align-items:center">
         <a v-if="isAdmin && wave.group_id == null" href="#" class="wave-link"
            data-act="parallelize" @click.prevent="emit('parallelize', wave)">并行到…</a>
@@ -73,3 +73,12 @@ const waveLabel = computed(() =>
     </div>
   </DnfFrame>
 </template>
+
+<style scoped>
+/* 波标题：保留原自绘标题视觉（库的 .dnf-title 用于弹窗/窗口标题，不能复用同名类） */
+.wave-title {
+  font-family: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  color: var(--dnf-gold-hi);
+  letter-spacing: 2px;
+}
+</style>

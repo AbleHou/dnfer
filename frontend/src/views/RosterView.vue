@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
                   @pick="onPick">
         <template #toolbar-extra>
           <DnfButton v-if="canEdit && !store.raid.locked" class="dnf-btn-sm"
-                     data-test="add-guest" @click="guestOpen = true">＋临时</DnfButton>
+                     style="flex:none" data-test="add-guest" @click="guestOpen = true">＋临时</DnfButton>
         </template>
       </RosterPool>
     </DnfDialog>

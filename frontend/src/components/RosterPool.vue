@@ -112,9 +112,11 @@ function cPos(cid: number): CharPlacement | undefined { return props.charPlaceme
   <div class="roster-pool">
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:0 2px">
       <DnfInput v-model="query" data-act="pool-search" placeholder="按用户名搜索"
-                style="flex:1;min-width:0" />
-      <DnfButton class="dnf-btn-sm" title="全部展开" data-act="pool-expand-all" @click="expandAll">▾▾</DnfButton>
-      <DnfButton class="dnf-btn-sm" title="全部收起" data-act="pool-collapse-all" @click="collapseAll">▴▴</DnfButton>
+                style="flex:1 1 150px;min-width:120px" />
+      <DnfButton class="dnf-btn-sm" title="全部展开" data-act="pool-expand-all"
+                 style="flex:none" @click="expandAll">▾▾</DnfButton>
+      <DnfButton class="dnf-btn-sm" title="全部收起" data-act="pool-collapse-all"
+                 style="flex:none" @click="collapseAll">▴▴</DnfButton>
       <slot name="toolbar-extra" />
     </div>
     <div v-for="g in visibleGroups" :key="g.user.id" class="pool-user" data-test="pool-user">
