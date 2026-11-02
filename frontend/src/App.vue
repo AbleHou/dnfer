@@ -49,7 +49,7 @@ function onMenuSelect(item: DnfMenuItem) {
             <DnfIcon name="info-bell" />群会议
           </router-link>
           <router-link v-if="auth.isAdmin" to="/admin" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
-            <DnfIcon name="hud-grid" />管理
+            <DnfIcon name="hud-settings" />管理
           </router-link>
           <span class="nav-right">
             <button class="nav-user" title="个人信息" @click="profileOpen = true">
