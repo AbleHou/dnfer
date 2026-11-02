@@ -2,6 +2,19 @@
 
 本项目所有值得记录的版本变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 变更
+
+- **UI 全面升级 @dnftools/ui**：以 DNF 游戏贴图组件库替换 naive-ui 与自绘样式（全量迁移、只留暗色、分阶段落地）。前端依赖 naive-ui 移除，组件库 `@dnftools/ui`（vendored 内置）全量接管——弹窗/消息（createDnfDialog/createDnfMessage）、按钮/面板/徽章/表格/输入/下拉/标签页/开关/数值/日期等全部换成 DNF 游戏贴图皮肤
+- **只保留暗色主题**：删除亮色主题与切换（含 FOUC 防闪脚本与 naive 覆写），回归单一 DNF 鎏金暗色风格
+- **攻坚创建/编辑日期时间选择器**：换原生 `datetime-local`
+
+### 工程
+
+- 前端依赖 naive-ui 移除、组件库 `@dnftools/ui` vendored 内置并接入别名与样式；`App.vue` 根组件换 `DnfProvider` + `DnfDropdownMenu` 导航；`notify` 适配层换 `createDnfDialog`/`createDnfMessage`（签名不变）；`dnf.css` 裁剪已替换类与库重复变量
+- 后端零改动，全量前端测试 376 例通过、`npm run build`（vue-tsc + vite）通过
+
 ## [v1.18.2] - 2026-10-26
 
 ### 变更
