@@ -308,7 +308,7 @@ async function onGuestCreated(u: User, charCount: number) {
         {{ closed || store.raid.locked ? '已锁定' : '未锁定' }}
       </DnfBadge>
       <DnfBadge v-if="closed" class="dnf-badge-danger">已关闭</DnfBadge>
-      <span style="margin-left:auto;display:flex;gap:8px">
+      <span class="raid-actions" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
         <DnfButton v-if="auth.isAdmin && !closed" class="dnf-btn-sm" data-test="roster-link"
                    @click="router.push(`/raids/${store.raid.id}/roster`)">
           <template #icon><DnfIcon name="npc-group" /></template>编队
@@ -463,13 +463,23 @@ async function onGuestCreated(u: User, charCount: number) {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 10px;
   border: 1px solid var(--dnf-border,#3a3f4b); border-radius: 8px;
-  min-width: 0;
+  min-width: 0; flex-wrap: wrap;   /* 窄屏放不下时「角色变更/取消报名」按钮折行，避免与昵称重叠 */
 }
 .signup-user {
-  flex: 1; justify-content: flex-start;
+  flex: 1 1 auto; justify-content: flex-start;
   align-items: center;   /* 头像/昵称/计数垂直居中，避免 stretch 把文本顶到顶部 */
   gap: 6px; min-width: 0; text-align: left;
 }
-.signup-nick { white-space: nowrap; }
+.signup-nick {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
 .signup-count { font-size: 12px; color: var(--dnf-text-muted,#9aa3b2); white-space: nowrap; }
+
+/* 页面头部操作按钮等宽：以最宽的「icon + 四个汉字」按钮（划水规则/关闭攻坚 ≈108px）为基准 */
+.raid-actions .dnf-btn-sm { min-width: 108px; }
+
+/* 窄屏：页面头部操作按钮一行一个纵向排布 */
+@media (max-width: 767px) {
+  .raid-actions { flex-direction: column; align-items: flex-end; }
+}
 </style>
