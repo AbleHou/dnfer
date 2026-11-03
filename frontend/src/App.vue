@@ -13,12 +13,12 @@ const router = useRouter()
 const profileOpen = ref(false)
 
 // computed 保持响应式：登录/登出后 isAdmin 变化时菜单实时更新
+// 菜单项暂不带 icon（图标方案待定，DnfMenuItem.icon 字段类型仍可用）
 const menuItems = computed<DnfMenuItem[]>(() => [
   { value: 'raids', label: '攻坚列表' },
   { value: 'characters', label: '我的角色' },
   { value: 'votes', label: '群会议' },
   ...(auth.isAdmin ? [{ value: 'admin', label: '管理' }] : []),
-  { separator: true, value: '__sep', label: '' },
   { value: 'logout', label: '退出' },
 ])
 
@@ -39,16 +39,16 @@ function onMenuSelect(item: DnfMenuItem) {
       <DnfMessageProvider :service="messages">
         <nav v-if="auth.user" class="dnf-nav">
           <router-link to="/" class="logo">跨六 DNF 糕手</router-link>
-          <router-link to="/" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+          <router-link to="/" class="nav-link">
             <DnfIcon name="hud-scroll" />攻坚列表
           </router-link>
-          <router-link to="/characters" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+          <router-link to="/characters" class="nav-link">
             <DnfIcon name="hud-character" />我的角色
           </router-link>
-          <router-link to="/votes" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+          <router-link to="/votes" class="nav-link">
             <DnfIcon name="info-bell" />群会议
           </router-link>
-          <router-link v-if="auth.isAdmin" to="/admin" class="nav-link" style="display:inline-flex;align-items:center;gap:4px">
+          <router-link v-if="auth.isAdmin" to="/admin" class="nav-link">
             <DnfIcon name="hud-settings" />管理
           </router-link>
           <span class="nav-right">
@@ -59,7 +59,7 @@ function onMenuSelect(item: DnfMenuItem) {
             </button>
             <a href="#" class="nav-exit" @click.prevent="logout">退出</a>
             <DnfDropdownMenu :items="menuItems" @select="onMenuSelect">
-              <template #trigger><button class="hamburger" aria-label="菜单">☰</button></template>
+              <template #trigger><button class="hamburger" aria-label="菜单"><DnfIcon name="skill-menu" state="auto" /></button></template>
             </DnfDropdownMenu>
           </span>
           <ProfilePanel :open="profileOpen" @close="profileOpen = false" />
