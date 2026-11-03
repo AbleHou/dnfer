@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { DnfBadge, DnfButton, DnfFrame, DnfInput, DnfSelect, DnfTable, DnfTabs } from '@dnftools/ui'
+import { DnfBadge, DnfButton, DnfFrame, DnfIcon, DnfInput, DnfSelect, DnfTable, DnfTabs } from '@dnftools/ui'
 import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
 import AdminNav from '../components/AdminNav.vue'
@@ -208,14 +208,19 @@ onMounted(() => {
       <DnfTable label="角色查询结果" :columns="queryCols" :rows="queryItems" :row-key="(r) => r.id">
         <template #cell-name="{ row }">{{ row.name }}</template>
         <template #cell-job_title="{ row }">{{ jobGenderTitle(row.job_name, row.job_title) }}</template>
+        <template #cell-class_type="{ row }">
+          <DnfIcon :name="row.class_type === '输出' ? 'profile-strength' : 'profile-heart-red'"
+                   :label="row.class_type" />
+        </template>
         <template #cell-simulated_damage="{ row }">{{ row.class_type === '输出' ? fmtNum(row.simulated_damage) : '—' }}</template>
         <template #cell-sustained_dps="{ row }">{{ row.class_type === '输出' ? fmtNum(row.sustained_dps) : '—' }}</template>
         <template #cell-buff_amount="{ row }">{{ row.class_type === '辅助' ? fmtNum(row.buff_amount) : '—' }}</template>
         <template #cell-sun_buff="{ row }">{{ row.class_type === '辅助' ? fmtNum(row.sun_buff) : '—' }}</template>
         <template #cell-adventure_party_name="{ row }">{{ row.adventure_party_name ?? '—' }}</template>
         <template #cell-owner_nickname="{ row }">
-          <DnfButton class="dnf-btn-sm" :data-act="'manage-owner-' + row.owner_id"
-                     @click="openOwner(row)">{{ row.owner_nickname }}</DnfButton>
+          <DnfButton skin="text" :data-act="'manage-owner-' + row.owner_id" @click="openOwner(row)">
+            <template #icon><DnfIcon name="observer-person" state="auto" /></template>{{ row.owner_nickname }}
+          </DnfButton>
         </template>
       </DnfTable>
       <p style="color:var(--dnf-text-faint)">共 {{ total }} 个角色</p>
