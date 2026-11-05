@@ -12,7 +12,7 @@ from .auth import hash_password
 from .config import settings
 from .db import SessionLocal, init_db
 from .models import User
-from .routers import admin, auth, bot, dungeons, jobs, members, parties, public, raids, votes
+from .routers import admin, auth, bot, dungeons, friends, jobs, members, parties, public, raids, votes
 from .ws import router as ws_router
 
 logger = logging.getLogger("dnfer")
@@ -45,6 +45,7 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(bot.router)
 app.include_router(dungeons.router)
+app.include_router(friends.router)
 app.include_router(jobs.router)
 app.include_router(members.router)
 app.include_router(parties.router)

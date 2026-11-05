@@ -363,6 +363,15 @@ class CharacterQueryResult(BaseModel):
     items: list[AdminCharacterRow]
     total: int
 
+class MemberCharacterRow(CharacterOut):
+    """「我的群友」查询行：仅暴露归属昵称，不暴露登录用户名（隐私）。"""
+    owner_id: int
+    owner_nickname: str
+
+class MemberCharacterQueryResult(BaseModel):
+    items: list[MemberCharacterRow]
+    total: int
+
 class VoteCreate(BaseModel):
     title: str = Field(min_length=1, max_length=128)
     description: str = Field(default="", max_length=2000)
