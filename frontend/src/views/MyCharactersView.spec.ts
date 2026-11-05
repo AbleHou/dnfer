@@ -249,11 +249,11 @@ describe('MyCharactersView job picker', () => {
     const char = { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: 'swordman_male', class_type: '输出', fame: 100,
       simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
-      adventure_party_id: 7, adventure_party_name: '阿伟的冒险团' }
+      adventure_party_id: 7, adventure_party_name: '阿伟的冒险团', combat_power: null }
     apiMock.get.mockResolvedValueOnce([char])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    expect(wrapper.text()).toContain('极诣·剑魂 · 输出 · 名望 100 · 阿伟的冒险团')
+    expect(wrapper.text()).toContain('极诣·剑魂 · 输出 · 名望 100 · 战斗力 暂无 · 阿伟的冒险团')
   })
 
   it('冒险团管理按钮打开团管理弹窗', async () => {
@@ -291,5 +291,39 @@ describe('MyCharactersView job picker', () => {
     await flushPromises()
     const sort = wrapper.findComponent({ name: 'DnfSelect' })
     expect(sort.props('modelValue')).toBe('type')
+  })
+
+  it('输出角色卡片展示战斗力（千分位），辅助不显示', async () => {
+    const out = { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 20000,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: 10000, str_int: 5000, elemental: 300, atk_power: 100, atk_power_amp: 20,
+      skill_atk: 50, combat_power: 250271 }
+    const sup = { id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+      parent_name: 'priest_male', class_type: '辅助', fame: 200,
+      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: 3000,
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null,
+      skill_atk: null, combat_power: null }
+    apiMock.get.mockResolvedValueOnce([out, sup])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    expect(wrapper.text()).toContain('名望 20000 · 战斗力 250,271')
+    expect(wrapper.text()).not.toContain('战斗力 暂无')   // 辅助卡无战斗力
+    expect(wrapper.text()).toContain('名望 200')          // 辅助卡正常
+  })
+
+  it('输出角色战斗力为空显示暂无', async () => {
+    const out = { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 100,
+      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null,
+      skill_atk: null, combat_power: null }
+    apiMock.get.mockResolvedValueOnce([out])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    expect(wrapper.text()).toContain('名望 100 · 战斗力 暂无')
   })
 })

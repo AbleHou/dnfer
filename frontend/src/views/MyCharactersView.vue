@@ -66,6 +66,7 @@ async function remove(c: Character) {
 }
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
 function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
+function fmtPower(n: number | null): string { return n == null ? '暂无' : n.toLocaleString('en-US') }
 </script>
 
 <template>
@@ -94,7 +95,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
           <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
           <div>
             <b style="margin-right:6px">{{ c.name }}</b>
-            <span style="color:var(--dnf-text-muted);font-size:12px">{{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }} · 名望 {{ c.fame }}<template v-if="c.adventure_party_name"> · {{ c.adventure_party_name }}</template></span>
+            <span style="color:var(--dnf-text-muted);font-size:12px">{{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }} · 名望 {{ c.fame }}<template v-if="c.class_type === '输出'"> · 战斗力 {{ fmtPower(c.combat_power) }}</template><template v-if="c.adventure_party_name"> · {{ c.adventure_party_name }}</template></span>
             <div style="color:var(--dnf-text-faint);font-size:12px">
               {{ c.class_type === '输出'
                 ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}`
