@@ -58,6 +58,10 @@ a { color: var(--dnf-gold-hi); }
   color: var(--dnf-text); text-decoration: none;
 }
 .dnf-nav a.nav-link.router-link-active { color: var(--dnf-gold-hi); }
+/* 导航 icon 统一尺寸：限入 25×25 盒（保比例不拉伸）；friend-ranking 内禀 43×30 会超界，被约束对齐其他图标 */
+.dnf-nav a.nav-link .dnf-icon {
+  max-width: 25px; max-height: 25px; width: auto; height: auto;
+}
 .dnf-nav .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .nav-user { display:inline-flex; align-items:center; gap:6px; background:none; border:none;
   color:var(--dnf-text); cursor:pointer; padding:2px 6px; border-radius:6px; }
