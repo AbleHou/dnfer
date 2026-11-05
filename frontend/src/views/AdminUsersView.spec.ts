@@ -92,7 +92,29 @@ describe('AdminUsersView', () => {
       global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } },
     })
     await flushPromises()
-    expect(wrapper.text()).toContain('神启·圣骑士（男）')
+    // 职业列改图标：gender 后缀放入图标 title（节省表格空间）
+    expect(wrapper.find('img[title="神启·圣骑士（男）"]').exists()).toBe(true)
+  })
+
+  it('角色查询表显示战斗力列：输出显示数值、辅助显示 —', async () => {
+    apiMock.get.mockResolvedValueOnce({ items: [
+      { id: 9, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+        parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
+        simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+        combat_power: 1460962,
+        owner_id: 2, owner_nickname: '阿甲', owner_username: 'a', owner_is_banned: false },
+      { id: 1, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+        parent_name: 'priest_male', class_type: '辅助', fame: 1,
+        simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
+        combat_power: null,
+        owner_id: 3, owner_nickname: '队员', owner_username: 'm', owner_is_banned: false },
+    ], total: 2 })
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('战斗力')       // 表头
+    expect(wrapper.text()).toContain('1460962')      // 输出行战斗力
   })
   it('角色查询表显示太阳增益列且排序可选', async () => {
     apiMock.get.mockResolvedValueOnce({ items: [{

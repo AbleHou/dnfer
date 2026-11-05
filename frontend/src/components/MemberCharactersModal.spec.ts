@@ -78,6 +78,26 @@ describe('MemberCharactersModal', () => {
     expect(wrapper.text()).toContain('太阳 暂无')
   })
 
+  it('输出职业卡片显示战斗力，辅助不显示', async () => {
+    apiMock.get.mockResolvedValue({ user, characters: [
+      { id: 11, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+        parent_name: 'swordman_male', class_type: '输出', fame: 52000,
+        simulated_damage: 5, sustained_dps: 2, buff_amount: null, sun_buff: null,
+        atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: 250271 },
+      { id: 12, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
+        parent_name: 'priest_male', class_type: '辅助', fame: 1,
+        simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
+        atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null },
+    ] })
+    const wrapper = mount(MemberCharactersModal, {
+      props: { open: true, rid: 1, user, placed: {} },
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('名望 52000 · 战斗力 250,271')
+    expect(wrapper.text()).not.toContain('战斗力 暂无')
+  })
+
   it('grayIds 命中的角色灰显', async () => {
     apiMock.get.mockResolvedValue({ user, characters })
     const wrapper = mount(MemberCharactersModal, {

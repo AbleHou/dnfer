@@ -11,7 +11,8 @@ const emptySlot: Slot = { id: 1, squad_index: 0, row_index: 0, character_id: nul
   combat_power: null }
 const filledSlot: Slot = { ...emptySlot, id: 2, character_id: 10, character_name: '剑魂',
   character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 5000,
-  simulated_damage: 12000, sustained_dps: 3000, owner_id: 3, owner_nickname: '队员',
+  simulated_damage: 12000, sustained_dps: 3000, combat_power: 250271,
+  owner_id: 3, owner_nickname: '队员',
   duty: '主C', version: 2, adventure_party_id: 5, adventure_party_name: '队员的冒险团' }
 const healSlot: Slot = { ...emptySlot, id: 3, character_id: 20, character_name: '奶',
   character_class: '辅助', job_name: 'crusader_female', job_title: '神启·圣骑士', fame: 8000,
@@ -37,11 +38,18 @@ describe('RosterSlot', () => {
     await w.find('.roster-slot').trigger('click')
     expect(w.emitted('place')).toBeTruthy()
   })
-  it('已占格显示 owner/角色名/名望/数值', () => {
+  it('已占格显示 owner/角色名/名望/战斗力/数值', () => {
     const w = mountSlot({ slot: filledSlot })
     expect(w.text()).toContain('队员'); expect(w.text()).toContain('剑魂')
-    expect(w.text()).toContain('5000 · 模拟 12000亿')
+    expect(w.text()).toContain('5000 · 战斗力 250,271 · 模拟 12000亿')
     expect(w.text()).toContain('12000')
+  })
+  it('输出格战斗力为空显示暂无，辅助格不显示战斗力', () => {
+    const w = mountSlot({ slot: { ...filledSlot, combat_power: null } })
+    expect(w.text()).toContain('战斗力 暂无')
+    const heal = mountSlot({ slot: healSlot })
+    expect(heal.text()).toContain('增益 46000')
+    expect(heal.text()).not.toContain('战斗力')
   })
   it('已占格 canEdit 时显示撤下与拿起', () => {
     const w = mountSlot({ slot: filledSlot })

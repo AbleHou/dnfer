@@ -9,7 +9,7 @@ import AdminResetPasswordModal from '../components/AdminResetPasswordModal.vue'
 import GuestCreateModal from '../components/GuestCreateModal.vue'
 import GuestConvertModal from '../components/GuestConvertModal.vue'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
-import { jobGenderTitle } from '../lib/job'
+import { jobGenderTitle, jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { AdminCharacterRow, AdminUser, CharacterQueryResult, JobCategory, User } from '../types'
 // ---- tab 切换（角色查询 / 账号管理）----
 const activeTab = ref<'query' | 'users'>('query')   // 默认「角色查询」
@@ -89,6 +89,7 @@ const queryCols: DnfColumn[] = [
   { key: 'job_title', label: '职业' },
   { key: 'class_type', label: '类别' },
   { key: 'fame', label: '名望' },
+  { key: 'combat_power', label: '战斗力' },
   { key: 'simulated_damage', label: '模拟伤害' },
   { key: 'sustained_dps', label: '持续输出' },
   { key: 'buff_amount', label: '增益量' },
@@ -207,11 +208,15 @@ onMounted(() => {
       <p v-if="queryError" class="form-error">{{ queryError }}</p>
       <DnfTable label="角色查询结果" :columns="queryCols" :rows="queryItems" :row-key="(r) => r.id">
         <template #cell-name="{ row }">{{ row.name }}</template>
-        <template #cell-job_title="{ row }">{{ jobGenderTitle(row.job_name, row.job_title) }}</template>
+        <template #cell-job_title="{ row }">
+          <img :src="jobIcon(row.job_name)" :title="jobGenderTitle(row.job_name, row.job_title)"
+               :data-job="row.job_name" alt="职业" @error="onIconError" style="width:20px;height:20px">
+        </template>
         <template #cell-class_type="{ row }">
           <DnfIcon :name="row.class_type === '输出' ? 'profile-strength' : 'profile-heart-red'"
                    :label="row.class_type" />
         </template>
+        <template #cell-combat_power="{ row }">{{ row.class_type === '输出' ? fmtNum(row.combat_power) : '—' }}</template>
         <template #cell-simulated_damage="{ row }">{{ row.class_type === '输出' ? fmtNum(row.simulated_damage) : '—' }}</template>
         <template #cell-sustained_dps="{ row }">{{ row.class_type === '输出' ? fmtNum(row.sustained_dps) : '—' }}</template>
         <template #cell-buff_amount="{ row }">{{ row.class_type === '辅助' ? fmtNum(row.buff_amount) : '—' }}</template>

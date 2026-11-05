@@ -8,6 +8,7 @@ const emit = defineEmits<{ (e: 'click', c: Character): void }>()
 
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
 function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
+function fmtPower(n: number | null): string { return n == null ? '暂无' : n.toLocaleString('en-US') }
 </script>
 
 <template>
@@ -16,9 +17,7 @@ function fmtBuff(n: number | null): string { return n == null ? '暂无' : Strin
          style="width:28px;height:28px">
     <div style="flex:1">
       <b style="margin-right:6px">{{ character.name }}</b>
-      <span style="color:var(--dnf-text-muted);font-size:12px">
-        {{ jobGenderTitle(character.job_name, character.job_title) }} · {{ character.class_type }} · 名望 {{ character.fame }}
-      </span>
+      <span style="color:var(--dnf-text-muted);font-size:12px">{{ jobGenderTitle(character.job_name, character.job_title) }} · {{ character.class_type }} · 名望 {{ character.fame }}<template v-if="character.class_type === '输出'"> · 战斗力 {{ fmtPower(character.combat_power) }}</template></span>
       <div style="color:var(--dnf-text-faint);font-size:12px">
         {{ character.class_type === '输出'
           ? `模拟 ${fmtDps(character.simulated_damage)} · 秒伤 ${fmtDps(character.sustained_dps)}`

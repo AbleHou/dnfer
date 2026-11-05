@@ -79,9 +79,10 @@ const visibleGroups = computed(() => {
 })
 
 function fmt(n: number | null, unit: string): string { return n == null ? '暂无' : `${n}${unit}` }
+function fmtPower(n: number | null): string { return n == null ? '暂无' : n.toLocaleString('en-US') }
 function powerText(c: Character): string {
   return c.class_type === '输出'
-    ? `模拟 ${fmt(c.simulated_damage, '亿')} · 秒伤 ${fmt(c.sustained_dps, '亿')}`
+    ? `战斗力 ${fmtPower(c.combat_power)} · 模拟 ${fmt(c.simulated_damage, '亿')} · 秒伤 ${fmt(c.sustained_dps, '亿')}`
     : `增益 ${fmt(c.buff_amount, '')} · 太阳 ${fmt(c.sun_buff, '')}`
 }
 function onPick(c: Character) { if (props.canEdit && !props.blockedCharIds.has(c.id)) emit('pick', c) }

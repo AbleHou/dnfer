@@ -10,7 +10,7 @@ const u2: User = { id: 2, username: 'b', nickname: '乙', is_admin: false, avata
 const c1: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂', parent_name: '鬼剑士',
   class_type: '输出', fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null,
   adventure_party_id: 100, adventure_party_name: '甲团',
-  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: 250271 }
 const c2: Character = { id: 11, name: '奶', job_name: 'crusader_female', job_title: '神启·圣骑士', parent_name: '圣职者',
   class_type: '辅助', fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0,
   adventure_party_id: 100, adventure_party_name: '甲团',
@@ -48,6 +48,15 @@ describe('RosterPool', () => {
     await expandAll(w)
     expect(w.text()).toContain('甲'); expect(w.text()).toContain('乙')
     expect(w.text()).toContain('剑魂'); expect(w.text()).toContain('奶')
+  })
+  it('输出角色行显示战斗力，辅助行不显示', async () => {
+    const w = mountPool()
+    await expandAll(w)
+    expect(w.find('[data-act="pool-char-10"]').text()).toContain('战斗力 250,271')
+    expect(w.find('[data-act="pool-char-10"]').text()).toContain('模拟 30000亿')
+    const heal = w.find('[data-act="pool-char-11"]')
+    expect(heal.text()).toContain('增益 46000')
+    expect(heal.text()).not.toContain('战斗力')
   })
   it('默认全部用户组收起：角色不渲染、用户头仍在', () => {
     const w = mountPool()
