@@ -116,6 +116,18 @@ describe('AdminUsersView', () => {
     expect(wrapper.text()).toContain('战斗力')       // 表头
     expect(wrapper.text()).toContain('1460962')      // 输出行战斗力
   })
+
+  it('角色查询表可按战斗力排序', async () => {
+    const wrapper = mount(AdminUsersView, {
+      global: { stubs: { AdminNav: true, AdminUserCharactersModal: true } },
+    })
+    await flushPromises()
+    const sortSel = wrapper.findAllComponents({ name: 'DnfSelect' }).find(s => s.attributes('data-filter') === 'sort')
+    await sortSel!.vm.$emit('update:modelValue', 'combat_power')
+    await flushPromises()
+    const qcalls = apiMock.get.mock.calls.filter((c: any[]) => String(c[0]).includes('/query'))
+    expect(String(qcalls[qcalls.length - 1][0])).toContain('sort=combat_power')
+  })
   it('角色查询表显示太阳增益列且排序可选', async () => {
     apiMock.get.mockResolvedValueOnce({ items: [{
       id: 1, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',

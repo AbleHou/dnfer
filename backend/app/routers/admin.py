@@ -107,6 +107,7 @@ def list_all_characters(admin: User = Depends(require_admin), db: Session = Depe
 
 _SORT_COLS = {
     "fame": Character.fame,
+    "combat_power": Character.combat_power,
     "simulated_damage": Character.simulated_damage,
     "sustained_dps": Character.sustained_dps,
     "buff_amount": Character.buff_amount,

@@ -46,6 +46,7 @@ const jobOptions = computed(() => [
 ])
 const sortOptions = [
   { value: 'fame', label: '名望' },
+  { value: 'combat_power', label: '战斗力' },
   { value: 'simulated_damage', label: '模拟伤害' },
   { value: 'sustained_dps', label: '持续输出' },
   { value: 'buff_amount', label: '增益量' },

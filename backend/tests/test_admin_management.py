@@ -193,6 +193,26 @@ def test_query_characters_sort_by_sun_buff(client, admin_headers, db):
                    params={"sort": "sun_buff", "order": "desc"}, headers=admin_headers)
     assert r.json()["items"][0]["name"] == "奶乙"
 
+def test_query_characters_sort_by_combat_power(client, admin_headers, db):
+    _, u1 = register_user(client, "cp1", "玩家一")
+    _add_char(db, u1["id"], name="剑甲", job="weapon_master", fame=100, class_type="输出")
+    db.add(Character(user_id=u1["id"], name="剑乙", job_name="weapon_master",
+                     class_type="输出", fame=200, simulated_damage=None,
+                     sustained_dps=None, buff_amount=None, sun_buff=None,
+                     atk_base=5718, str_int=8205, elemental=483,
+                     atk_power=72724.5, atk_power_amp=155.4, skill_atk=583751168.0,
+                     combat_power=1460962))
+    db.commit()
+    r = client.get("/api/admin/characters/query",
+                   params={"sort": "combat_power", "order": "asc"}, headers=admin_headers)
+    assert r.status_code == 200
+    names = [i["name"] for i in r.json()["items"]]
+    assert names[0] == "剑乙"      # combat_power 1460962 排最前
+    assert names[-1] == "剑甲"     # combat_power NULL 经 NULLS LAST 排最后
+    r = client.get("/api/admin/characters/query",
+                   params={"sort": "combat_power", "order": "desc"}, headers=admin_headers)
+    assert r.json()["items"][0]["name"] == "剑乙"
+
 def test_admin_create_character_with_sun_buff(client, admin_headers):
     _, u = register_user(client, "s2", "玩家二")
     r = client.post(f"/api/admin/users/{u['id']}/characters", headers=admin_headers,
