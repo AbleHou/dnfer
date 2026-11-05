@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from .. import jobs as job_data
 from ..models import Character, RaidSignupCharacter, Slot
 from ..schemas import CharacterIn, CharacterOut
+from .damage import compute_combat_power
 
 
 def character_out(c: Character) -> CharacterOut:
@@ -15,6 +16,9 @@ def character_out(c: Character) -> CharacterOut:
                         simulated_damage=c.simulated_damage,
                         sustained_dps=c.sustained_dps, buff_amount=c.buff_amount,
                         sun_buff=c.sun_buff,
+                        atk_base=c.atk_base, str_int=c.str_int, elemental=c.elemental,
+                        atk_power=c.atk_power, atk_power_amp=c.atk_power_amp,
+                        skill_atk=c.skill_atk, combat_power=c.combat_power,
                         adventure_party_id=c.adventure_party_id,
                         adventure_party_name=party.name if party else None)
 
@@ -33,6 +37,23 @@ def apply_character_payload(c: Character, body: CharacterIn) -> None:
     c.sustained_dps = body.sustained_dps
     c.buff_amount = body.buff_amount
     c.sun_buff = body.sun_buff
+    if c.class_type == "输出":
+        c.atk_base = body.atk_base
+        c.str_int = body.str_int
+        c.elemental = body.elemental
+        c.atk_power = body.atk_power
+        c.atk_power_amp = body.atk_power_amp
+        c.skill_atk = body.skill_atk
+        c.combat_power = compute_combat_power(body.atk_base, body.str_int, body.elemental,
+                                              body.atk_power, body.atk_power_amp, body.skill_atk)
+    else:
+        c.atk_base = None
+        c.str_int = None
+        c.elemental = None
+        c.atk_power = None
+        c.atk_power_amp = None
+        c.skill_atk = None
+        c.combat_power = None
 
 
 def delete_character_if_free(db: Session, cid: int) -> None:

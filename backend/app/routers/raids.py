@@ -65,7 +65,8 @@ def _slot_out(slot: Slot) -> SlotOut:
         owner_avatar=c.owner.avatar if c else None,
         duty=slot.duty, version=slot.version,
         adventure_party_id=c.adventure_party_id if c else None,
-        adventure_party_name=party.name if party else None)
+        adventure_party_name=party.name if party else None,
+        combat_power=c.combat_power if c else None)
 
 def _participates(db: Session, raid: Raid, user_id: int) -> bool:
     """用户是否参与本场攻坚：团长恒参与，其余须有报名行。"""
