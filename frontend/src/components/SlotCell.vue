@@ -35,10 +35,11 @@ function onCellClick() {
 // fame 值单独渲染（与图标绑成不换行单元），fameRest 是其后「· 模拟/增益…」部分
 const fameRest = computed(() => {
   const s = props.slot
-  if (s.character_class === '输出') return ` · 模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
+  if (s.character_class === '输出') return ` · 战斗力 ${fmtPower(s.combat_power)} · 模拟 ${fmtDps(s.simulated_damage)} · 秒伤 ${fmtDps(s.sustained_dps)}`
   if (s.character_class === '辅助') return ` · 增益 ${fmtBuff(s.buff_amount)} · 太阳 ${fmtBuff(s.sun_buff)}`
   return ''
 })
+function fmtPower(n: number | null): string { return n == null ? '暂无' : n.toLocaleString('en-US') }
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
 function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
 </script>

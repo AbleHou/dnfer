@@ -70,7 +70,7 @@ describe('SlotCell admin interactions', () => {
 
   it('输出占位格在模拟前显示名望（fame 图标 + 数值）', () => {
     const wrapper = mount(SlotCell, { props: { slot: occupied(1), squadIndex: 0, editable: false, pickable: false } })
-    expect(wrapper.text()).toContain('1 · 模拟 2亿 · 秒伤 3亿')
+    expect(wrapper.text()).toContain('1 · 战斗力 暂无 · 模拟 2亿 · 秒伤 3亿')
     expect(wrapper.findComponent({ name: 'DnfIcon' }).exists()).toBe(true)
   })
 
@@ -89,5 +89,19 @@ describe('SlotCell admin interactions', () => {
   it('未 grayed 不加 class', () => {
     const wrapper = mount(SlotCell, { props: { slot: occupied(1), squadIndex: 0, editable: false, pickable: false } })
     expect(wrapper.find('.slot-cell.grayed').exists()).toBe(false)
+  })
+
+  it('输出占位格在名望后显示战斗力', () => {
+    const s: Slot = { ...occupied(1), combat_power: 250271 }
+    const wrapper = mount(SlotCell, { props: { slot: s, squadIndex: 0, editable: false, pickable: false } })
+    expect(wrapper.text()).toContain('1 · 战斗力 250,271 · 模拟 2亿 · 秒伤 3亿')
+  })
+
+  it('辅助占位格不显示战斗力', () => {
+    const s: Slot = { ...occupied(1), character_class: '辅助', job_name: 'crusader_male',
+      job_title: '神启·圣骑士', buff_amount: 9000, sun_buff: 3000, combat_power: null }
+    const wrapper = mount(SlotCell, { props: { slot: s, squadIndex: 0, editable: false, pickable: false } })
+    expect(wrapper.text()).toContain('1 · 增益 9000 · 太阳 3000')
+    expect(wrapper.text()).not.toContain('战斗力')
   })
 })
