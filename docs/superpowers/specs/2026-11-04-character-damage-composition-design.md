@@ -8,7 +8,7 @@
 - **目标**：输出角色配置 6 项数值（三攻/力智/属强/攻强/攻强增幅/技攻），后端按副本面板计算伤害构成并压缩为「战斗力」存储。
 - **战斗力语义**：**副本实际伤害**（进入副本后加辅助 buff 面板下的伤害），非装备含金量。
 - **公式**：`伤害构成 = 副本三攻 × (1 + 副本力智×0.4%) × (1.05 + 属强×0.45%) × [1 + 攻强×(1+攻强增幅)] × (1 + 技攻)`，其中 副本三攻 = 三攻+40000、副本力智 = 力智+220000；攻强/攻强增幅/技攻 三个百分数项由系统拼 `%`（输入 155 = 155%）。
-- **压缩**：`战斗力 = round(伤害构成 / 1_000_000)`，展示为十万级千分位整数（如 250,271）。线性缩放无损相对准确性（比例/排序保留）。
+- **压缩**：`战斗力 = round(伤害构成 / 1_000_000_000_000)`，展示为百万级千分位整数（数值膨胀修正，见 §2）。线性缩放无损相对准确性（比例/排序保留）。
 - **与旧字段关系**：`simulated_damage`/`sustained_dps` 等旧字段**保留**（兼容 + 用户习惯），划水规则/编队达标**暂不适配**战斗力。新 6 项输入 + 战斗力本身一并入库。
 - **展示范围**：仅攻坚详情格（SlotCell）与我的角色卡额外展示战斗力（与名望并列）；卡片不展示公式输入值（只出现在编辑表单）。
 - **不做实时预览**（避免前端重复公式、双源维护）。
@@ -36,7 +36,7 @@
 ```python
 DUNGEON_ATK_BASE_BONUS = 40_000   # 副本三攻加成
 DUNGEON_STR_INT_BONUS   = 220_000  # 副本力智加成
-COMBAT_POWER_SCALE      = 1_000_000  # 战斗力压缩常数（÷100万 → 十万级）
+COMBAT_POWER_SCALE      = 1_000_000_000_000  # 战斗力压缩常数（÷1e12 → 百万级；数值膨胀修正）
 
 def compute_combat_power(atk_base, str_int, elemental, atk_power, atk_power_amp, skill_atk) -> int | None:
     # 6 项任一为 None → None（未配置，不计算）
@@ -51,24 +51,25 @@ def compute_combat_power(atk_base, str_int, elemental, atk_power, atk_power_amp,
     return round(raw / COMBAT_POWER_SCALE)
 ```
 
-- `atk_power`/`atk_power_amp`/`skill_atk` 存**整数百分数**（155 = 155%），公式内 `/100` 换算。
-- 返回值 int 或 None。取整用 Python 内置 `round()`（**半偶舍入** round-half-even，非半进位）；在 ÷100 万尺度下 .5 边界实际几乎不可能出现，单测断言用非 .5 边界值即可。
+- `atk_power`/`atk_power_amp`/`skill_atk` 存**百分数（可带小数）**（155 = 155%），公式内 `/100` 换算。
+- 返回值 int 或 None。取整用 Python 内置 `round()`（**半偶舍入** round-half-even，非半进位）；在 ÷1e12 尺度下 .5 边界实际几乎不可能出现，单测断言用非 .5 边界值即可。
+- **压缩修正（2026-11-05）**：实际游戏数值膨胀（技攻可达数亿），原 ÷1e6 后仍为万亿级，故总压缩改为 ÷1e12（百万级）。
 
 ## 3. 数据模型与迁移
 
-`characters` 新增 **7 个可空 Integer 列**：
+`characters` 新增 **7 个可空列**（`atk_base`/`str_int`/`elemental`/`combat_power` 为 Integer；`atk_power`/`atk_power_amp`/`skill_atk` 为 Float 以支持小数）：
 
-| 列 | 含义 | 输入 |
-|---|---|---|
-| `atk_base` | 三攻 | 裸值 |
-| `str_int` | 力智 | 裸值 |
-| `elemental` | 属强 | 裸值 |
-| `atk_power` | 攻强 | 百分数（155=155%） |
-| `atk_power_amp` | 攻强增幅 | 百分数 |
-| `skill_atk` | 技攻 | 百分数 |
-| `combat_power` | 战斗力（压缩后整数） | 后端计算 |
+| 列 | 类型 | 含义 | 输入 |
+|---|---|---|---|
+| `atk_base` | Integer | 三攻 | 裸值 |
+| `str_int` | Integer | 力智 | 裸值 |
+| `elemental` | Integer | 属强 | 裸值 |
+| `atk_power` | Float | 攻强 | 百分数（可带小数，如 72724.5） |
+| `atk_power_amp` | Float | 攻强增幅 | 百分数（可带小数，如 155.4） |
+| `skill_atk` | Float | 技攻 | 百分数（可带小数，如 583751168.0） |
+| `combat_power` | Integer | 战斗力（压缩后整数） | 后端计算 |
 
-迁移 `migrate_characters_damage`（`backend/app/migrations.py`）：幂等 `ALTER TABLE characters ADD COLUMN ... INTEGER` × 7，对齐 `migrate_characters_sun_buff` 模式（`PRAGMA table_info` 检查缺列才加）。新库 `create_all` 自动建表。**须同时注册进 `db.py` 的 `init_db()`**（`backend/app/db.py:35-38` 的 import + 调用列表，末尾追加 `migrate_characters_damage(engine)`）。
+迁移 `migrate_characters_damage`（`backend/app/migrations.py`）：幂等 `ALTER TABLE characters ADD COLUMN ... INTEGER/FLOAT` × 7，对齐 `migrate_characters_sun_buff` 模式（`PRAGMA table_info` 检查缺列才加）。SQLite 整数亲和列亦可存浮点，存量库已建的 INTEGER 列无需重建。新库 `create_all` 自动建表。**须同时注册进 `db.py` 的 `init_db()`**（`backend/app/db.py:35-38` 的 import + 调用列表，末尾追加 `migrate_characters_damage(engine)`）。
 
 ## 4. 后端逻辑
 
@@ -130,7 +131,7 @@ def compute_combat_power(atk_base, str_int, elemental, atk_power, atk_power_amp,
 
 ## 7. CHANGELOG
 
-Unreleased「新增」一条：**角色伤害构成与战斗力**——输出职业可在「我的角色」配置 三攻/力智/属强/攻强/攻强增幅/技攻，后端按副本面板（加 40000 三攻、220000 力智）计算伤害构成并 ÷100 万压缩为「战斗力」存储；攻坚详情与我的角色卡片在名望旁展示战斗力（千分位整数）。旧的模拟伤害/秒伤字段保留，划水规则/编队暂不涉及战斗力。
+Unreleased「新增」一条：**角色伤害构成与战斗力**——输出职业可在「我的角色」配置 三攻/力智/属强/攻强/攻强增幅/技攻（攻强/攻强增幅/技攻支持小数），后端按副本面板（加 40000 三攻、220000 力智）计算伤害构成并压缩为「战斗力」（百万级整数，总 ÷1e12）存储；攻坚详情与我的角色卡片在名望旁展示战斗力（千分位整数）。旧的模拟伤害/秒伤字段保留，划水规则/编队暂不涉及战斗力。
 
 ## 8. 非目标 / 后续
 

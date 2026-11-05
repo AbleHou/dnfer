@@ -113,17 +113,23 @@ def migrate_characters_sun_buff(engine: Engine) -> None:
 
 
 def migrate_characters_damage(engine: Engine) -> None:
-    """为存量库补建角色伤害构成列（三攻/力智/属强/攻强/攻强增幅/技攻/战斗力，幂等）。"""
+    """为存量库补建角色伤害构成列（三攻/力智/属强/攻强/攻强增幅/技攻/战斗力，幂等）。
+
+    攻强/攻强增幅/技攻用 FLOAT（可存小数）；SQLite 整数亲和列亦能存浮点，
+    存量库已建 INTEGER 列无需重建即可存小数。
+    """
     from . import models  # noqa: F401  确保模型注册
     from .db import Base
 
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:
         cols = {row[1] for row in conn.execute(text("PRAGMA table_info(characters)")).all()}
-        for col in ("atk_base", "str_int", "elemental", "atk_power",
-                    "atk_power_amp", "skill_atk", "combat_power"):
+        types = {"atk_base": "INTEGER", "str_int": "INTEGER", "elemental": "INTEGER",
+                 "atk_power": "FLOAT", "atk_power_amp": "FLOAT", "skill_atk": "FLOAT",
+                 "combat_power": "INTEGER"}
+        for col, col_type in types.items():
             if col not in cols:
-                conn.execute(text(f"ALTER TABLE characters ADD COLUMN {col} INTEGER"))
+                conn.execute(text(f"ALTER TABLE characters ADD COLUMN {col} {col_type}"))
 
 
 def migrate_waves_group(engine: Engine) -> None:

@@ -3,14 +3,14 @@ from app.services.damage import compute_combat_power
 
 
 def test_compute_applies_buffs_and_percent():
-    # 三攻=10000 力智=5000 属强=300 攻强=100(100%) 攻强增幅=20(20%) 技攻=50(50%)
-    # 副本: 三攻=50000 力智=225000 → 50000*901*2.4*2.2*1.5 / 1e6 = 357
-    assert compute_combat_power(10000, 5000, 300, 100, 20, 50) == 357
+    # 玩家实际数据（数值膨胀）：三攻=5718 力智=8205 属强=483 攻强=72724.5 攻强增幅=155.4 技攻=583751168
+    # 副本: 三攻=45718 力智=228205 → f3=1858.38 f4=5837512.68 → raw≈1.461e18 → /1e12 = 1460961.56 → round 1460962
+    assert compute_combat_power(5718, 8205, 483, 72724.5, 155.4, 583751168) == 1460962
 
 
 def test_compute_zero_own_stats_only_buffs():
-    # 三攻=40000 力智=220000 → 40000*881*1.05 / 1e6 = 37
-    assert compute_combat_power(0, 0, 0, 0, 0, 0) == 37
+    # 仅 buff：三攻=40000 力智=220000 → raw=3700万，÷1e12 后 <1 → 取整 0（低于展示精度边界）
+    assert compute_combat_power(0, 0, 0, 0, 0, 0) == 0
 
 
 def test_compute_any_none_returns_none():
@@ -26,20 +26,20 @@ def test_character_damage_save_roundtrip(client):
     r = client.post("/api/me/characters", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 20000,
         "simulated_damage": 680000, "sustained_dps": 420000,
-        "atk_base": 10000, "str_int": 5000, "elemental": 300,
-        "atk_power": 100, "atk_power_amp": 20, "skill_atk": 50})
+        "atk_base": 5718, "str_int": 8205, "elemental": 483,
+        "atk_power": 72724.5, "atk_power_amp": 155.4, "skill_atk": 583751168.0})
     assert r.status_code == 200
     body = r.json()
-    assert body["combat_power"] == 357
-    assert body["atk_base"] == 10000
-    assert body["skill_atk"] == 50
+    assert body["combat_power"] == 1460962
+    assert body["atk_base"] == 5718
+    assert body["skill_atk"] == 583751168.0
     # 编辑清空某输入 → combat_power 变 None
     cid = body["id"]
     r2 = client.put(f"/api/me/characters/{cid}", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 20000,
         "simulated_damage": 680000, "sustained_dps": 420000,
-        "atk_base": 10000, "str_int": 5000, "elemental": 300,
-        "atk_power": 100, "atk_power_amp": None, "skill_atk": 50})
+        "atk_base": 5718, "str_int": 8205, "elemental": 483,
+        "atk_power": 72724.5, "atk_power_amp": None, "skill_atk": 583751168.0})
     assert r2.status_code == 200
     assert r2.json()["combat_power"] is None
 
@@ -70,8 +70,8 @@ def test_bot_update_keeps_damage_fields(client):
     h, _ = register_user(client, "dmg4", "阿伟")
     cid = client.post("/api/me/characters", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 1,
-        "atk_base": 10000, "str_int": 5000, "elemental": 300,
-        "atk_power": 100, "atk_power_amp": 20, "skill_atk": 50}).json()["id"]
+        "atk_base": 5718, "str_int": 8205, "elemental": 483,
+        "atk_power": 72724.5, "atk_power_amp": 155.4, "skill_atk": 583751168.0}).json()["id"]
     # bot 按账号更新同名角色（部分字段），不带伤害字段 → 不清空
     # /api/public/* 需要 bot API token（conftest 种入 change-me-bot-token）
     bot_h = {"Authorization": "Bearer change-me-bot-token"}
@@ -80,8 +80,8 @@ def test_bot_update_keeps_damage_fields(client):
     assert r.status_code == 200
     assert r.json()["results"][0]["ok"] is True
     got = client.get("/api/me/characters", headers=h).json()[0]
-    assert got["combat_power"] == 357
-    assert got["atk_base"] == 10000
+    assert got["combat_power"] == 1460962
+    assert got["atk_base"] == 5718
 
 def test_slot_out_carries_combat_power(client):
     from .helpers import make_dungeon, make_raid, signup
@@ -92,23 +92,23 @@ def test_slot_out_carries_combat_power(client):
     # 先建角色再 signup：signup 默认勾选全部角色，角色为空会 400「至少选择一个角色」
     cid = client.post("/api/me/characters", headers=h, json={
         "name": "剑魂", "job_name": "weapon_master", "fame": 1,
-        "atk_base": 10000, "str_int": 5000, "elemental": 300,
-        "atk_power": 100, "atk_power_amp": 20, "skill_atk": 50}).json()["id"]
+        "atk_base": 5718, "str_int": 8205, "elemental": 483,
+        "atk_power": 72724.5, "atk_power_amp": 155.4, "skill_atk": 583751168.0}).json()["id"]
     signup(client, rid, h)
     slot_id = client.get(f"/api/raids/{rid}", headers=h).json()["waves"][0]["slots"][0]["id"]
     r = client.post(f"/api/raids/{rid}/slots/{slot_id}/fill", headers=h,
                     json={"character_id": cid})
     assert r.status_code == 200
     slot = r.json()["slot"]
-    assert slot["combat_power"] == 357
+    assert slot["combat_power"] == 1460962
 
 def test_guest_create_character_computes_combat_power(client):
     ah = {"Authorization": f"Bearer {client.post('/api/auth/login', json={'username':'admin','password':'admin123'}).json()['token']}"}
     r = client.post("/api/admin/users", headers=ah, json={
         "nickname": "临时", "characters": [{
             "name": "剑魂", "job_name": "weapon_master", "fame": 1,
-            "atk_base": 10000, "str_int": 5000, "elemental": 300,
-            "atk_power": 100, "atk_power_amp": 20, "skill_atk": 50}]})
+            "atk_base": 5718, "str_int": 8205, "elemental": 483,
+            "atk_power": 72724.5, "atk_power_amp": 155.4, "skill_atk": 583751168.0}]})
     assert r.status_code == 200
     chars = r.json()["characters"]
-    assert chars[0]["combat_power"] == 357
+    assert chars[0]["combat_power"] == 1460962

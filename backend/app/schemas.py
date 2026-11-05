@@ -24,9 +24,9 @@ class CharacterIn(BaseModel):
     atk_base: int | None = Field(default=None, ge=0)
     str_int: int | None = Field(default=None, ge=0)
     elemental: int | None = Field(default=None, ge=0)
-    atk_power: int | None = Field(default=None, ge=0)
-    atk_power_amp: int | None = Field(default=None, ge=0)
-    skill_atk: int | None = Field(default=None, ge=0)
+    atk_power: float | None = Field(default=None, ge=0)      # 百分数，可带小数（如 72724.5）
+    atk_power_amp: float | None = Field(default=None, ge=0)  # 百分数，可带小数（如 155.4）
+    skill_atk: float | None = Field(default=None, ge=0)      # 百分数，可带小数（如 583751168.0）
 
 class CharacterOut(BaseModel):
     id: int
@@ -45,9 +45,9 @@ class CharacterOut(BaseModel):
     atk_base: int | None = None
     str_int: int | None = None
     elemental: int | None = None
-    atk_power: int | None = None
-    atk_power_amp: int | None = None
-    skill_atk: int | None = None
+    atk_power: float | None = None
+    atk_power_amp: float | None = None
+    skill_atk: float | None = None
     combat_power: int | None = None
 
 class RegisterIn(BaseModel):

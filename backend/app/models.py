@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -47,9 +47,9 @@ class Character(Base):
     atk_base: Mapped[int | None] = mapped_column(Integer, nullable=True)      # 三攻
     str_int: Mapped[int | None] = mapped_column(Integer, nullable=True)       # 力智
     elemental: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 属强
-    atk_power: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 攻强(%)
-    atk_power_amp: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 攻强增幅(%)
-    skill_atk: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 技攻(%)
+    atk_power: Mapped[float | None] = mapped_column(Float, nullable=True)     # 攻强(%)，可带小数
+    atk_power_amp: Mapped[float | None] = mapped_column(Float, nullable=True)  # 攻强增幅(%)，可带小数
+    skill_atk: Mapped[float | None] = mapped_column(Float, nullable=True)     # 技攻(%)，可带小数
     combat_power: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 战斗力
     owner: Mapped[User] = relationship(back_populates="characters")
     adventure_party_id: Mapped[int | None] = mapped_column(
