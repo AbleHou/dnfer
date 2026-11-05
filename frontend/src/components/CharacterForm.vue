@@ -14,7 +14,13 @@ const form = ref({ name: props.editing?.name ?? '', fame: props.editing?.fame ??
   sustained_dps: props.editing?.sustained_dps ?? null as number | null,
   buff_amount: props.editing?.buff_amount ?? null as number | null,
   sun_buff: props.editing?.sun_buff ?? null as number | null,
-  adventure_party_id: props.editing?.adventure_party_id ?? null as number | null })
+  adventure_party_id: props.editing?.adventure_party_id ?? null as number | null,
+  atk_base: props.editing?.atk_base ?? null as number | null,
+  str_int: props.editing?.str_int ?? null as number | null,
+  elemental: props.editing?.elemental ?? null as number | null,
+  atk_power: props.editing?.atk_power ?? null as number | null,
+  atk_power_amp: props.editing?.atk_power_amp ?? null as number | null,
+  skill_atk: props.editing?.skill_atk ?? null as number | null })
 const parties = ref<AdventureParty[]>([])
 const partiesBase = computed(() => {
   const m = props.baseUrl?.match(/\/api\/admin\/users\/(\d+)/)
@@ -46,6 +52,8 @@ watch(selectedJob, (j) => {
   if (j?.class_type === '输出') { form.value.buff_amount = null; form.value.sun_buff = null }
   else if (j?.class_type === '辅助') {
     form.value.simulated_damage = null; form.value.sustained_dps = null
+    form.value.atk_base = null; form.value.str_int = null; form.value.elemental = null
+    form.value.atk_power = null; form.value.atk_power_amp = null; form.value.skill_atk = null
   }
 })
 
@@ -57,7 +65,10 @@ async function save() {
       fame: Number(form.value.fame) || 0,
       simulated_damage: form.value.simulated_damage,
       sustained_dps: form.value.sustained_dps, buff_amount: form.value.buff_amount,
-      sun_buff: form.value.sun_buff, adventure_party_id: form.value.adventure_party_id }
+      sun_buff: form.value.sun_buff, adventure_party_id: form.value.adventure_party_id,
+      atk_base: form.value.atk_base, str_int: form.value.str_int, elemental: form.value.elemental,
+      atk_power: form.value.atk_power, atk_power_amp: form.value.atk_power_amp,
+      skill_atk: form.value.skill_atk }
     if (props.editing) await api.put(`${base()}/${props.editing.id}`, payload)
     else await api.post(base(), payload)
     emit('saved')
@@ -123,6 +134,42 @@ async function save() {
           <label for="char-dps" class="form-label">秒伤（亿）：</label>
           <DnfInput id="char-dps" :model-value="form.sustained_dps?.toString() ?? ''"
                     @update:model-value="v => form.sustained_dps = v ? Number(v) : null"
+                    type="number" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-atk-base" class="form-label">三攻：</label>
+          <DnfInput id="char-atk-base" :model-value="form.atk_base?.toString() ?? ''"
+                    @update:model-value="v => form.atk_base = v ? Number(v) : null"
+                    type="number" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-str-int" class="form-label">力智：</label>
+          <DnfInput id="char-str-int" :model-value="form.str_int?.toString() ?? ''"
+                    @update:model-value="v => form.str_int = v ? Number(v) : null"
+                    type="number" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-elemental" class="form-label">属强：</label>
+          <DnfInput id="char-elemental" :model-value="form.elemental?.toString() ?? ''"
+                    @update:model-value="v => form.elemental = v ? Number(v) : null"
+                    type="number" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-atk-power" class="form-label">攻强（%）：</label>
+          <DnfInput id="char-atk-power" :model-value="form.atk_power?.toString() ?? ''"
+                    @update:model-value="v => form.atk_power = v ? Number(v) : null"
+                    type="number" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-atk-power-amp" class="form-label">攻强增幅（%）：</label>
+          <DnfInput id="char-atk-power-amp" :model-value="form.atk_power_amp?.toString() ?? ''"
+                    @update:model-value="v => form.atk_power_amp = v ? Number(v) : null"
+                    type="number" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <label for="char-skill-atk" class="form-label">技攻（%）：</label>
+          <DnfInput id="char-skill-atk" :model-value="form.skill_atk?.toString() ?? ''"
+                    @update:model-value="v => form.skill_atk = v ? Number(v) : null"
                     type="number" style="flex:1" />
         </div>
       </template>

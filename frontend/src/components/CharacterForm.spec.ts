@@ -140,4 +140,48 @@ describe('CharacterForm', () => {
     expect(apiMock.post).toHaveBeenCalledWith('/api/me/characters',
       expect.objectContaining({ sun_buff: null, buff_amount: null }))
   })
+
+  it('输出职业显示 6 个伤害构成输入框并提交', async () => {
+    apiMock.post.mockResolvedValue({})
+    const wrapper = mount(CharacterForm, { props: { categories, editing: null } })
+    await wrapper.find('[data-cat="swordman_male"]').trigger('click')
+    await wrapper.find('[data-job="weapon_master"]').trigger('click')
+    for (const id of ['#char-atk-base', '#char-str-int', '#char-elemental',
+                      '#char-atk-power', '#char-atk-power-amp', '#char-skill-atk']) {
+      expect(wrapper.find(id).exists()).toBe(true)
+    }
+    await wrapper.find('#char-name').setValue('剑魂')
+    await wrapper.find('#char-fame').setValue(100)
+    await wrapper.find('#char-atk-base').setValue(10000)
+    await wrapper.find('#char-str-int').setValue(5000)
+    await wrapper.find('#char-elemental').setValue(300)
+    await wrapper.find('#char-atk-power').setValue(100)
+    await wrapper.find('#char-atk-power-amp').setValue(20)
+    await wrapper.find('#char-skill-atk').setValue(50)
+    await wrapper.find('[data-act="save"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/me/characters',
+      expect.objectContaining({ atk_base: 10000, str_int: 5000, elemental: 300,
+        atk_power: 100, atk_power_amp: 20, skill_atk: 50 }))
+  })
+
+  it('输出切辅助清空 6 个伤害构成字段', async () => {
+    apiMock.post.mockResolvedValue({})
+    const both = [...categories,
+      { id: 8, name: 'priest_male', title: '圣职者(男)', children: [
+        { id: 0, name: 'crusader_male', title: '神启·圣骑士', class_type: '辅助' as const }] }]
+    const wrapper = mount(CharacterForm, { props: { categories: both, editing: null } })
+    await wrapper.find('#char-name').setValue('奶')
+    await wrapper.find('[data-cat="swordman_male"]').trigger('click')
+    await wrapper.find('[data-job="weapon_master"]').trigger('click')
+    await wrapper.find('#char-atk-base').setValue(10000)
+    await wrapper.find('[data-cat="priest_male"]').trigger('click')
+    await wrapper.find('[data-job="crusader_male"]').trigger('click')
+    await wrapper.find('#char-sun-buff').setValue(3000)
+    await wrapper.find('[data-act="save"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.post).toHaveBeenCalledWith('/api/me/characters',
+      expect.objectContaining({ atk_base: null, str_int: null, elemental: null,
+        atk_power: null, atk_power_amp: null, skill_atk: null }))
+  })
 })
