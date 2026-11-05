@@ -44,6 +44,13 @@ class Character(Base):
     sustained_dps: Mapped[int | None] = mapped_column(Integer, nullable=True)      # 输出
     buff_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)        # 辅助
     sun_buff: Mapped[int | None] = mapped_column(Integer, nullable=True)        # 辅助：太阳增益
+    atk_base: Mapped[int | None] = mapped_column(Integer, nullable=True)      # 三攻
+    str_int: Mapped[int | None] = mapped_column(Integer, nullable=True)       # 力智
+    elemental: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 属强
+    atk_power: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 攻强(%)
+    atk_power_amp: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 攻强增幅(%)
+    skill_atk: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 技攻(%)
+    combat_power: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 战斗力
     owner: Mapped[User] = relationship(back_populates="characters")
     adventure_party_id: Mapped[int | None] = mapped_column(
         ForeignKey("adventure_parties.id"), nullable=True, index=True)

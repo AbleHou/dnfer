@@ -182,3 +182,20 @@ def test_migrate_raid_close_adds_columns():
         assert "closed" in cols
         assert "snapshot" in cols
     migrate_raid_close(engine)  # 幂等：再次运行不报错
+
+def test_migrate_characters_damage_adds_columns():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE characters (
+            id INTEGER PRIMARY KEY, user_id INTEGER, name VARCHAR(64),
+            job_name VARCHAR(64), class_type VARCHAR(8), fame INTEGER,
+            simulated_damage INTEGER, sustained_dps INTEGER, buff_amount INTEGER,
+            sun_buff INTEGER)"""))
+    from app.migrations import migrate_characters_damage
+    migrate_characters_damage(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(characters)")).all()}
+        for col in ("atk_base", "str_int", "elemental", "atk_power",
+                    "atk_power_amp", "skill_atk", "combat_power"):
+            assert col in cols
+    migrate_characters_damage(engine)  # 幂等：再次运行不报错
