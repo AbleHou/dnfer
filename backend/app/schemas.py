@@ -21,6 +21,12 @@ class CharacterIn(BaseModel):
     buff_amount: int | None = None
     sun_buff: int | None = None
     adventure_party_id: int | None = None
+    atk_base: int | None = Field(default=None, ge=0)
+    str_int: int | None = Field(default=None, ge=0)
+    elemental: int | None = Field(default=None, ge=0)
+    atk_power: int | None = Field(default=None, ge=0)
+    atk_power_amp: int | None = Field(default=None, ge=0)
+    skill_atk: int | None = Field(default=None, ge=0)
 
 class CharacterOut(BaseModel):
     id: int
@@ -36,6 +42,13 @@ class CharacterOut(BaseModel):
     sun_buff: int | None
     adventure_party_id: int | None = None
     adventure_party_name: str | None = None
+    atk_base: int | None = None
+    str_int: int | None = None
+    elemental: int | None = None
+    atk_power: int | None = None
+    atk_power_amp: int | None = None
+    skill_atk: int | None = None
+    combat_power: int | None = None
 
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=64)
@@ -190,6 +203,7 @@ class SlotOut(BaseModel):
     version: int
     adventure_party_id: int | None = None
     adventure_party_name: str | None = None
+    combat_power: int | None = None
 
 class WaveOut(BaseModel):
     id: int
