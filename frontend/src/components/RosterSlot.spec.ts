@@ -7,7 +7,8 @@ import type { Slot } from '../types'
 const emptySlot: Slot = { id: 1, squad_index: 0, row_index: 0, character_id: null, character_name: null,
   character_class: null, job_name: null, job_title: null, fame: null, simulated_damage: null,
   sustained_dps: null, buff_amount: null, sun_buff: null, owner_id: null, owner_nickname: null,
-  owner_avatar: null, duty: null, version: 1, adventure_party_id: null, adventure_party_name: null }
+  owner_avatar: null, duty: null, version: 1, adventure_party_id: null, adventure_party_name: null,
+  combat_power: null }
 const filledSlot: Slot = { ...emptySlot, id: 2, character_id: 10, character_name: '剑魂',
   character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 5000,
   simulated_damage: 12000, sustained_dps: 3000, owner_id: 3, owner_nickname: '队员',

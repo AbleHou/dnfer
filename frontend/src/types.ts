@@ -15,7 +15,10 @@ export interface RaidSignup { user: User; created_at: string | null; characters:
 export interface Character { id: number; name: string; job_name: string; job_title: string;
   parent_name: string; class_type: ClassType; fame: number;
   simulated_damage: number | null; sustained_dps: number | null; buff_amount: number | null;
-  sun_buff: number | null; adventure_party_id: number | null; adventure_party_name: string | null }
+  sun_buff: number | null; adventure_party_id: number | null; adventure_party_name: string | null;
+  atk_base: number | null; str_int: number | null; elemental: number | null;
+  atk_power: number | null; atk_power_amp: number | null; skill_atk: number | null;
+  combat_power: number | null }
 export interface AdventureParty { id: number; name: string; created_at: string; character_count: number }
 export interface PlayerCharacters { user: User; characters: Character[] }
 export interface Slot { id: number; squad_index: number; row_index: number;
@@ -24,7 +27,8 @@ export interface Slot { id: number; squad_index: number; row_index: number;
   fame: number | null; simulated_damage: number | null; sustained_dps: number | null;
   buff_amount: number | null; sun_buff: number | null; owner_id: number | null; owner_nickname: string | null;
   owner_avatar: string | null; duty: Duty | null; version: number;
-  adventure_party_id: number | null; adventure_party_name: string | null }
+  adventure_party_id: number | null; adventure_party_name: string | null;
+  combat_power: number | null }
 export interface CharacterPlacement { wave_index: number; squad_index: number; duty: Duty }
 export interface JobChild { id: number; name: string; title: string; class_type: ClassType }
 export interface JobCategory { id: number; name: string; title: string; children: JobChild[] }

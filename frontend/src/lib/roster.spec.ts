@@ -9,7 +9,7 @@ function slot(duty: string | null, classType: ClassType | null = '输出'): Slot
     character_name: duty ? 'x' : null, character_class: classType, job_name: null, job_title: null,
     fame: null, simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
     owner_id: null, owner_nickname: null, owner_avatar: null, duty: duty as any, version: 1,
-    adventure_party_id: null, adventure_party_name: null,
+    adventure_party_id: null, adventure_party_name: null, combat_power: null,
   }
 }
 
@@ -158,13 +158,16 @@ describe('squadOverview 总览（新引擎）', () => {
 
 const c1: Character = { id: 1, name: '高伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
   fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null,
-  adventure_party_id: null, adventure_party_name: null }
+  adventure_party_id: null, adventure_party_name: null,
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
 const c2: Character = { id: 2, name: '低伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
   fame: 1, simulated_damage: 5000, sustained_dps: 0, buff_amount: null, sun_buff: null,
-  adventure_party_id: null, adventure_party_name: null }
+  adventure_party_id: null, adventure_party_name: null,
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
 const healer: Character = { id: 3, name: '奶', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '辅助',
   fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0,
-  adventure_party_id: null, adventure_party_name: null }
+  adventure_party_id: null, adventure_party_name: null,
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
 
 function wave(id: number, slots: Slot[]): Wave {
   return { id, index: id, group_id: null, round_index: 1, group_index: 1, slots }
@@ -176,7 +179,8 @@ const sqSlot = (sq: number, filled: boolean, sim: number | null = null, duty: st
      character_name: filled ? 'x' : null, character_class: filled ? '输出' : null,
      job_name: null, job_title: null, fame: null, simulated_damage: sim, sustained_dps: null,
      buff_amount: null, sun_buff: null, owner_id: null, owner_nickname: null, owner_avatar: null,
-     duty: filled ? duty as Duty : null, version: 1, adventure_party_id: null, adventure_party_name: null })
+     duty: filled ? duty as Duty : null, version: 1, adventure_party_id: null, adventure_party_name: null,
+     combat_power: null })
 
 describe('sortByPower', () => {
   it('输出按模拟伤害降序（null 排最后）', () => {
@@ -289,7 +293,7 @@ function pslot(id: number, charId: number | null, opts: Partial<Slot> = {}): Slo
     character_name: charId != null ? 'x' : null, character_class: null, job_name: null, job_title: null,
     fame: null, simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
     owner_id: charId != null ? 1 : null, owner_nickname: null, owner_avatar: null, duty: null, version: 1,
-    adventure_party_id: null, adventure_party_name: null, ...opts }
+    adventure_party_id: null, adventure_party_name: null, combat_power: null, ...opts }
 }
 
 describe('placementByChar', () => {

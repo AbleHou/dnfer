@@ -33,11 +33,13 @@ const chars: Character[] = [
   { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
     parent_name: 'swordman_male', class_type: '输出', fame: 1, simulated_damage: 5,
     sustained_dps: 2, buff_amount: null, sun_buff: null,
-    adventure_party_id: null, adventure_party_name: null },
+    adventure_party_id: null, adventure_party_name: null,
+    atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null },
   { id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
     parent_name: 'priest_male', class_type: '辅助', fame: 2, simulated_damage: null,
     sustained_dps: null, buff_amount: 9000, sun_buff: null,
-    adventure_party_id: null, adventure_party_name: null },
+    adventure_party_id: null, adventure_party_name: null,
+    atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null },
 ]
 
 beforeEach(() => {

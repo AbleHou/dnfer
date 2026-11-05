@@ -10,7 +10,7 @@ function mkSlot(over: Partial<Slot> = {}): Slot {
     character_class: '输出' as const, job_name: 'weapon_master', job_title: '极诣·剑魂',
     fame: 1, simulated_damage: 1, sustained_dps: null, buff_amount: null, sun_buff: null,
     owner_id: 2, owner_nickname: '阿伟', owner_avatar: null, duty: '主C' as const, version: 0,
-    adventure_party_id: 1, adventure_party_name: '阿伟的冒险团',
+    adventure_party_id: 1, adventure_party_name: '阿伟的冒险团', combat_power: null,
     ...over,
   }
 }

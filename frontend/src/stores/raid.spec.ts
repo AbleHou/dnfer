@@ -12,7 +12,7 @@ function makeRaid(): Raid {
       character_id: null, character_name: null, character_class: null, job_name: null, job_title: null, fame: null,
       simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
       owner_id: null, owner_nickname: null, owner_avatar: null, duty: null, version: 0,
-      adventure_party_id: null, adventure_party_name: null })) }],
+      adventure_party_id: null, adventure_party_name: null, combat_power: null })) }],
   }
 }
 
@@ -25,7 +25,7 @@ describe('raid store', () => {
       id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null, sun_buff: null,
       owner_id: 9, owner_nickname: '甲', owner_avatar: null, duty: '主C', version: 1,
-      adventure_party_id: 5, adventure_party_name: '甲的冒险团' } })
+      adventure_party_id: 5, adventure_party_name: '甲的冒险团', combat_power: null } })
     expect(store.raid!.waves[0].slots[0].character_name).toBe('剑魂')
   })
 
@@ -59,12 +59,12 @@ describe('raid store', () => {
       id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null, sun_buff: null,
       owner_id: 9, owner_nickname: '甲', owner_avatar: null, duty: '主C', version: 1,
-      adventure_party_id: 5, adventure_party_name: '甲的冒险团' } })
+      adventure_party_id: 5, adventure_party_name: '甲的冒险团', combat_power: null } })
     applyEvent(store, { type: 'slot:duty_changed', slot: {
       id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null, sun_buff: null,
       owner_id: 9, owner_nickname: '甲', owner_avatar: null, duty: '辅C', version: 2,
-      adventure_party_id: 5, adventure_party_name: '甲的冒险团' } })
+      adventure_party_id: 5, adventure_party_name: '甲的冒险团', combat_power: null } })
     expect(store.raid!.waves[0].slots[0].duty).toBe('辅C')
   })
 
@@ -76,13 +76,13 @@ describe('raid store', () => {
       id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null, sun_buff: null,
       owner_id: 9, owner_nickname: '甲', owner_avatar: null, duty: '主C', version: 2,
-      adventure_party_id: 5, adventure_party_name: '甲的冒险团' } })
+      adventure_party_id: 5, adventure_party_name: '甲的冒险团', combat_power: null } })
     // stale v1 event must NOT overwrite v2
     applyEvent(store, { type: 'slot:duty_changed', slot: {
       id: 1, squad_index: 0, row_index: 0, character_id: 9, character_name: '剑魂',
       character_class: '输出', job_name: 'weapon_master', job_title: '极诣·剑魂', fame: 1, simulated_damage: 2, sustained_dps: 3, buff_amount: null, sun_buff: null,
       owner_id: 9, owner_nickname: '甲', owner_avatar: null, duty: '主奶', version: 1,
-      adventure_party_id: 5, adventure_party_name: '甲的冒险团' } })
+      adventure_party_id: 5, adventure_party_name: '甲的冒险团', combat_power: null } })
     expect(store.raid!.waves[0].slots[0].duty).toBe('主C')
   })
 
@@ -110,7 +110,8 @@ describe('raid store', () => {
     const chars = [{ id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: '鬼剑士', class_type: '输出' as const, fame: 1, simulated_damage: 2,
       sustained_dps: 3, buff_amount: null, sun_buff: null,
-      adventure_party_id: 1, adventure_party_name: '乙的冒险团' }]
+      adventure_party_id: 1, adventure_party_name: '乙的冒险团',
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }]
     applyEvent(store, { type: 'raid:signup_chars_changed', user_id: 9, characters: chars })
     expect(store.raid!.signups[0].characters).toEqual(chars)
   })

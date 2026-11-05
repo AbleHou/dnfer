@@ -43,7 +43,8 @@ describe('CharacterForm', () => {
     const editing = { id: 5, name: '旧', job_name: 'weapon_master', job_title: 'x',
       parent_name: 'swordman_male', class_type: '输出' as const, fame: 1,
       simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
-      adventure_party_id: null, adventure_party_name: null }
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
     const wrapper = mount(CharacterForm,
       { props: { categories, editing, baseUrl: '/api/admin/users/7/characters' } })
     await fillAndSave(wrapper)
@@ -101,7 +102,8 @@ describe('CharacterForm', () => {
     const editing = { id: 5, name: '旧', job_name: 'weapon_master', job_title: 'x',
       parent_name: 'swordman_male', class_type: '输出' as const, fame: 1,
       simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
-      adventure_party_id: 2, adventure_party_name: '奶爸团' }
+      adventure_party_id: 2, adventure_party_name: '奶爸团',
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
     const wrapper = mount(CharacterForm, { props: { categories, editing } })
     await flushPromises()
     // 编辑态回填：触发按钮显示当前团名（adventure_party_id=2 → 奶爸团）
