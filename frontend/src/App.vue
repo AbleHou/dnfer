@@ -17,6 +17,7 @@ const profileOpen = ref(false)
 const menuItems = computed<DnfMenuItem[]>(() => [
   { value: 'raids', label: '攻坚列表' },
   { value: 'characters', label: '我的角色' },
+  { value: 'friends', label: '我的群友' },
   { value: 'votes', label: '群会议' },
   ...(auth.isAdmin ? [{ value: 'admin', label: '管理' }] : []),
   { value: 'logout', label: '退出' },
@@ -28,7 +29,7 @@ function logout() {
 }
 function onMenuSelect(item: DnfMenuItem) {
   if (item.value === 'logout') { logout(); return }
-  const path = ({ raids: '/', characters: '/characters', votes: '/votes', admin: '/admin' } as Record<string, string>)[item.value]
+  const path = ({ raids: '/', characters: '/characters', friends: '/friends', votes: '/votes', admin: '/admin' } as Record<string, string>)[item.value]
   if (path) router.push(path)
 }
 </script>
@@ -44,6 +45,9 @@ function onMenuSelect(item: DnfMenuItem) {
           </router-link>
           <router-link to="/characters" class="nav-link">
             <DnfIcon name="hud-character" />我的角色
+          </router-link>
+          <router-link to="/friends" class="nav-link">
+            <DnfIcon name="friend-ranking" />我的群友
           </router-link>
           <router-link to="/votes" class="nav-link">
             <DnfIcon name="info-bell" />群会议

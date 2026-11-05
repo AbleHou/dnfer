@@ -11,6 +11,7 @@ const router = createRouter({
     { path: '/raids/:id', component: () => import('../views/RaidDetailView.vue') },
     { path: '/raids/:id/roster', component: () => import('../views/RosterView.vue') },
     { path: '/characters', component: () => import('../views/MyCharactersView.vue') },
+    { path: '/friends', component: () => import('../views/GroupFriendsView.vue') },
     { path: '/votes', component: () => import('../views/VotesView.vue') },
     { path: '/admin', redirect: '/admin/codes' },
     { path: '/admin/codes', component: () => import('../views/AdminCodesView.vue') },
