@@ -6,12 +6,12 @@ const output: Character = { id: 10, name: '剑魂', job_name: 'weapon_master', j
   parent_name: '鬼剑士', class_type: '输出', fame: 52000, simulated_damage: 5,
   sustained_dps: 2, buff_amount: null, sun_buff: null,
   adventure_party_id: null, adventure_party_name: null,
-  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null, profile: null }
 const support: Character = { id: 11, name: '奶', job_name: 'crusader_female', job_title: '神启·圣骑士',
   parent_name: '圣职者', class_type: '辅助', fame: 40000, simulated_damage: null,
   sustained_dps: null, buff_amount: 3000, sun_buff: 500,
   adventure_party_id: null, adventure_party_name: null,
-  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null, profile: null }
 
 describe('slack 判定', () => {
   it('metricValue 取对应数值', () => {

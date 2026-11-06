@@ -111,7 +111,7 @@ describe('raid store', () => {
       parent_name: '鬼剑士', class_type: '输出' as const, fame: 1, simulated_damage: 2,
       sustained_dps: 3, buff_amount: null, sun_buff: null,
       adventure_party_id: 1, adventure_party_name: '乙的冒险团',
-      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }]
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null, profile: null }]
     applyEvent(store, { type: 'raid:signup_chars_changed', user_id: 9, characters: chars })
     expect(store.raid!.signups[0].characters).toEqual(chars)
   })

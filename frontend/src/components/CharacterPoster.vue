@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { DnfIconButton } from '@dnftools/ui'
 import { characterProfile, jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Character } from '../types'
@@ -7,10 +7,16 @@ import type { Character } from '../types'
 const props = defineProps<{ character: Character }>()
 const emit = defineEmits<{ (e: 'click'): void; (e: 'delete'): void }>()
 
-const src = computed(() => characterProfile(props.character.parent_name, props.character.job_name))
-// profile 图加载失败 → 切换深色底 + 职业图标（state flag 保证只切一次，防循环）
-const fallbackUsed = ref(false)
-function onImgError() { fallbackUsed.value = true }
+const customSrc = computed(() => props.character.profile)
+const defaultSrc = computed(() => characterProfile(props.character.parent_name, props.character.job_name))
+// 兜底层级：0=当前 src（自定义或默认） 1=降级默认图 2=深底+图标
+const level = ref(0)
+const displaySrc = computed(() => level.value === 1 ? defaultSrc.value : (customSrc.value ?? defaultSrc.value))
+function onImgError() {
+  if (level.value === 0 && customSrc.value) level.value = 1  // 自定义失败 → 默认图
+  else level.value = 2                                        // 默认失败或无自定义 → 深底
+}
+watch(() => props.character.profile, () => { level.value = 0 })
 
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
 function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
@@ -30,7 +36,7 @@ const line2 = computed(() => props.character.class_type === '输出'
 <template>
   <div class="char-poster" @click="emit('click')">
     <div class="poster-img">
-      <img v-if="!fallbackUsed" :src="src" class="cover" alt="" @error="onImgError">
+      <img v-if="level < 2" :src="displaySrc" class="cover" alt="" @error="onImgError">
       <div v-else class="fallback">
         <img :src="jobIcon(character.job_name)" class="fallback-icon" alt="" @error="onIconError">
       </div>

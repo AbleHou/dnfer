@@ -159,15 +159,15 @@ describe('squadOverview 总览（新引擎）', () => {
 const c1: Character = { id: 1, name: '高伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
   fame: 1, simulated_damage: 30000, sustained_dps: 0, buff_amount: null, sun_buff: null,
   adventure_party_id: null, adventure_party_name: null,
-  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null, profile: null }
 const c2: Character = { id: 2, name: '低伤', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '输出',
   fame: 1, simulated_damage: 5000, sustained_dps: 0, buff_amount: null, sun_buff: null,
   adventure_party_id: null, adventure_party_name: null,
-  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null, profile: null }
 const healer: Character = { id: 3, name: '奶', job_name: 'a', job_title: 't', parent_name: 'p', class_type: '辅助',
   fame: 1, simulated_damage: null, sustained_dps: null, buff_amount: 46000, sun_buff: 0,
   adventure_party_id: null, adventure_party_name: null,
-  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null }
+  atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null, skill_atk: null, combat_power: null, profile: null }
 
 function wave(id: number, slots: Slot[]): Wave {
   return { id, index: id, group_id: null, round_index: 1, group_index: 1, slots }
