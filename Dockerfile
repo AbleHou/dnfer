@@ -17,5 +17,6 @@ COPY --from=frontend /app/frontend/dist ./static
 ENV DNFER_STATIC_DIR=/app/static
 ENV DNFER_JOB_DATA_PATH=/app/职业信息.json
 ENV DNFER_IMAGES_DIR=/app/images/adventure
+ENV DNFER_CHARACTERS_DIR=/app/images/characters
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
