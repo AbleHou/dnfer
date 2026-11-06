@@ -7,10 +7,12 @@
 ### 变更
 
 - **「我的角色」九宫格海报**：角色展示从横向条卡片改为 3:4 竖版海报——职业 profile 图铺满卡片，底部信息条两行（第一行职业图标 + 名字 + 名望/战斗力 + 冒险团名，第二行输出显示模拟·秒伤、辅助显示增益·太阳），响应式网格列数随界面宽度自适应（900px 页宽约 5-6 列、窄屏 3 列左右）；点击海报进编辑弹窗（创建/编辑统一 DnfDialog 弹窗承载 CharacterForm），右上角仅保留 `npc-close` 图标删除按钮（无编辑按钮）；缺 profile 图的职业（帝国骑士·破浪者、圣职者女·蓝拳圣使）自动显示深色底 + 职业图标兜底
+- **角色自定义 profile**：「我的角色」编辑角色弹窗新增「角色头像」区——上传专属海报图（PNG/JPG/WebP，≤10MB，存 S3 `profiles/` 目录）或一键恢复职业默认图；海报卡片优先显示自定义图，缺图逐级回退（自定义→职业默认→深底占位）；创建弹窗不显示该区，仅成员本人可操作（管理员不管 profile）
 
 ### 工程
 
 - 后端新增 `/characters-images` 静态挂载（config 新增 `characters_dir`，指向 `images/characters/` 职业 profile 图目录）+ vite dev 代理；前端新增 `CharacterPoster` 海报卡片组件与 `characterProfile` 路径函数；全量前端测试 401 例、后端测试 361 例通过、`npm run build`（vue-tsc + vite）通过
+- 后端 `Character` 新增 `profile` 列（幂等迁移 `migrate_characters_profile`）+ S3 新增 `upload_profile`/`delete_profile`（复用头像 S3 链路）+ 成员端点 `POST/DELETE /api/me/characters/{cid}/profile`；角色删除时 best-effort 清理 S3 对象；全量后端测试 369 例、前端测试 409 例通过、`npm run build`（vue-tsc + vite）通过
 
 ## [v2.1] - 2026-11-05
 
