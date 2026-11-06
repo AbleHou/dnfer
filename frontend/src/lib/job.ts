@@ -1,5 +1,6 @@
 export function jobIcon(jobName: string): string { return `/images/jobs/${jobName}.png` }
 export function categoryIcon(parentName: string): string { return `/images/sub/${parentName}.png` }
+export function characterProfile(parentName: string, jobName: string): string { return `/characters-images/${parentName}/${jobName}/profile.png` }
 export const ICON_FALLBACK = '/images/jobs/empty.png'
 export function handleIconError(e: Event) {
   const img = e.target as HTMLImageElement

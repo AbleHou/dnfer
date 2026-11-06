@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { jobIcon, categoryIcon, ICON_FALLBACK, jobGenderTitle } from './job'
+import { jobIcon, categoryIcon, ICON_FALLBACK, jobGenderTitle, characterProfile } from './job'
 
 describe('job icon helpers', () => {
   it('builds child and category icon urls', () => {
@@ -8,6 +8,9 @@ describe('job icon helpers', () => {
   })
   it('exposes a fallback placeholder', () => {
     expect(ICON_FALLBACK).toBe('/images/jobs/empty.png')
+  })
+  it('characterProfile 拼接角色海报路径', () => {
+    expect(characterProfile('archer', 'hunter')).toBe('/characters-images/archer/hunter/profile.png')
   })
 })
 
