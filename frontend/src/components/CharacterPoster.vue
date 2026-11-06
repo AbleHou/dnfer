@@ -49,11 +49,13 @@ const line2 = computed(() => props.character.class_type === '输出'
 
 <style scoped>
 .char-poster { position: relative; aspect-ratio: 3/4; border-radius: 8px; overflow: hidden;
-  cursor: pointer; background: var(--dnf-bg, #1a1b22); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  cursor: pointer; background: var(--dnf-panel); border: 1px solid var(--dnf-edge);
+  box-shadow: 0 2px 8px rgba(0,0,0,.4); transition: border-color .15s, box-shadow .15s; }
+.char-poster:hover { border-color: var(--dnf-accent); box-shadow: 0 0 10px rgba(255,213,74,.35); }
 .poster-img { position: absolute; inset: 0; }
 .poster-img .cover { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: #1a1b22; }
+  background: var(--dnf-panel); }
 .fallback-icon { width: 60%; height: 60%; object-fit: contain; opacity: .6; }
 .grad { position: absolute; inset: auto 0 0 0; height: 55%; pointer-events: none;
   background: linear-gradient(to top, rgba(0,0,0,.88), transparent); }

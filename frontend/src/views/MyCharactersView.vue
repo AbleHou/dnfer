@@ -97,6 +97,6 @@ async function remove(c: Character) {
 </template>
 
 <style scoped>
-.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 12px; margin: 12px 0; }
+.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 14px; margin: 12px 0; }
 </style>
