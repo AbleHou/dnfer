@@ -27,7 +27,8 @@
 
 ### 静态资源
 
-- 后端 `backend/app/main.py`：新增 `app.mount("/characters-images", StaticFiles(directory="../images/characters"), name="characters-images")`，与现有 `/images` 并列；沿用同款 try/except，目录不存在时 warning 跳过。
+- 后端 `backend/app/config.py`：新增 `characters_dir: str = "../images/characters"`，对齐既有 `images_dir` 模式。
+- 后端 `backend/app/main.py`：新增 `app.mount("/characters-images", StaticFiles(directory=settings.characters_dir), name="characters-images")`，与现有 `/images` 并列；沿用同款 try/except，目录不存在时 warning 跳过。
 - `frontend/vite.config.ts`：proxy 增加 `'/characters-images': 'http://localhost:8000'`。
 
 ### 路径拼接
@@ -47,8 +48,9 @@ export function characterProfile(parentName: string, jobName: string): string {
 1. **`CharacterPoster.vue`（新增）**：纯展示海报卡片。
    - props：`Character`
    - 内部拼 profile URL（用 `character.parent_name` / `character.job_name`）
-   - `<img>` 带 `@error` 兜底：加载失败 → 切为深色底 + 职业图标居中（`jobIcon(job_name)`，`object-fit: contain`）
-   - 底部信息条：`jobIcon`（20px）+ 名字 + `名望 N`（输出 `· 战斗力 X`，有冒险团 `· 团名`）
+   - 主图 `<img>` 用 `object-fit: cover` 铺满 3:4 卡片（profile 源图比例各异，cover 裁剪，视觉统一）
+   - `<img>` 带 `@error` 兜底：加载失败 → 切为深色底 + 职业图标居中（`jobIcon(job_name)`，`object-fit: contain`）；用局部 state flag 保证只替换一次，防循环替换
+   - 底部信息条：`jobIcon`（20px）+ 名字 + `名望 N`（输出 `· 战斗力 X` 用 `toLocaleString('en-US')` 千分位，有冒险团 `· 团名`）
    - emit：`click`（编辑）、`delete`
    - 删除按钮 `@click.stop`，图标 `npc-close`，`confirmDialog` 强确认后 `api.del` → 父级 `load()`
 
