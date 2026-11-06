@@ -15,7 +15,7 @@
 | 决策点 | 结论 |
 | --- | --- |
 | 卡片样式 | 方案 A：满图海报 + 底部渐变信息条 |
-| 底部信息条 | 职业图标 + 角色名 + 名望/战斗力 + 冒险团名（有则显示） |
+| 底部信息条 | 第一行：职业图标 + 角色名 + 名望/战斗力 + 冒险团名（有则显示）；第二行：输出显示模拟/秒伤，辅助显示增益量/太阳增益 |
 | 删除按钮 | 右上角仅删除按钮，图标 `npc-close`（无编辑按钮） |
 | 点击交互 | 点击海报任意处 → 打开编辑弹窗（n-modal CharacterForm） |
 | 创建表单 | 「＋添加角色」也改为弹窗打开 |
@@ -50,7 +50,9 @@ export function characterProfile(parentName: string, jobName: string): string {
    - 内部拼 profile URL（用 `character.parent_name` / `character.job_name`）
    - 主图 `<img>` 用 `object-fit: cover` 铺满 3:4 卡片（profile 源图比例各异，cover 裁剪，视觉统一）
    - `<img>` 带 `@error` 兜底：加载失败 → 切为深色底 + 职业图标居中（`jobIcon(job_name)`，`object-fit: contain`）；用局部 state flag 保证只替换一次，防循环替换
-   - 底部信息条：`jobIcon`（20px）+ 名字 + `名望 N`（输出 `· 战斗力 X` 用 `toLocaleString('en-US')` 千分位，有冒险团 `· 团名`）
+   - 底部信息条两行：
+     - 第一行：`jobIcon`（20px）+ 名字 + `名望 N`（输出 `· 战斗力 X` 用 `toLocaleString('en-US')` 千分位，有冒险团 `· 团名`）
+     - 第二行（小号字）：输出 `模拟 X · 秒伤 Y`（复用 `fmtDps`，null → 暂无）；辅助 `增益 X · 太阳 Y`（复用 `fmtBuff`，null → 暂无）
    - emit：`click`（编辑）、`delete`
    - 删除按钮 `@click.stop`，图标 `npc-close`，`confirmDialog` 强确认后 `api.del` → 父级 `load()`
 
@@ -81,7 +83,7 @@ export function characterProfile(parentName: string, jobName: string): string {
 ## 测试
 
 - **`lib/job.spec.ts`**：`characterProfile('archer','hunter')` → `'/characters-images/archer/hunter/profile.png'`
-- **`CharacterPoster.spec.ts`（新）**：正常 URL 拼接；缺图兜底（触发 img `error` 事件后 src 切换为 jobIcon）；底部信息条文案（名望/战斗力/冒险团名、辅助不显示战斗力）
+- **`CharacterPoster.spec.ts`（新）**：正常 URL 拼接；缺图兜底（触发 img `error` 事件后 src 切换为 jobIcon）；底部信息条文案（名望/战斗力/冒险团名、辅助不显示战斗力；第二行输出显示模拟/秒伤、辅助显示增益/太阳、null 显示暂无）
 - **`MyCharactersView.spec.ts`（改）**：
   - 现有排序/性别/战斗力等断言从 DnfFrame 内 `<b>` 定位改为海报卡片内名字元素定位
   - 新增：点海报 → 编辑弹窗打开；右上角 `npc-close` 删除按钮 → confirmDialog → `api.del` 调用；「＋添加角色」→ 创建弹窗
@@ -93,4 +95,3 @@ export function characterProfile(parentName: string, jobName: string): string {
 - 不改其他展示角色的模块（SignupModal / RosterPool / CharacterCard 等）——它们仍用 32px 职业图标
 - 不引入角色个人自定义头像（仍只用职业默认 profile）
 - 不把 profile 图并入 `images/adventure` 或改 `images_dir` 指向（避免回归）
-- 海报不展示模拟/秒伤/增益/太阳明细——完整属性通过点击进编辑弹窗查看
