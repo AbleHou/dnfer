@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     static_dir: str = "../frontend/dist"
     job_data_path: str = "../职业信息.json"
     images_dir: str = "../images/adventure"
+    characters_dir: str = "../images/characters"
 
     # S3 头像存储（公开读桶）
     s3_endpoint: str = ""

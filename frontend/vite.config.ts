@@ -30,6 +30,7 @@ export default defineConfig({
       '/api': 'http://localhost:8000',
       '/ws': { target: 'ws://localhost:8000', ws: true },
       '/images': 'http://localhost:8000',
+      '/characters-images': 'http://localhost:8000',
     },
   },
 })
