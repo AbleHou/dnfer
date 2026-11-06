@@ -38,13 +38,13 @@
 3. **端点** `routers/members.py`（仅成员，owner 校验）：
    - `POST /api/me/characters/{cid}/profile`（multipart `file`）：
      1. 校验角色归属（404「角色不存在」）；
-     2. 白名单 `image/png|jpeg|webp` 否则 400「仅支持 PNG/JPG/WebP 图片」；`>10MB` → 400「图片不能超过 10MB」；`s3_configured()` 为假 → 503「头像存储未配置」；
-     3. S3 上传异常 → 503「头像存储暂不可用」；
+     2. 白名单 `image/png|jpeg|webp` 否则 400「仅支持 PNG/JPG/WebP 图片」；`>10MB` → 400「图片不能超过 10MB」；`s3_configured()` 为假 → 503「图片存储未配置」；
+     3. S3 上传异常 → 503「图片存储暂不可用」；
      4. 若已有 `profile` 先 best-effort 删旧对象；
      5. `character.profile = url`，commit，返回 `CharacterOut`。
    - `DELETE /api/me/characters/{cid}/profile`（恢复默认）：校验归属 → best-effort 删 S3 对象 → `profile = None` → commit → 返回 `CharacterOut`。
 
-4. **角色删除清理** `services/characters.py` `delete_character_if_free`：删除角色前 best-effort 删其 profile S3 对象（guest 删除复用该函数自动覆盖）。
+4. **角色删除清理**：`services/characters.py` `delete_character_if_free` 删除角色前 best-effort 删其 profile S3 对象（覆盖成员端与管理端单角色删除）；`admin.py` `delete_guest_user` 批量删角色时**先收集各角色 profile URL 再批量 best-effort 删除**（该路径不走 `delete_character_if_free`，需显式处理，防孤儿对象）。
 
 5. **序列化** `services/characters.py` `character_out` 补 `profile=c.profile`；`schemas.py` `CharacterOut` 加 `profile: str | None = None`（带默认值防中间态）。
 
@@ -52,14 +52,14 @@
 
 1. **类型** `types.ts`：`Character` 加必填 `profile: string | null`（连带修全部 Character 字面量 fixture）。
 
-2. **CharacterPoster.vue**：主图 src 改为 `character.profile ?? characterProfile(parent_name, job_name)`；兜底链路两级——自定义图加载失败 → 切默认图（`characterProfile`）再失败 → 深底+职业图标。`fallbackUsed` 状态改为记录当前兜底层级（`0` 原图 / `1` 默认图 / `2` 深底图标）。
+2. **CharacterPoster.vue**：主图 src 改为 `character.profile ?? characterProfile(parent_name, job_name)`；兜底链路两级——自定义图加载失败 → 切默认图（`characterProfile`）再失败 → 深底+职业图标。`fallbackUsed` 状态改为记录当前兜底层级（`0` 原图 / `1` 默认图 / `2` 深底图标）；**watch `character.profile` 变化时重置兜底状态**（恢复默认/换图后重新尝试对应层级，避免停留在旧兜底）。
 
 3. **api.client**：复用 `api.upload`（FormData）与 `api.del`。
 
 4. **MyCharactersView.vue 编辑弹窗**：`DnfDialog` 内 `CharacterForm` 下方加「角色头像」区（`editing` 非空才显示）：
    - 当前图预览（`character.profile ?? characterProfile(...)`，3:4 小预览）；
-   - 「上传」按钮（隐藏 file input，`api.upload('/api/me/characters/{id}/profile', f)` → `load()` 刷新网格 + 更新预览）；
-   - 「恢复默认」按钮（仅 `editing.profile` 非空显示，`api.del(...)` → `load()`）；
+   - 「上传」按钮（隐藏 file input，`api.upload('/api/me/characters/{id}/profile', f)` → 用返回的 `CharacterOut` 更新 `editing`（含新 profile，弹窗内预览即时刷新）→ `load()` 刷新网格）；
+   - 「恢复默认」按钮（仅 `editing.profile` 非空显示，`api.del(...)` → 同样更新 `editing` + `load()`）；
    - 上传/恢复中按钮禁用；错误 `notifyError`、成功 `notifySuccess`。
 
 ## 错误处理
