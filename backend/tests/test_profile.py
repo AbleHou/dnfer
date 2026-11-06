@@ -114,6 +114,18 @@ def test_delete_avatar_prefix_guard(monkeypatch):
     monkeypatch.setattr("app.s3._get_client", lambda: SimpleNamespace(delete_object=boom))
     s3mod.delete_avatar("https://cdn.example.com/avatars/2/y.png")
 
+def test_upload_profile_key_format(monkeypatch):
+    captured = {}
+    monkeypatch.setattr("app.s3._get_client", lambda: SimpleNamespace(
+        put_object=lambda **kw: captured.update(kw)))
+    from app.s3 import upload_profile, delete_profile, _key_from_url
+    url = upload_profile(3, 7, "png", b"x", "image/png")
+    assert "/profiles/3/7/" in url and url.endswith(".png")
+    assert captured["Key"].startswith("profiles/3/7/") and captured["Key"].endswith(".png")
+    assert captured["ACL"] == "public-read"
+    assert _key_from_url(url) == captured["Key"]
+    assert _key_from_url("https://other.example.com/x.png") is None
+
 def test_change_password_success(client):
     h, _ = register_user(client, "pwchg1", "改密甲")
     r = client.put("/api/me/password", headers=h,

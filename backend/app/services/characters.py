@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from .. import jobs as job_data
+from .. import s3
 from ..models import Character, RaidSignupCharacter, Slot
 from ..schemas import CharacterIn, CharacterOut
 from .damage import compute_combat_power
@@ -19,6 +20,7 @@ def character_out(c: Character) -> CharacterOut:
                         atk_base=c.atk_base, str_int=c.str_int, elemental=c.elemental,
                         atk_power=c.atk_power, atk_power_amp=c.atk_power_amp,
                         skill_atk=c.skill_atk, combat_power=c.combat_power,
+                        profile=c.profile,
                         adventure_party_id=c.adventure_party_id,
                         adventure_party_name=party.name if party else None)
 
@@ -60,6 +62,9 @@ def delete_character_if_free(db: Session, cid: int) -> None:
     in_use = db.query(Slot).filter(Slot.character_id == cid).first()
     if in_use:
         raise HTTPException(400, "该角色正在攻坚中，请先撤下")
+    c = db.get(Character, cid)
+    if c and c.profile:
+        s3.delete_profile(c.profile)
     # 角色在报名勾选中 → 一并移除子行；若该报名因此清空 → 整条取消报名
     for rsc in db.query(RaidSignupCharacter).filter(
             RaidSignupCharacter.character_id == cid).all():

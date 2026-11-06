@@ -6,6 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .. import s3
 from ..auth import hash_password, make_code, require_admin
 from ..db import get_db
 from ..models import AdventureParty, Character, Raid, RaidSignup, RegistrationCode, User
@@ -263,6 +264,9 @@ async def delete_guest_user(uid: int, admin: User = Depends(require_admin),
     # 2-4) 删角色 → 删冒险团 → 删用户（单事务）
     # FK 安全：guest 的随机密码不可知 → 无法登录，故无 vote_ballots/registration_code/
     # 建团(created_by) 等其余外键引用；占位与报名已在第 1 步清完
+    for p in [c.profile for c in db.query(Character).filter(Character.user_id == uid).all()
+              if c.profile]:
+        s3.delete_profile(p)
     db.query(Character).filter(Character.user_id == uid).delete()
     db.query(AdventureParty).filter(AdventureParty.user_id == uid).delete()
     db.delete(target)

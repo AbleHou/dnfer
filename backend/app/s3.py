@@ -36,19 +36,35 @@ def s3_configured() -> bool:
                 and settings.s3_secret_key and settings.s3_bucket
                 and settings.s3_public_base)
 
-def upload_avatar(user_id: int, ext: str, data: bytes, content_type: str) -> str:
-    key = f"avatars/{user_id}/{uuid4().hex}.{ext}"
+def _key_from_url(url: str) -> str | None:
+    base = settings.s3_public_base.rstrip("/")
+    if not url.startswith(base + "/"):
+        return None
+    return url[len(base) + 1:]
+
+def _upload(key: str, ext: str, data: bytes, content_type: str) -> str:
     _get_client().put_object(Bucket=settings.s3_bucket, Key=key, Body=data,
                              ContentType=content_type, ACL="public-read")
     return f"{settings.s3_public_base.rstrip('/')}/{key}"
 
-def delete_avatar(url: str) -> None:
-    """best-effort 删除旧头像对象；URL 不在公开前缀下或删除失败均忽略。"""
-    base = settings.s3_public_base.rstrip("/")
-    if not url.startswith(base + "/"):
-        return
-    key = url[len(base) + 1:]
+def _delete(key: str) -> None:
     try:
         _get_client().delete_object(Bucket=settings.s3_bucket, Key=key)
     except Exception:
         pass
+
+def upload_avatar(user_id: int, ext: str, data: bytes, content_type: str) -> str:
+    return _upload(f"avatars/{user_id}/{uuid4().hex}.{ext}", ext, data, content_type)
+
+def delete_avatar(url: str) -> None:
+    key = _key_from_url(url)
+    if key:
+        _delete(key)
+
+def upload_profile(user_id: int, char_id: int, ext: str, data: bytes, content_type: str) -> str:
+    return _upload(f"profiles/{user_id}/{char_id}/{uuid4().hex}.{ext}", ext, data, content_type)
+
+def delete_profile(url: str) -> None:
+    key = _key_from_url(url)
+    if key:
+        _delete(key)

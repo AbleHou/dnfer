@@ -199,3 +199,16 @@ def test_migrate_characters_damage_adds_columns():
                     "atk_power_amp", "skill_atk", "combat_power"):
             assert col in cols
     migrate_characters_damage(engine)  # 幂等：再次运行不报错
+
+def test_migrate_characters_profile():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE characters (
+            id INTEGER PRIMARY KEY, user_id INTEGER, name VARCHAR(64), job_name VARCHAR(64),
+            class_type VARCHAR(8), fame INTEGER)"""))
+    from app.migrations import migrate_characters_profile
+    migrate_characters_profile(engine)
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(characters)")).all()}
+        assert "profile" in cols
+    migrate_characters_profile(engine)  # 幂等

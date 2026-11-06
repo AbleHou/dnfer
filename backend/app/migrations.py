@@ -194,6 +194,18 @@ def migrate_adventure_parties(engine: Engine) -> None:
                 {"pid": party_id, "uid": uid})
 
 
+def migrate_characters_profile(engine: Engine) -> None:
+    """为存量库补建 characters.profile 列（幂等）。"""
+    from . import models  # noqa: F401  确保模型注册
+    from .db import Base
+
+    Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(characters)")).all()}
+        if "profile" not in cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN profile VARCHAR(256)"))
+
+
 if __name__ == "__main__":
     from .db import engine
     migrate_dungeons(engine)

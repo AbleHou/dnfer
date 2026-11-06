@@ -49,6 +49,7 @@ class CharacterOut(BaseModel):
     atk_power_amp: float | None = None
     skill_atk: float | None = None
     combat_power: int | None = None
+    profile: str | None = None
 
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=64)

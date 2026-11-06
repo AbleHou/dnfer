@@ -51,6 +51,7 @@ class Character(Base):
     atk_power_amp: Mapped[float | None] = mapped_column(Float, nullable=True)  # 攻强增幅(%)，可带小数
     skill_atk: Mapped[float | None] = mapped_column(Float, nullable=True)     # 技攻(%)，可带小数
     combat_power: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 战斗力
+    profile: Mapped[str | None] = mapped_column(String(256), nullable=True)  # 自定义海报图 S3 URL
     owner: Mapped[User] = relationship(back_populates="characters")
     adventure_party_id: Mapped[int | None] = mapped_column(
         ForeignKey("adventure_parties.id"), nullable=True, index=True)
