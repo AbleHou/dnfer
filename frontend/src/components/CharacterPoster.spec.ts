@@ -53,8 +53,8 @@ describe('CharacterPoster', () => {
     const w = mount(CharacterPoster, { props: { character: mkChar({ profile: 'https://cdn.example.com/profiles/1/2/x.png' }) } })
     await w.find('.cover').trigger('error')          // 降级到默认图
     expect(w.find('.cover').attributes('src')).toBe('/characters-images/swordman_male/weapon_master/profile.png')
-    await w.setProps({ character: mkChar({ profile: null }) })  // 恢复默认 → 重置
-    expect(w.find('.cover').attributes('src')).toBe('/characters-images/swordman_male/weapon_master/profile.png')
+    await w.setProps({ character: mkChar({ profile: 'https://cdn.example.com/profiles/1/2/y.png' }) })  // 换新自定义图 → 重置
+    expect(w.find('.cover').attributes('src')).toBe('https://cdn.example.com/profiles/1/2/y.png')
   })
 
   // 注意：simulated_damage/sustained_dps 存储单位即「亿」，fmtDps(n) = `${n}亿`

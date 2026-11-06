@@ -16,7 +16,7 @@ function onImgError() {
   if (level.value === 0 && customSrc.value) level.value = 1  // 自定义失败 → 默认图
   else level.value = 2                                        // 默认失败或无自定义 → 深底
 }
-watch(() => props.character.profile, () => { level.value = 0 })
+watch(() => [props.character.profile, defaultSrc.value], () => { level.value = 0 })
 
 function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
 function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
