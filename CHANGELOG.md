@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [v2.2.1] - 2026-11-06
+
+### 修复
+
+- **Docker 角色海报目录挂载失败**：容器内后端从 `/app` 启动，`characters_dir` 相对默认路径 `../images/characters` 被解析为 `/images/characters`（`/app` 的父级是 `/`）而不存在，导致 `/characters-images` 静态挂载被跳过、自定义 profile 与海报兜底失效；Dockerfile 显式设 `DNFER_CHARACTERS_DIR=/app/images/characters`（与 `DNFER_IMAGES_DIR` 同款绝对路径），需重新构建镜像生效
+
 ## [v2.2] - 2026-11-06
 
 ### 变更
