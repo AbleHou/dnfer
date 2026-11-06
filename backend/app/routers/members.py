@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import s3
 from ..auth import get_current_user
 from ..db import get_db
 from ..models import Character, User
@@ -56,3 +57,42 @@ def delete_character(cid: int, user: User = Depends(get_current_user),
     db.delete(c)
     db.commit()
     return {"ok": True}
+
+_PROFILE_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+_MAX_PROFILE_BYTES = 10 * 1024 * 1024
+
+@router.post("/{cid}/profile", response_model=CharacterOut)
+def upload_character_profile(cid: int, file: UploadFile = File(...),
+                             user: User = Depends(get_current_user),
+                             db: Session = Depends(get_db)):
+    c = _own_character(db, cid, user)
+    if file.content_type not in _PROFILE_EXT:
+        raise HTTPException(400, "仅支持 PNG/JPG/WebP 图片")
+    data = file.file.read()
+    if len(data) > _MAX_PROFILE_BYTES:
+        raise HTTPException(400, "图片不能超过 10MB")
+    if not s3.s3_configured():
+        raise HTTPException(503, "图片存储未配置")
+    ext = _PROFILE_EXT[file.content_type]
+    try:
+        url = s3.upload_profile(user.id, c.id, ext, data,
+                                file.content_type or "application/octet-stream")
+    except Exception:
+        raise HTTPException(503, "图片存储暂不可用")
+    if c.profile:
+        s3.delete_profile(c.profile)
+    c.profile = url
+    db.commit()
+    db.refresh(c)
+    return character_out(c)
+
+@router.delete("/{cid}/profile", response_model=CharacterOut)
+def restore_default_profile(cid: int, user: User = Depends(get_current_user),
+                            db: Session = Depends(get_db)):
+    c = _own_character(db, cid, user)
+    if c.profile:
+        s3.delete_profile(c.profile)
+    c.profile = None
+    db.commit()
+    db.refresh(c)
+    return character_out(c)
