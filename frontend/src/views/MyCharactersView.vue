@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { DnfButton, DnfFrame, DnfSelect } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfSelect } from '@dnftools/ui'
 import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
+import CharacterPoster from '../components/CharacterPoster.vue'
 import AdventurePartyModal from '../components/AdventurePartyModal.vue'
-import { jobIcon, jobGenderTitle, handleIconError as onIconError } from '../lib/job'
 import { confirmDialog, notifyError } from '../lib/notify'
 import type { Character, JobCategory } from '../types'
 
@@ -53,10 +53,6 @@ function startCreate() { editing.value = null; showForm.value = true }
 function startEdit(c: Character) { editing.value = c; showForm.value = true }
 async function onSaved() { showForm.value = false; editing.value = null; await load() }
 function onCancel() { showForm.value = false; editing.value = null }
-function onCardClick() {
-  // 编辑框打开时点卡片 = 取消（移动端无需划到底部点取消按钮）
-  if (showForm.value && editing.value) onCancel()
-}
 
 async function remove(c: Character) {
   const ok = await confirmDialog({ content: `删除角色 ${c.name}？` })
@@ -64,13 +60,10 @@ async function remove(c: Character) {
   try { await api.del(`/api/me/characters/${c.id}`); await load() }
   catch (e: any) { notifyError(e.message) }
 }
-function fmtDps(n: number | null): string { return n == null ? '暂无' : `${n}亿` }
-function fmtBuff(n: number | null): string { return n == null ? '暂无' : String(n) }
-function fmtPower(n: number | null): string { return n == null ? '暂无' : n.toLocaleString('en-US') }
 </script>
 
 <template>
-  <div class="dnf-page" style="max-width:640px">
+  <div class="dnf-page" style="max-width:900px">
     <div class="page-head">
       <h2>我的角色</h2>
       <div style="display:flex;align-items:center;gap:8px">
@@ -85,34 +78,25 @@ function fmtPower(n: number | null): string { return n == null ? '暂无' : n.to
 
     <p v-if="error" class="form-error">{{ error }}</p>
 
-    <CharacterForm v-if="showForm && !editing" :categories="categories" :editing="null"
-                   @saved="onSaved" @cancel="onCancel" />
-
-    <template v-for="c in sorted" :key="c.id">
-      <DnfFrame surface="panel" style="padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px"
-                @click="onCardClick">
-        <div style="display:flex;align-items:center;gap:10px;flex:1">
-          <img :src="jobIcon(c.job_name)" @error="onIconError" style="width:32px;height:32px">
-          <div>
-            <b style="margin-right:6px">{{ c.name }}</b>
-            <span style="color:var(--dnf-text-muted);font-size:12px">{{ jobGenderTitle(c.job_name, c.job_title) }} · {{ c.class_type }} · 名望 {{ c.fame }}<template v-if="c.class_type === '输出'"> · 战斗力 {{ fmtPower(c.combat_power) }}</template><template v-if="c.adventure_party_name"> · {{ c.adventure_party_name }}</template></span>
-            <div style="color:var(--dnf-text-faint);font-size:12px">
-              {{ c.class_type === '输出'
-                ? `模拟 ${fmtDps(c.simulated_damage)} · 秒伤 ${fmtDps(c.sustained_dps)}`
-                : `增益 ${fmtBuff(c.buff_amount)} · 太阳 ${fmtBuff(c.sun_buff)}` }}
-            </div>
-          </div>
-        </div>
-        <DnfButton class="dnf-btn-sm" @click.stop="startEdit(c)">编辑</DnfButton>
-        <DnfButton tone="orange" class="dnf-btn-sm" @click.stop="remove(c)">删除</DnfButton>
-      </DnfFrame>
-      <CharacterForm v-if="showForm && editing?.id === c.id" :categories="categories" :editing="c"
-                     @saved="onSaved" @cancel="onCancel" />
-    </template>
+    <div class="char-grid">
+      <CharacterPoster v-for="c in sorted" :key="c.id" :character="c"
+                       @click="startEdit(c)" @delete="remove(c)" />
+    </div>
     <p v-if="!list.length" style="color:var(--dnf-text-faint)">还没有角色</p>
+
+    <DnfDialog :open="showForm" :title="editing ? '编辑角色' : '添加角色'" width="min(560px,92vw)"
+               modal close-on-outside
+               @update:open="(s: boolean) => { if (!s) onCancel() }">
+      <CharacterForm :categories="categories" :editing="editing" @saved="onSaved" @cancel="onCancel" />
+    </DnfDialog>
 
     <AdventurePartyModal :open="partyModalOpen"
                          @close="partyModalOpen = false"
                          @changed="load" />
   </div>
 </template>
+
+<style scoped>
+.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px; margin: 12px 0; }
+</style>

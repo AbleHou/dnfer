@@ -47,9 +47,10 @@ describe('MyCharactersView job picker', () => {
   }
 
   it('selecting an output job shows damage inputs and submits job_name', async () => {
-    const wrapper = mount(MyCharactersView)
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
     await flushPromises()
     await wrapper.find('button').trigger('click')          // 添加角色
+    await flushPromises()
     await wrapper.find('button[data-cat="swordman_male"]').trigger('click')
     await wrapper.find('button[data-job="weapon_master"]').trigger('click')
     expect(wrapper.text()).toContain('模拟伤害')
@@ -65,9 +66,10 @@ describe('MyCharactersView job picker', () => {
   })
 
   it('selecting a support job shows buff input', async () => {
-    const wrapper = mount(MyCharactersView)
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
     await flushPromises()
     await wrapper.find('button').trigger('click')
+    await flushPromises()
     await wrapper.find('button[data-cat="priest_male"]').trigger('click')
     await wrapper.find('button[data-job="crusader_male"]').trigger('click')
     expect(wrapper.text()).toContain('增益量')
@@ -79,13 +81,14 @@ describe('MyCharactersView job picker', () => {
       id: 1, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
       parent_name: 'priest_male', class_type: '辅助', fame: 1,
       simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null,
+      skill_atk: null, combat_power: null,
     }
     apiMock.get.mockResolvedValueOnce([char])
-    const wrapper = mount(MyCharactersView)
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
     await flushPromises()
-    const editBtn = wrapper.findAll('button').find(b => b.text() === '编辑')
-    expect(editBtn).toBeTruthy()
-    await editBtn!.trigger('click')
+    await wrapper.findAll('.char-poster').find(w => w.text().includes('奶'))!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('已选：神启·圣骑士（男）（辅助职业）')
     await wrapper.find('button[data-act="save"]').trigger('click')
@@ -95,78 +98,36 @@ describe('MyCharactersView job picker', () => {
     expect(body.job_name).toBe('crusader_male')
   })
 
-  it('edit form renders inline right below the edited card', async () => {
-    const charA = {
-      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+  it('点击海报打开编辑弹窗', async () => {
+    const char = { id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
       parent_name: 'swordman_male', class_type: '输出', fame: 100,
       simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
-    }
-    const charB = {
-      id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
-      parent_name: 'priest_male', class_type: '辅助', fame: 200,
-      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
-    }
-    apiMock.get.mockResolvedValueOnce([charA, charB])
-    const wrapper = mount(MyCharactersView)
-    await flushPromises()
-    const editBtns = wrapper.findAll('button').filter(b => b.text() === '编辑')
-    await editBtns[0].trigger('click')
-    await flushPromises()
-    const panels = wrapper.findAllComponents({ name: 'DnfFrame' })
-    const cardIdx = panels.findIndex(p => p.text().includes('剑魂'))
-    const next = panels[cardIdx + 1]
-    expect(next.classes()).toContain('create-form')
-    expect(next.text()).toContain('编辑角色')
-    expect(panels[cardIdx + 2].text()).toContain('奶')
-  })
-
-  it('clicking a character card closes the open edit form (same as cancel)', async () => {
-    const char = {
-      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
-      parent_name: 'swordman_male', class_type: '输出', fame: 100,
-      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
-    }
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null,
+      skill_atk: null, combat_power: null }
     apiMock.get.mockResolvedValueOnce([char])
-    const wrapper = mount(MyCharactersView)
-    await flushPromises()
-    const editBtn = wrapper.findAll('button').find(b => b.text() === '编辑')
-    await editBtn!.trigger('click')
-    await flushPromises()
-    expect(wrapper.text()).toContain('编辑角色')  // 编辑框已打开
-    // 点卡片（编辑按钮所在外层 DnfFrame）→ 关闭编辑框
-    const card = wrapper.findAllComponents({ name: 'DnfFrame' }).find(p => p.text().includes('剑魂'))!
-    await card.trigger('click')
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
     await flushPromises()
     expect(wrapper.text()).not.toContain('编辑角色')
-    // 点「编辑」按钮不会立即关闭（.stop 防冒泡），仍可重新打开
-    const editBtn2 = wrapper.findAll('button').find(b => b.text() === '编辑')
-    expect(editBtn2).toBeTruthy()
-    await editBtn2!.trigger('click')
+    await wrapper.findAll('.char-poster').find(w => w.text().includes('剑魂'))!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('编辑角色')
   })
 
-  it('create form renders below the header, not after the list', async () => {
-    const char = {
-      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
-      parent_name: 'swordman_male', class_type: '输出', fame: 100,
-      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
-    }
-    apiMock.get.mockResolvedValueOnce([char])
-    const wrapper = mount(MyCharactersView)
+  it('点添加角色按钮打开创建弹窗', async () => {
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
     await flushPromises()
+    expect(wrapper.text()).not.toContain('请先选择职业')   // 弹窗未开
     await wrapper.find('button').trigger('click')          // 添加角色
     await flushPromises()
-    const panels = wrapper.findAllComponents({ name: 'DnfFrame' })
-    expect(panels[0].classes()).toContain('create-form')
-    expect(panels[0].text()).toContain('添加角色')
-    expect(panels[1].text()).toContain('剑魂')
+    expect(wrapper.text()).toContain('请先选择职业')       // CharacterForm 默认提示，证明弹窗已渲染
   })
 
   it('save without picking a job shows guard error and does not post', async () => {
-    const wrapper = mount(MyCharactersView)
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
     await flushPromises()
     await wrapper.find('button').trigger('click')          // 添加角色
+    await flushPromises()
     await wrapper.find('button[data-act="save"]').trigger('click')
     await flushPromises()
     expect(apiMock.post).not.toHaveBeenCalled()
@@ -179,7 +140,7 @@ describe('MyCharactersView job picker', () => {
     ])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    const names = wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())
+    const names = wrapper.findAll('.poster-name').map(el => el.text())
     expect(names).toEqual(['鬼泣', '剑魂', '奶'])   // 输出(名望降序) → 辅助
   })
 
@@ -189,11 +150,11 @@ describe('MyCharactersView job picker', () => {
     ])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())).toEqual(['鬼泣', '剑魂', '奶'])
+    expect(wrapper.findAll('.poster-name').map(el => el.text())).toEqual(['鬼泣', '剑魂', '奶'])
     const sort = wrapper.findComponent({ name: 'DnfSelect' })
     await sort.vm.$emit('update:modelValue', 'fame')
     await nextTick()
-    expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text())).toEqual(['鬼泣', '奶', '剑魂'])
+    expect(wrapper.findAll('.poster-name').map(el => el.text())).toEqual(['鬼泣', '奶', '剑魂'])
   })
 
   it('排序下拉切换排序模式（默认按类型）', async () => {
@@ -209,22 +170,9 @@ describe('MyCharactersView job picker', () => {
     expect(sort.props('modelValue')).toBe('party')
   })
 
-  it('角色卡与职业选择器显示男女双版性别后缀', async () => {
-    const charA = {
-      id: 1, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
-      parent_name: 'swordman_male', class_type: '输出', fame: 100,
-      simulated_damage: 680000, sustained_dps: 60000, buff_amount: null, sun_buff: null,
-    }
-    const charB = {
-      id: 2, name: '奶', job_name: 'crusader_male', job_title: '神启·圣骑士',
-      parent_name: 'priest_male', class_type: '辅助', fame: 200,
-      simulated_damage: null, sustained_dps: null, buff_amount: 9000, sun_buff: null,
-    }
-    apiMock.get.mockResolvedValueOnce([charA, charB])
-    const wrapper = mount(MyCharactersView)
+  it('职业选择器显示男女双版性别后缀', async () => {
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
     await flushPromises()
-    expect(wrapper.text()).toContain('神启·圣骑士（男）')     // 卡片职业名
-    expect(wrapper.text()).not.toContain('极诣·剑魂（')      // 单性别不加
     // 打开添加角色表单，职业按钮 title 带后缀
     await wrapper.find('button').trigger('click')
     await flushPromises()
@@ -253,7 +201,7 @@ describe('MyCharactersView job picker', () => {
     apiMock.get.mockResolvedValueOnce([char])
     const wrapper = mount(MyCharactersView)
     await flushPromises()
-    expect(wrapper.text()).toContain('极诣·剑魂 · 输出 · 名望 100 · 战斗力 暂无 · 阿伟的冒险团')
+    expect(wrapper.text()).toContain('名望 100 · 战斗力 暂无 · 阿伟的冒险团')
   })
 
   it('冒险团管理按钮打开团管理弹窗', async () => {
@@ -282,7 +230,7 @@ describe('MyCharactersView job picker', () => {
     const sort = wrapper.findComponent({ name: 'DnfSelect' })
     await sort.vm.$emit('update:modelValue', 'party')
     await nextTick()
-    expect(wrapper.findAllComponents({ name: 'DnfFrame' }).flatMap(f => f.findAll('b')).map(b => b.text()))
+    expect(wrapper.findAll('.poster-name').map(el => el.text()))
       .toEqual(['甲奶', '甲输出', '乙输出', '无团奶'])
   })
 
@@ -325,5 +273,20 @@ describe('MyCharactersView job picker', () => {
     const wrapper = mount(MyCharactersView)
     await flushPromises()
     expect(wrapper.text()).toContain('名望 100 · 战斗力 暂无')
+  })
+
+  it('海报右上角删除按钮删除角色', async () => {
+    const char = { id: 5, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出', fame: 100,
+      simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null,
+      skill_atk: null, combat_power: null }
+    apiMock.get.mockResolvedValueOnce([char])
+    const wrapper = mount(MyCharactersView)
+    await flushPromises()
+    await wrapper.find('.poster-delete').trigger('click')
+    await flushPromises()
+    expect(apiMock.del).toHaveBeenCalledWith('/api/me/characters/5')
   })
 })
