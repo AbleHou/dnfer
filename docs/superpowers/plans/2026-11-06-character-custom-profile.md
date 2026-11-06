@@ -104,7 +104,7 @@ def delete_profile(url: str) -> None:
 
 `character_out` 返回值加 `profile=c.profile`。
 
-`delete_character_if_free` 顶部（拿到 `cid` 后）加：
+`delete_character_if_free` 在 **in-use 检查（`if in_use: raise`）之后**、删子行之前插入清理（放在 in-use 检查之前会在角色被占用报 400 时误删 S3 对象，留下悬空 profile URL）：
 
 ```python
     c = db.get(Character, cid)
