@@ -5,7 +5,8 @@ import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
 import CharacterPoster from '../components/CharacterPoster.vue'
 import AdventurePartyModal from '../components/AdventurePartyModal.vue'
-import { confirmDialog, notifyError } from '../lib/notify'
+import { characterProfile } from '../lib/job'
+import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
 import type { Character, JobCategory } from '../types'
 
 const list = ref<Character[]>([])
@@ -60,6 +61,40 @@ async function remove(c: Character) {
   try { await api.del(`/api/me/characters/${c.id}`); await load() }
   catch (e: any) { notifyError(e.message) }
 }
+
+const profileInput = ref<HTMLInputElement | null>(null)
+const uploading = ref(false)
+const profilePreviewSrc = computed(() =>
+  editing.value ? editing.value.profile
+      ?? characterProfile(editing.value.parent_name, editing.value.job_name) : '')
+
+async function onProfileFile(e: Event) {
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (!f || !editing.value) return
+  uploading.value = true
+  try {
+    const updated = await api.upload<Character>(`/api/me/characters/${editing.value.id}/profile`, f)
+    editing.value = updated
+    await load()
+    notifySuccess('头像已更新')
+  } catch (err: any) { notifyError(err.message) }
+  finally {
+    uploading.value = false
+    if (profileInput.value) profileInput.value.value = ''
+  }
+}
+
+async function restoreProfile() {
+  if (!editing.value) return
+  uploading.value = true
+  try {
+    const updated = await api.del<Character>(`/api/me/characters/${editing.value.id}/profile`)
+    editing.value = updated
+    await load()
+    notifySuccess('已恢复默认')
+  } catch (err: any) { notifyError(err.message) }
+  finally { uploading.value = false }
+}
 </script>
 
 <template>
@@ -88,6 +123,15 @@ async function remove(c: Character) {
                modal close-on-outside
                @update:open="(s: boolean) => { if (!s) onCancel() }">
       <CharacterForm :categories="categories" :editing="editing" @saved="onSaved" @cancel="onCancel" />
+      <div v-if="editing" class="profile-section" style="margin-top:12px;display:flex;align-items:center;gap:10px">
+        <img :src="profilePreviewSrc" class="profile-preview"
+             style="width:48px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--dnf-edge)">
+        <input ref="profileInput" type="file" accept="image/*" style="display:none" @change="onProfileFile">
+        <DnfButton class="dnf-btn-sm" :disabled="uploading" @click="profileInput?.click()">
+          {{ uploading ? '上传中…' : '上传头像' }}</DnfButton>
+        <DnfButton v-if="editing.profile" class="dnf-btn-sm" :disabled="uploading" @click="restoreProfile">
+          恢复默认</DnfButton>
+      </div>
     </DnfDialog>
 
     <AdventurePartyModal :open="partyModalOpen"

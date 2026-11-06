@@ -6,7 +6,7 @@ import MyCharactersView from './MyCharactersView.vue'
 import type { JobCategory } from '../types'
 
 const { apiMock } = vi.hoisted(() => ({
-  apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn(), getJobs: vi.fn() },
+  apiMock: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn(), getJobs: vi.fn(), upload: vi.fn() },
 }))
 vi.mock('../api/client', () => ({
   api: apiMock,
@@ -17,6 +17,7 @@ vi.mock('../api/client', () => ({
 vi.mock('../lib/notify', () => ({
   confirmDialog: vi.fn(async () => true),
   notifyError: vi.fn(),
+  notifySuccess: vi.fn(),
 }))
 
 const tree: JobCategory[] = [
@@ -288,5 +289,69 @@ describe('MyCharactersView job picker', () => {
     await wrapper.find('.poster-delete').trigger('click')
     await flushPromises()
     expect(apiMock.del).toHaveBeenCalledWith('/api/me/characters/5')
+  })
+})
+
+describe('MyCharactersView profile section', () => {
+  function mkChar(id: number, profile: string | null) {
+    return { id, name: '剑魂', job_name: 'weapon_master', job_title: '极诣·剑魂',
+      parent_name: 'swordman_male', class_type: '输出' as const, fame: 100,
+      simulated_damage: null, sustained_dps: null, buff_amount: null, sun_buff: null,
+      adventure_party_id: null, adventure_party_name: null,
+      atk_base: null, str_int: null, elemental: null, atk_power: null, atk_power_amp: null,
+      skill_atk: null, combat_power: null, profile }
+  }
+
+  it('编辑弹窗显示角色头像区，创建弹窗不显示', async () => {
+    apiMock.get.mockResolvedValueOnce([mkChar(1, null)])
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
+    await flushPromises()
+    // 创建弹窗：不显示头像区
+    await wrapper.find('button').trigger('click')   // 添加角色
+    await flushPromises()
+    expect(wrapper.find('.profile-preview').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('上传头像')
+    // 取消创建 → 点海报进编辑 → 显示头像区
+    await wrapper.findAll('button').find(b => b.text() === '取消')!.trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.char-poster').find(w => w.text().includes('剑魂'))!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.profile-preview').exists()).toBe(true)
+    expect(wrapper.text()).toContain('上传头像')
+  })
+
+  it('有自定义 profile 时预览用自定义图', async () => {
+    apiMock.get.mockResolvedValueOnce([mkChar(1, 'https://cdn.example.com/profiles/1/2/x.png')])
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
+    await flushPromises()
+    await wrapper.findAll('.char-poster').find(w => w.text().includes('剑魂'))!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.profile-preview').attributes('src')).toBe('https://cdn.example.com/profiles/1/2/x.png')
+  })
+
+  it('恢复默认按钮调用 api.del', async () => {
+    apiMock.get.mockResolvedValueOnce([mkChar(5, 'https://cdn.example.com/profiles/1/5/x.png')])
+    apiMock.del.mockResolvedValueOnce({ ...mkChar(5, 'https://cdn.example.com/profiles/1/5/x.png'), profile: null })
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
+    await flushPromises()
+    await wrapper.findAll('.char-poster').find(w => w.text().includes('剑魂'))!.trigger('click')
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text() === '恢复默认')!.trigger('click')
+    await flushPromises()
+    expect(apiMock.del).toHaveBeenCalledWith('/api/me/characters/5/profile')
+  })
+
+  it('上传头像调用 api.upload 正确 URL', async () => {
+    apiMock.get.mockResolvedValueOnce([mkChar(1, null)])
+    apiMock.upload.mockResolvedValueOnce({ ...mkChar(1, null), profile: 'https://cdn.example.com/profiles/1/1/u.png' })
+    const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })
+    await flushPromises()
+    await wrapper.findAll('.char-poster').find(w => w.text().includes('剑魂'))!.trigger('click')
+    await flushPromises()
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'a.png', { type: 'image/png' })] })
+    await input.trigger('change')
+    await flushPromises()
+    expect(apiMock.upload).toHaveBeenCalledWith('/api/me/characters/1/profile', expect.anything())
   })
 })
