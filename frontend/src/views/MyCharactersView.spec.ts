@@ -310,14 +310,14 @@ describe('MyCharactersView profile section', () => {
     await wrapper.find('button').trigger('click')   // 添加角色
     await flushPromises()
     expect(wrapper.find('.profile-preview').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('上传头像')
+    expect(wrapper.text()).not.toContain('自定义形象')
     // 取消创建 → 点海报进编辑 → 显示头像区
     await wrapper.findAll('button').find(b => b.text() === '取消')!.trigger('click')
     await flushPromises()
     await wrapper.findAll('.char-poster').find(w => w.text().includes('剑魂'))!.trigger('click')
     await flushPromises()
     expect(wrapper.find('.profile-preview').exists()).toBe(true)
-    expect(wrapper.text()).toContain('上传头像')
+    expect(wrapper.text()).toContain('自定义形象')
   })
 
   it('有自定义 profile 时预览用自定义图', async () => {
@@ -341,7 +341,7 @@ describe('MyCharactersView profile section', () => {
     expect(apiMock.del).toHaveBeenCalledWith('/api/me/characters/5/profile')
   })
 
-  it('上传头像调用 api.upload 正确 URL', async () => {
+  it('自定义形象上传调用 api.upload 正确 URL', async () => {
     apiMock.get.mockResolvedValueOnce([mkChar(1, null)])
     apiMock.upload.mockResolvedValueOnce({ ...mkChar(1, null), profile: 'https://cdn.example.com/profiles/1/1/u.png' })
     const wrapper = mount(MyCharactersView, { global: { stubs: { teleport: true } } })

@@ -128,7 +128,7 @@ async function restoreProfile() {
              style="width:48px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--dnf-edge)">
         <input ref="profileInput" type="file" accept="image/*" style="display:none" @change="onProfileFile">
         <DnfButton class="dnf-btn-sm" :disabled="uploading" @click="profileInput?.click()">
-          {{ uploading ? '上传中…' : '上传头像' }}</DnfButton>
+          {{ uploading ? '上传中…' : '自定义形象' }}</DnfButton>
         <DnfButton v-if="editing.profile" class="dnf-btn-sm" :disabled="uploading" @click="restoreProfile">
           恢复默认</DnfButton>
       </div>
