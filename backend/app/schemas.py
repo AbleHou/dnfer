@@ -432,3 +432,17 @@ class PublicVoteBallotIn(BaseModel):
         if (self.account is None) == (self.nickname is None):
             raise ValueError("account 与 nickname 必须恰好提供一个")
         return self
+
+class CommunitySyncIn(BaseModel):
+    communityId: str
+
+class CommunitySyncOut(BaseModel):
+    taskId: int
+
+class CommunitySyncTaskOut(BaseModel):
+    taskId: int
+    status: str
+    communityId: str
+    message: str | None = None
+    result: dict | None = None
+    createdAt: str
