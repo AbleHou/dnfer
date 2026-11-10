@@ -10,6 +10,7 @@ from ..config import settings
 from ..db import get_db
 from ..models import AdventureParty, User
 from ..schemas import ChangePasswordIn, LoginIn, ProfileUpdate, RegisterIn, UserOut
+from ..services.images import detect_image, image_content_type
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -42,7 +43,8 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
 def me(user: User = Depends(get_current_user)):
     return UserOut.model_validate(user)
 
-_AVATAR_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+_AVATAR_EXT = {"image/png": "png", "image/apng": "png",
+               "image/jpeg": "jpg", "image/webp": "webp"}
 _MAX_AVATAR_BYTES = 2 * 1024 * 1024
 
 @router.put("/me/profile", response_model=UserOut)
@@ -79,12 +81,14 @@ def upload_avatar(file: UploadFile = File(...),
     data = file.file.read()
     if len(data) > _MAX_AVATAR_BYTES:
         raise HTTPException(400, "图片不能超过 2MB")
+    ext = _AVATAR_EXT[file.content_type]
+    # magic 字节校验：拒绝伪造 ContentType 的垃圾内容
+    if detect_image(data) != ext:
+        raise HTTPException(400, "图片内容与格式不符")
     if not s3.s3_configured():
         raise HTTPException(503, "头像存储未配置")
-    ext = _AVATAR_EXT[file.content_type]
     try:
-        url = s3.upload_avatar(user.id, ext, data,
-                               file.content_type or "application/octet-stream")
+        url = s3.upload_avatar(user.id, ext, data, image_content_type(ext))
     except Exception:
         raise HTTPException(503, "头像存储暂不可用")
     if user.avatar:

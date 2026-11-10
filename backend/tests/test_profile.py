@@ -1,9 +1,9 @@
 from types import SimpleNamespace
 
 import app.s3 as s3mod
-from .helpers import register_user
+from .helpers import APNG_BYTES, PNG_BYTES, register_user
 
-def _upload(client, h, filename="a.png", data=b"fakepng", content_type="image/png"):
+def _upload(client, h, filename="a.png", data=PNG_BYTES, content_type="image/png"):
     return client.post("/api/me/avatar", headers=h,
                        files={"file": (filename, data, content_type)})
 
@@ -69,6 +69,26 @@ def test_avatar_unconfigured(client):
     h, _ = register_user(client, "prof8", "阿存")
     # 默认未配置 S3（conftest 环境无 env）
     assert _upload(client, h).status_code == 503
+
+def test_avatar_upload_apng(client, monkeypatch):
+    monkeypatch.setattr("app.s3.s3_configured", lambda: True)
+    captured = {}
+    monkeypatch.setattr("app.s3.upload_avatar",
+                        lambda uid, ext, data, ct: captured.update(ext=ext, ct=ct) or
+                        "https://cdn.example.com/avatars/1/abc.png")
+    h, _ = register_user(client, "prof10", "阿p动")
+    r = _upload(client, h, data=APNG_BYTES, content_type="image/apng")
+    assert r.status_code == 200
+    assert captured["ext"] == "png"
+    assert captured["ct"] == "image/png"  # 归一化存储
+
+
+def test_avatar_upload_mime_spoof(client):
+    # 声称 image/png 但内容是垃圾：magic 校验拦截（未配置 S3 也先 400）
+    h, _ = register_user(client, "prof11", "阿伪")
+    r = _upload(client, h, data=b"garbage", content_type="image/png")
+    assert r.status_code == 400
+    assert r.json()["detail"] == "图片内容与格式不符"
 
 # —— 代码质量审查补充：s3 模块 URL 拼接 / 删除逻辑的直接单测 ——
 
