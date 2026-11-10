@@ -143,7 +143,7 @@
         "name": "thief",
         "title": "暗夜使者",
         "children": [
-            {"id": 0, "name": "rogue", "title": "隐夜·刺客", "class": "GF.thief.rogue"},
+            {"id": 0, "name": "rogue", "title": "隐夜·暗星", "class": "GF.thief.rogue"},
             {"id": 1, "name": "necro", "title": "隐夜·死灵术士", "class": "GF.thief.necro"},
             {"id": 2, "name": "kunoichi", "title": "隐夜·忍者", "class": "GF.thief.kunoichi"},
             {"id": 3, "name": "shadow_dancer", "title": "隐夜·影舞者", "class": "GF.thief.shadow_dancer"},
