@@ -189,3 +189,14 @@ class VoteBallot(Base):
     vote: Mapped[Vote] = relationship(back_populates="ballots")
     option: Mapped[VoteOption] = relationship(back_populates="ballots")
     user: Mapped[User | None] = relationship()
+
+class CommunitySyncTask(Base):
+    __tablename__ = "community_sync_tasks"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    community_id: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # pending/running/success/failed
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)

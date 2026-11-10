@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     s3_region: str = ""
     s3_public_base: str = ""
 
+    # 社区同步（独立 web 服务，DNfer 后端 worker 内网调用）
+    community_sync_base: str = "http://127.0.0.1:8100"
+    community_sync_max_retry: int = 3
+
     model_config = {"env_file": _ENV_FILE if _ENV_FILE.exists() else None,
                     "env_prefix": "DNFER_"}
 
