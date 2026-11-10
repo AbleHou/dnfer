@@ -9,6 +9,7 @@ from ..models import Character, User
 from ..schemas import CharacterIn, CharacterOut
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
+from ..services.images import detect_image, image_content_type
 from ..services.parties import resolve_party
 
 router = APIRouter(prefix="/api/me/characters", tags=["members"])
@@ -58,7 +59,8 @@ def delete_character(cid: int, user: User = Depends(get_current_user),
     db.commit()
     return {"ok": True}
 
-_PROFILE_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+_PROFILE_EXT = {"image/png": "png", "image/apng": "png",
+                "image/jpeg": "jpg", "image/webp": "webp"}
 _MAX_PROFILE_BYTES = 10 * 1024 * 1024
 
 @router.post("/{cid}/profile", response_model=CharacterOut)
@@ -71,12 +73,14 @@ def upload_character_profile(cid: int, file: UploadFile = File(...),
     data = file.file.read()
     if len(data) > _MAX_PROFILE_BYTES:
         raise HTTPException(400, "图片不能超过 10MB")
+    ext = _PROFILE_EXT[file.content_type]
+    # magic 字节校验：拒绝伪造 ContentType 的垃圾内容
+    if detect_image(data) != ext:
+        raise HTTPException(400, "图片内容与格式不符")
     if not s3.s3_configured():
         raise HTTPException(503, "图片存储未配置")
-    ext = _PROFILE_EXT[file.content_type]
     try:
-        url = s3.upload_profile(user.id, c.id, ext, data,
-                                file.content_type or "application/octet-stream")
+        url = s3.upload_profile(user.id, c.id, ext, data, image_content_type(ext))
     except Exception:
         raise HTTPException(503, "图片存储暂不可用")
     if c.profile:
