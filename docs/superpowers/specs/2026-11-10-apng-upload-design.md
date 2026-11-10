@@ -36,13 +36,14 @@
      - `data.startswith(JPEG_SIG)` → `'jpg'`
      - `len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP"` → `'webp'`
    - `is_apng(data: bytes) -> bool`：先验 PNG 签名；随后按 chunk 结构遍历（8 字节签名 → IHDR → 循环读 4 字节大端长度 + 4 字节类型），`acTL` 出现在首个 `IDAT` 之前 → `True`；到 `IDAT` 未见 `acTL` → `False`；非 PNG / 数据不足 → `False`
+   - **角色说明**：请求放行只依赖 `detect_image`（APNG 与静态 PNG 同签名，天然被接受）；`is_apng` 是「识别」这一交付物的可测纯函数（配单测），**不接入请求流**，供诊断/未来使用——计划实现时不得把它当请求校验路径的一部分。
    - `image_content_type(ext: str) -> str`：`{'png': 'image/png', 'jpg': 'image/jpeg', 'webp': 'image/webp'}[ext]`
 
 2. **`routers/auth.py`（头像）与 `routers/members.py`（形象）**：
    - `_AVATAR_EXT` / `_PROFILE_EXT` 白名单加 `"image/apng": "png"`（仍按 content-type 做快速预过滤）
    - 读取 `data` 且大小校验通过后新增内容校验：
      ```python
-     ext = _EXT[file.content_type]
+     ext = _AVATAR_EXT[file.content_type]  # 或 _PROFILE_EXT
      if detect_image(data) != ext:
          raise HTTPException(400, "图片内容与格式不符")
      ```
@@ -77,6 +78,7 @@
   ```
 - `tests/test_profile.py` / `tests/test_character_profiles.py`：
   - 所有走 magic 校验的成功/替换/恢复/503 用例：`b"fakepng"` / `b"x"` 换 `PNG` 字节（`test_profile_upload_success`、`test_profile_upload_replaces_old_and_deletes`、`test_profile_restore_default`、`test_avatar_upload_success`、`test_avatar_unconfigured`、`test_profile_upload_validation` 的 503 行）
+  - `test_profile_upload_not_own_404` 保持 `b"x"` 不变：404 归属校验先于内容校验，属有意为之（若将来调整校验顺序需同步改该 fixture）
   - 新增：形象上传 APNG（minimal APNG 字节 + `image/apng` 与 `image/png`）→ 200，且 mock 捕获的 s3 调用断言 `ext == 'png'`、`content_type == 'image/png'`
   - 新增：声称 `image/png` 但字节为垃圾 → 400「图片内容与格式不符」（形象 + 头像两处）
   - 头像同样补 APNG 成功用例（`image/apng` → 200）
