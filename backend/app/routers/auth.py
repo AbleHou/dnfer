@@ -75,7 +75,7 @@ def upload_avatar(file: UploadFile = File(...),
                   db: Session = Depends(get_db)):
     # 先做文件级校验（400），再判存储可用性（503）：
     # 未配置 S3 时非法文件仍应返回 400（测试依赖此顺序）
-    # 仅白名单 png/jpg/webp，拒绝任意 image/*（如 svg/gif），避免存成误导性 .bin
+    # 仅白名单 PNG（含 APNG）/JPG/WebP，拒绝任意 image/*（如 svg/gif），避免存成误导性 .bin
     if file.content_type not in _AVATAR_EXT:
         raise HTTPException(400, "仅支持 PNG/JPG/WebP 图片")
     data = file.file.read()

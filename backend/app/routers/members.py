@@ -68,6 +68,8 @@ def upload_character_profile(cid: int, file: UploadFile = File(...),
                              user: User = Depends(get_current_user),
                              db: Session = Depends(get_db)):
     c = _own_character(db, cid, user)
+    # 先做文件级校验（400），再判存储可用性（503）：
+    # 未配置 S3 时非法文件仍应返回 400（测试依赖此顺序）
     if file.content_type not in _PROFILE_EXT:
         raise HTTPException(400, "仅支持 PNG/JPG/WebP 图片")
     data = file.file.read()
