@@ -1,3 +1,16 @@
+def _chunk(cname: bytes, payload: bytes) -> bytes:
+    # 与 test_images.py 的构造器保持一致：真实 PNG chunk 含 4 字节 CRC
+    return len(payload).to_bytes(4, "big") + cname + payload + b"\x00\x00\x00\x00"
+
+
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"payload"
+
+APNG_BYTES = (b"\x89PNG\r\n\x1a\n"
+              + _chunk(b"IHDR", (1).to_bytes(4, "big") + (1).to_bytes(4, "big") + b"\x08\x06\x00\x00\x00")
+              + _chunk(b"acTL", (1).to_bytes(4, "big") + (1).to_bytes(4, "big"))
+              + _chunk(b"IDAT", b""))
+
+
 def register_user(client, username, nickname):
     admin = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
     ah = {"Authorization": f"Bearer {admin.json()['token']}"}
