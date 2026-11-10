@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+### 变更
+
+- **形象/头像上传支持 APNG**：APNG（animated PNG——`.apng` 文件浏览器报 `image/apng`，或 `.png` 命名的 APNG）现可上传「我的角色」形象与用户头像，归一化为 `image/png` 存储（支持 APNG 的浏览器照常播动画，旧 Safari 显示首帧）；同时新增字节级 magic 内容校验，内容与声称格式不符返回 400「图片内容与格式不符」（此前仅按 MIME 白名单拦截，伪造 MIME/非图片字节也能入库）
+
+### 工程
+
+- 后端新增 `services/images.py` 纯函数助手（`detect_image`/`is_apng`/`image_content_type`），头像（auth.py）与形象（members.py）上传端点共用——白名单加 `image/apng`、读字节后按 magic 校验内容一致、S3 存储 ContentType 归一化；前端两处 file input `accept` 补 `.apng` 兜底 Safari 文件选择器过滤；全量后端测试 382 例、前端测试 409 例通过、`npm run build`（vue-tsc + vite）通过
+
 ## [v2.2.1] - 2026-11-06
 
 ### 修复
