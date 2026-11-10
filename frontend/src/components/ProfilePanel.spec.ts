@@ -59,6 +59,7 @@ describe('ProfilePanel', () => {
     const w = mount(ProfilePanel, { props: { open: true }, global: { stubs: { teleport: true } } })
     await flushPromises()
     const input = w.find('input[type="file"]')
+    expect(input.attributes('accept')).toContain('.apng')
     Object.defineProperty(input.element, 'files', {
       value: [new File(['x'], 'a.png', { type: 'image/png' })],
     })

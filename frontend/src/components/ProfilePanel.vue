@@ -64,7 +64,7 @@ async function onFileChange(e: Event) {
               :disabled="uploading" @click="fileInput?.click()">
         <UserAvatar :nickname="auth.user.nickname" :avatar="auth.user.avatar" :size="72" />
       </button>
-      <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange">
+      <input ref="fileInput" type="file" accept="image/*,.apng" style="display:none" @change="onFileChange">
       <div style="width:100%">
         <div style="color:var(--dnf-text-muted);font-size:12px;margin-bottom:4px">账号（登录用）</div>
         <div style="color:var(--dnf-text)">{{ auth.user.username }}</div>

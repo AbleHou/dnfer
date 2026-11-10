@@ -349,6 +349,7 @@ describe('MyCharactersView profile section', () => {
     await wrapper.findAll('.char-poster').find(w => w.text().includes('剑魂'))!.trigger('click')
     await flushPromises()
     const input = wrapper.find('input[type="file"]')
+    expect(input.attributes('accept')).toContain('.apng')
     Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'a.png', { type: 'image/png' })] })
     await input.trigger('change')
     await flushPromises()
