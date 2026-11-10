@@ -82,13 +82,13 @@ DNfer frontend
 
 **端点**（`routers/members.py`，`/api/me/characters` 下，需登录）：
 
-- `POST /api/me/characters/sync` `{"communityId": "..."}`：
+- `POST /api/me/characters/sync` `{"communityId": "..."}`（**必须 `async def`**——`asyncio.create_task` 需要运行中的事件循环；sync 端点若写成 `def` 会跑在线程池线程、无事件循环，`create_task` 抛 `RuntimeError: no running event loop`，且任务行已 commit 后 500 会留下卡死的 `pending` 行阻断重发）：
   1. 校验社区ID：`^\d{1,20}$`，否则 400「社区ID格式不正确」；
   2. 幂等/每日限制：
-     - 本人存在 `pending/running` 任务 → 返回该任务 `{taskId}`（幂等，防并发重复）；
+     - 本人存在 `pending/running` 任务 → 返回该任务 `{taskId}`（幂等；**并发重复的 check-then-insert 竞态在用户量小的情况下接受**）；
      - 本人今天（UTC 自然日 `created_at`）已有 `success` 任务 → 400「今日已同步，请明天再试」；
      - 否则创建新任务（`pending`），`db.commit`；
-  3. 启动后台任务 `asyncio.create_task(run_sync_task(task_id))`，返回 `{taskId}`。
+  3. 请求级 `get_db` Session 在启动后台任务**之前**已提交并关闭（后台任务用自己新开的 Session）；`asyncio.create_task(run_sync_task(task_id))`，返回 `{taskId}`。
 - `GET /api/me/characters/sync/latest`：
   - 返回本人最近一次任务 `{taskId, status, communityId, message, result, createdAt}`；无任务 → 404「还没有同步记录」。前端打开面板 + 轮询均打此端点。
 
@@ -97,7 +97,7 @@ DNfer frontend
 ```
 run_sync_task(task_id):
   置 status=running
-  for attempt in 1..MAX_RETRY:
+  for attempt in 1..MAX_RETRY:      # MAX_RETRY=3 即最多 3 次尝试（首次 + 2 次重试）
     调 web 服务 POST /sync（urllib，asyncio.to_thread 避免阻塞事件循环）
     ├─ 429 → 置 message=「换绑限流，等待重试」; await asyncio.sleep(retryAfterSec); 继续
     ├─ 其他错误 → status=failed; 写 message; return
@@ -108,21 +108,21 @@ run_sync_task(task_id):
 角色处理（对每个 role）：
 1. `resolve_job(role.job)` → None → result 项 `action=skipped, reason=职业未收录`（跳过，不阻断）；
 2. 查本人 `user_id + name == role.roleName`：
-   - 已存在 → 仅 `c.fame = role.fame`，其余字段**不动**；`action=updated`；
+   - 已存在 → 更新**第一个匹配**（按 `Character.id` 升序；`Character` 无 `(user_id, name)` 唯一约束，同名多行时语义取最小 id 那行）；仅 `c.fame = role.fame`，其余字段**不动**；`action=updated`；
    - 不存在 → 创建 `Character(user_id, name, job_name, class_type=job_data.class_type_for(job_name), fame, adventure_party_id=ensure_default_party(...))`；`action=created`；
 3. **形象 best-effort**：调 web 服务 `GET /portrait` 拿 APNG 字节 → `s3.upload_profile(user_id, c.id, "png", data, "image/png")` → 写 `c.profile`；成功 → `profileImported=true`；任一异常 → `profileImported=false`（忽略，不阻断）；
 4. result 项：`{roleName, job, jobName, level, fame, server, action, reason?, characterId, profileImported}`。
 
-每角色独立 try/except，单个失败不阻断整体。任务内 SQLAlchemy 用独立 Session。
+每角色独立 try/except，单个失败不阻断整体。任务内 SQLAlchemy 用独立 Session。`level`/`server` 仅用于结果表格展示与 `result` JSON，**不持久化**到 `Character`（该模型无这两列）。
 
 **纯函数** `resolve_job(dnfbbz_job: str) -> str | None`（TDD）：
 - 去掉末尾 `(男)`/`(女)`/`（男）`/`（女）` → base title；
 - 遍历 `job_data.job_tree()`：children 中 `title == base` 的候选；
   - 1 个 → 该 `job_name`；
-  - 多个（男女双版）→ 取所在大类 title 以「男」结尾的那个；
+  - 多个（男女双版）→ 取所在大类 title **带 `(男)` 后缀**的那个（如 `神枪手(男)` vs `神枪手(女)`；注意 title 末字符是 `)`，匹配需针对 `(男)` 子串而非「以 男 结尾」）；
   - 0 个 → `None`。
 
-**配置** `config.py`：`community_sync_base: str = "http://127.0.0.1:8100"`、`community_sync_max_retry: int = 3`（env `COMMUNITY_SYNC_BASE` / `COMMUNITY_SYNC_MAX_RETRY`）。
+**配置** `config.py`（遵循仓库 `DNFER_` 前缀约定）：`dnfer_community_sync_base: str = "http://127.0.0.1:8100"`、`dnfer_community_sync_max_retry: int = 3`（env `DNFER_COMMUNITY_SYNC_BASE` / `DNFER_COMMUNITY_SYNC_MAX_RETRY`，补充进 `.env.example`）。
 
 **启动恢复**：`main.py` lifespan 把残留 `running/pending` 任务置 `failed`（重启丢内存任务，状态回填，避免卡死）。
 
@@ -172,7 +172,7 @@ run_sync_task(task_id):
 
 - **本 repo 提交**：backend 同步模块（模型/端点/执行器/解析/配置）+ 前端同步面板 + 测试。后端生产依赖零新增。
 - **sibling 项目** `../dnfer-community-sync/`：独立项目（用户明确不在本 repo 内），代码不进本 repo git；按本 spec §1 契约实现，含自身 requirements.txt / README / 单测。
-- **部署**：web 服务与 DNfer 后端同机运行（后端经 `COMMUNITY_SYNC_BASE=http://127.0.0.1:8100` 内网调用）；浏览器与 nginx **无需**任何 `/community-sync` 代理配置（此前的同源代理方案因改为后端 worker 调用而废弃）。
+- **部署**：web 服务与 DNfer 后端同机运行（后端经 `DNFER_COMMUNITY_SYNC_BASE=http://127.0.0.1:8100` 内网调用）；浏览器与 nginx **无需**任何 `/community-sync` 代理配置（此前的同源代理方案因改为后端 worker 调用而废弃）。web 服务自身 env：`DNFBBZ_USER` / `DNFBBZ_PASS` / `PORT`（默认 8100）。
 - 实现顺序：① sibling web 服务（含自测）→ ② 后端模块（TDD）→ ③ 前端面板 → ④ 端到端手测（本机起 web 服务 + 后端）。
 
 ## 不做的事（明确非目标）
