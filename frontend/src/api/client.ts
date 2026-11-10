@@ -1,3 +1,4 @@
+import { normalizeImageType } from '../lib/image'
 import type { JobCategory } from '../types'
 
 const TOKEN_KEY = 'dnfer_token'
@@ -42,7 +43,7 @@ export const api = {
   del: <T>(url: string) => request<T>('DELETE', url),
   upload: <T>(url: string, file: File) => {
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', normalizeImageType(file))
     return request<T>('POST', url, form, true)
   },
   getJobs: () => request<JobCategory[]>('GET', '/api/jobs'),

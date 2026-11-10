@@ -76,7 +76,7 @@ async function onProfileFile(e: Event) {
     const updated = await api.upload<Character>(`/api/me/characters/${editing.value.id}/profile`, f)
     editing.value = updated
     await load()
-    notifySuccess('头像已更新')
+    notifySuccess('形象已更新')
   } catch (err: any) { notifyError(err.message) }
   finally {
     uploading.value = false
