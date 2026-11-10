@@ -376,7 +376,7 @@ Expected: 9 passed（4 + 5）
 **Files:**
 - Modify: `backend/app/models.py`（文件末尾追加 CommunitySyncTask）
 - Modify: `backend/app/config.py:10-22`
-- Modify: `backend/.env.example`（若有）
+- Modify: `.env.example`（仓库根，`DNFER_COMMUNITY_SYNC_BASE` / `DNFER_COMMUNITY_SYNC_MAX_RETRY`）
 
 - [ ] **Step 1: models.py 追加表**
 
@@ -399,6 +399,13 @@ class CommunitySyncTask(Base):
     # 社区同步（独立 web 服务，DNfer 后端 worker 内网调用）
     community_sync_base: str = "http://127.0.0.1:8100"
     community_sync_max_retry: int = 3
+```
+
+- [ ] **Step 2b: `.env.example`（仓库根）追加**
+
+```
+DNFER_COMMUNITY_SYNC_BASE=http://127.0.0.1:8100
+DNFER_COMMUNITY_SYNC_MAX_RETRY=3
 ```
 
 - [ ] **Step 3: 验证无回归**
@@ -586,7 +593,7 @@ def fetch_portrait(community_id: str, role_id: str | None, original_role_id: str
 ```bash
 cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_community_sync.py -v
 ```
-Expected: 4 passed
+Expected: 3 passed
 
 - [ ] **Step 5: 提交**
 
@@ -842,11 +849,6 @@ async def run_sync_task(task_id: int) -> None:
                 task.message = str(e)
                 db.commit()
                 return
-        else:  # 全部尝试都限流
-            task.status = "failed"
-            task.message = "同步服务不可用"
-            db.commit()
-            return
         results = _process_roles(db, task.user_id, community_id, roles)
         task.status = "success"
         task.result = {"roles": results}
@@ -860,7 +862,7 @@ async def run_sync_task(task_id: int) -> None:
 ```bash
 cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_community_sync.py -v
 ```
-Expected: 13 passed（4 解析 + 7 执行器 + 之前无）
+Expected: 9 passed（3 解析 + 6 执行器）
 
 - [ ] **Step 5: 提交**
 
@@ -997,7 +999,7 @@ def latest_sync_task(user: User = Depends(get_current_user),
 ```bash
 cd /Users/able/toys/dnfer/backend && .venv/bin/python -m pytest tests/test_community_sync.py -v && .venv/bin/python -m pytest -q
 ```
-Expected: 新增 7 例通过；全量无回归
+Expected: 新增 4 例通过；全量无回归
 
 - [ ] **Step 5: 提交**
 
@@ -1073,7 +1075,7 @@ export interface SyncTask {
 }
 ```
 
-- [ ] **Step 2: client.ts 追加方法**（`api` 对象内）
+- [ ] **Step 2: client.ts 追加方法**（`api` 对象内；同时把顶部 `import type { JobCategory } from '../types'` 改为 `import type { JobCategory, SyncTask } from '../types'`，否则 vue-tsc 报 `Cannot find name 'SyncTask'`）
 
 ```ts
   syncCreate: (body: { communityId: string }) =>
