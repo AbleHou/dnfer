@@ -60,8 +60,9 @@ async function submit() {
   submitting.value = true
   try {
     await api.syncCreate({ communityId: cid })
-    const t = await pollTick()  // 真正等待 loadLatest 完成，避免用旧 task.value 判断轮询
-    if (t && (t.status === 'pending' || t.status === 'running')) startPolling()
+    stopPolling()
+    emit('close')  // 后台异步进行，关闭弹窗稍后查看
+    notifySuccess('同步工作后台进行，稍后查看结果')
   } catch (e: any) {
     if (e.message === '今日已同步，请明天再试') notifyWarning(e.message)
     else notifyError('查询失败，请联系管理员')

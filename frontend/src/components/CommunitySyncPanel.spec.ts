@@ -20,7 +20,10 @@ function mkTask(status: SyncTask['status'], result: SyncTask['result'] = null): 
   return { taskId: 1, status, communityId: '329230843', message: null, result, createdAt: 'x' }
 }
 
-beforeEach(() => { vi.clearAllMocks() })
+beforeEach(() => {
+  vi.clearAllMocks()
+  apiMock.syncLatest.mockResolvedValue(mkTask('success', { roles: [] }))
+})
 
 function mountPanel() {
   return mount(CommunitySyncPanel, {
@@ -50,17 +53,16 @@ describe('CommunitySyncPanel', () => {
     expect(w.text()).toContain('已导入')
   })
 
-  it('提交→轮询到 success→通知+emit changed', async () => {
+  it('提交成功→关闭弹窗+提示后台进行', async () => {
     apiMock.syncCreate.mockResolvedValue({ taskId: 1 })
-    apiMock.syncLatest.mockResolvedValue(mkTask('success', { roles: [] }))
     const w = mountPanel()
     await flushPromises()
     await w.find('[data-act="community-id-input"]').setValue('329230843')
     await w.find('[data-act="sync-submit"]').trigger('click')
     await flushPromises()
     expect(apiMock.syncCreate).toHaveBeenCalledWith({ communityId: '329230843' })
-    expect(notifyMock.notifySuccess).toHaveBeenCalledWith('同步完成')
-    expect(w.emitted('changed')).toBeTruthy()
+    expect(notifyMock.notifySuccess).toHaveBeenCalledWith('同步工作后台进行，稍后查看结果')
+    expect(w.emitted('close')).toBeTruthy()
   })
 
   it('今日已同步→notifyWarning', async () => {
@@ -73,30 +75,25 @@ describe('CommunitySyncPanel', () => {
     expect(notifyMock.notifyWarning).toHaveBeenCalledWith('今日已同步，请明天再试')
   })
 
-  it('failed 状态→统一失败文案', async () => {
-    apiMock.syncCreate.mockResolvedValue({ taskId: 1 })
+  it('打开显示 failed 任务→统一失败文案', async () => {
     apiMock.syncLatest.mockResolvedValue(mkTask('failed'))
     const w = mountPanel()
     await flushPromises()
-    await w.find('[data-act="community-id-input"]').setValue('1')
-    await w.find('[data-act="sync-submit"]').trigger('click')
-    await flushPromises()
-    expect(notifyMock.notifyError).toHaveBeenCalledWith('查询失败，请联系管理员')
+    expect(w.text()).toContain('查询失败，请联系管理员')
   })
 
-  it('关闭时停止轮询', async () => {
+  it('打开时任务进行中→自动轮询；关闭停止', async () => {
     vi.useFakeTimers()
-    apiMock.syncCreate.mockResolvedValue({ taskId: 1 })
     apiMock.syncLatest.mockResolvedValue(mkTask('running'))
     const w = mountPanel()
     await flushPromises()
-    await w.find('[data-act="community-id-input"]').setValue('1')
-    await w.find('[data-act="sync-submit"]').trigger('click')
-    await flushPromises()
-    const callsBefore = apiMock.syncLatest.mock.calls.length
+    const afterOpen = apiMock.syncLatest.mock.calls.length  // 打开即加载一次
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(apiMock.syncLatest.mock.calls.length).toBe(afterOpen + 1)  // 自动续轮询
     await w.setProps({ open: false })
+    const afterClose = apiMock.syncLatest.mock.calls.length
     await vi.advanceTimersByTimeAsync(6000)
-    expect(apiMock.syncLatest.mock.calls.length).toBe(callsBefore)
+    expect(apiMock.syncLatest.mock.calls.length).toBe(afterClose)  // 关闭停止
     vi.useRealTimers()
   })
 })
