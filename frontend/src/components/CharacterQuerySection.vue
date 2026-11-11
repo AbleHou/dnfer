@@ -30,6 +30,8 @@ const podiumOrder = computed(() => {
     { rank: 3, rankLabel: '第3名', row: top[2] },
   ].filter((p) => p.row)
 })
+// 领奖台模式下表格不再重复展示前三名
+const tableRows = computed(() => props.showPodium ? queryItems.value.slice(3) : queryItems.value)
 const classType = ref('')
 const jobName = ref('')
 const keyword = ref('')
@@ -147,7 +149,7 @@ defineExpose({ refresh: loadQuery })
         <CharacterPoster :character="p.row" hide-delete class="podium-card" />
       </div>
     </div>
-    <DnfTable label="角色查询结果" :columns="queryCols" :rows="queryItems" :row-key="(r) => r.id">
+    <DnfTable label="角色查询结果" :columns="queryCols" :rows="tableRows" :row-key="(r) => r.id">
       <template #cell-name="{ row }">{{ row.name }}</template>
       <template #cell-job_title="{ row }">
         <img :src="jobIcon(row.job_name)" :title="jobGenderTitle(row.job_name, row.job_title)"
