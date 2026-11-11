@@ -103,14 +103,14 @@ async function restoreProfile() {
   <div class="dnf-page" style="max-width:900px">
     <div class="page-head">
       <h2>我的角色</h2>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div class="page-actions">
         <DnfButton tone="gold" class="dnf-btn-sm" @click="startCreate">＋ 添加角色</DnfButton>
         <DnfButton class="dnf-btn-sm" data-act="manage-parties"
                    @click="partyModalOpen = true">冒险团管理</DnfButton>
         <DnfButton class="dnf-btn-sm" data-act="sync-community" @click="syncPanelOpen = !syncPanelOpen">
           同步社区</DnfButton>
         <DnfSelect :model-value="sortMode" :options="sortOptions" label="排序"
-                   data-act="sort-select" style="width:130px"
+                   data-act="sort-select" class="page-sort"
                    @update:model-value="(v) => sortMode = v as SortMode" />
       </div>
     </div>
@@ -129,7 +129,7 @@ async function restoreProfile() {
       <CharacterForm :categories="categories" :editing="editing" @saved="onSaved" @cancel="onCancel" />
       <div v-if="editing" class="profile-section" style="margin-top:12px;display:flex;align-items:center;gap:10px">
         <img :src="profilePreviewSrc" class="profile-preview"
-             style="width:48px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--dnf-edge)">
+             style="width:48px;height:64px;object-fit:contain;border-radius:6px;border:1px solid var(--dnf-edge)">
         <input ref="profileInput" type="file" accept="image/*,.apng" style="display:none" @change="onProfileFile">
         <DnfButton class="dnf-btn-sm" :disabled="uploading" @click="profileInput?.click()">
           {{ uploading ? '上传中…' : '自定义形象' }}</DnfButton>
@@ -149,4 +149,11 @@ async function restoreProfile() {
 <style scoped>
 .char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
   gap: 14px; margin: 12px 0; }
+/* 页头操作区：窄屏时按钮/下拉改为纵向一行一个 */
+.page-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.page-sort { width: 130px; }
+@media (max-width: 767px) {
+  .page-actions { flex-direction: column; align-items: stretch; width: 100%; }
+  .page-sort { width: 100%; }
+}
 </style>

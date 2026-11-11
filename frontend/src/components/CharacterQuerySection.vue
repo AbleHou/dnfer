@@ -178,13 +178,18 @@ defineExpose({ refresh: loadQuery })
 </template>
 
 <style scoped>
-/* 领奖台：第1名更宽更高居中，第2/3名矮一些在两侧，底边对齐 */
+/* 领奖台：第1名更宽更高居中，第2/3名矮一些在两侧，底边对齐。
+   列宽用 flex 分配 + max-width 封顶（桌面维持 150/128/118 的领奖台比例），
+   窄屏时 min-width:0 让列随容器收缩，避免横向溢出。 */
 .podium { display: flex; align-items: flex-end; justify-content: center; gap: 16px; margin: 12px 0; }
-.podium-col { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 128px; }
-.podium-col.rank-1 { width: 150px; }
-.podium-col.rank-3 { width: 118px; }
+.podium-col { flex: 1 1 0; min-width: 0; max-width: 128px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.podium-col.rank-1 { flex-grow: 1.2; max-width: 150px; }
+.podium-col.rank-3 { flex-grow: 1; max-width: 118px; }
 .podium-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .podium-name { font-size: 12px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .podium-card { width: 100%; }
 .podium-rank { font-size: 12px; font-weight: bold; color: var(--dnf-accent,#ffd54a); }
+@media (max-width: 767px) {
+  .podium { gap: 8px; }
+}
 </style>

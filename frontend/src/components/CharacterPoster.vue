@@ -46,7 +46,7 @@ const line2 = computed(() => props.character.class_type === '输出'
       <div class="name-col">
         <span class="line1"><b class="poster-name">{{ character.name }}</b>
           <DnfMarquee class="meta" :duration="10">{{ line1 }}</DnfMarquee></span>
-        <span class="line2">{{ line2 }}</span>
+        <DnfMarquee class="line2" :duration="10">{{ line2 }}</DnfMarquee>
       </div>
     </div>
     <DnfIconButton v-if="!hideDelete" class="poster-delete" label="删除角色" icon="npc-close"
@@ -62,7 +62,7 @@ const line2 = computed(() => props.character.class_type === '输出'
   transition: border-color .15s, box-shadow .15s; }
 .char-poster:hover { border-color: var(--dnf-accent); box-shadow: 0 0 10px rgba(255,213,74,.35); }
 .poster-img { position: relative; flex: 1; min-height: 0; }
-.poster-img .cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.poster-img .cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
 .fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   background: var(--dnf-panel); }
 .fallback-icon { width: 60%; height: 60%; object-fit: contain; opacity: .6; }

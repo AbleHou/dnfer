@@ -115,6 +115,12 @@ describe('CharacterPoster', () => {
     expect(w.find('.line1').text()).toContain('超长冒险团名称')
   })
 
+  it('末行（输出/辅助明细）也用 DnfMarquee 滚动展示', () => {
+    const w = mount(CharacterPoster, { props: { character: mkChar() } })
+    expect(w.find('.line2').classes()).toContain('dnf-marquee')
+    expect(w.find('.line2').text()).toBe('模拟 68亿 · 秒伤 6亿')
+  })
+
   it('hide-delete 时隐藏删除按钮', async () => {
     const w = mount(CharacterPoster, { props: { character: mkChar(), hideDelete: true } })
     expect(w.find('.poster-delete').exists()).toBe(false)

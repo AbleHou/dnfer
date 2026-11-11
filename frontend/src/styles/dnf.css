@@ -76,7 +76,8 @@ a { color: var(--dnf-gold-hi); }
 
 /* 页面容器与排版 */
 .dnf-page { max-width: 860px; margin: 24px auto; padding: 0 16px; }
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.page-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; }
+.page-head h2 { flex-shrink: 0; white-space: nowrap; }   /* 标题横向展示，不被挤压成竖排 */
 
 /* 状态徽章 */
 .dnf-badge { font-size: 12px; padding: 1px 10px; border-radius: 10px; border: 1px solid; white-space: nowrap; }
