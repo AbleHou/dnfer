@@ -32,6 +32,13 @@ async def lifespan(app: FastAPI):
                     password_hash=hash_password(settings.admin_password),
                     nickname=settings.admin_nickname, is_admin=True))
         db.commit()
+    # 重启后内存 asyncio 任务已丢失：残留 pending/running 任务置 failed，避免卡死每日一次判定
+    from .models import CommunitySyncTask
+    for t in db.query(CommunitySyncTask).filter(
+            CommunitySyncTask.status.in_(("pending", "running"))).all():
+        t.status = "failed"
+        t.message = "服务重启，任务中断"
+    db.commit()
     db.close()
     yield
 
