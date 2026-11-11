@@ -146,3 +146,46 @@ def test_run_fails_on_service_error(client, db, monkeypatch):
     db.expire_all()
     task = db.get(CommunitySyncTask, task_id)
     assert task.status == "failed" and "同步服务不可用" in task.message
+
+
+def test_sync_create_task_and_idempotent(client, db, monkeypatch):
+    h, u = register_user(client, "csG", "同步庚")
+    async def noop(task_id): pass
+    monkeypatch.setattr("app.routers.members.run_sync_task", noop)
+    r1 = client.post("/api/me/characters/sync", headers=h, json={"communityId": "329230843"})
+    assert r1.status_code == 200
+    task = db.query(CommunitySyncTask).filter(CommunitySyncTask.user_id == u["id"]).first()
+    assert task is not None and task.status == "pending"
+    # 进行中幂等：再发返回同一 taskId
+    r2 = client.post("/api/me/characters/sync", headers=h, json={"communityId": "111"})
+    assert r2.status_code == 200 and r2.json()["taskId"] == task.id
+
+
+def test_sync_daily_limit(client, db, monkeypatch):
+    h, u = register_user(client, "csH", "同步辛")
+    async def noop(task_id): pass
+    monkeypatch.setattr("app.routers.members.run_sync_task", noop)
+    db.add(CommunitySyncTask(user_id=u["id"], community_id="1", status="success"))
+    db.commit()
+    r = client.post("/api/me/characters/sync", headers=h, json={"communityId": "2"})
+    assert r.status_code == 400 and "今日已同步" in r.json()["detail"]
+
+
+def test_sync_bad_community_id(client, db, monkeypatch):
+    h, u = register_user(client, "csI", "同步壬")
+    r = client.post("/api/me/characters/sync", headers=h, json={"communityId": "abc"})
+    assert r.status_code == 400 and "社区ID格式" in r.json()["detail"]
+
+
+def test_sync_latest_404_and_visible_only_to_self(client, db):
+    h, u = register_user(client, "csJ", "同步癸")
+    h2, u2 = register_user(client, "csK", "同步子")
+    assert client.get("/api/me/characters/sync/latest", headers=h).status_code == 404
+    db.add(CommunitySyncTask(user_id=u2["id"], community_id="1", status="success",
+                             result={"roles": []}))
+    db.commit()
+    assert client.get("/api/me/characters/sync/latest", headers=h).status_code == 404
+    r = client.get("/api/me/characters/sync/latest", headers=h2)
+    assert r.status_code == 200 and r.json()["status"] == "success"
+    assert r.json()["result"] == {"roles": []}
+    assert "communityId" in r.json()

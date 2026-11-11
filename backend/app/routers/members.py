@@ -1,3 +1,7 @@
+import asyncio
+import re
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -5,14 +9,23 @@ from sqlalchemy.orm import Session
 from .. import s3
 from ..auth import get_current_user
 from ..db import get_db
-from ..models import Character, User
-from ..schemas import CharacterIn, CharacterOut
+from ..models import Character, CommunitySyncTask, User
+from ..schemas import (CharacterIn, CharacterOut, CommunitySyncIn,
+                       CommunitySyncOut, CommunitySyncTaskOut)
 from ..services.characters import (apply_character_payload, character_out,
                                    delete_character_if_free, validate_job)
+from ..services.community_sync import run_sync_task
 from ..services.images import detect_image, image_content_type
 from ..services.parties import resolve_party
 
 router = APIRouter(prefix="/api/me/characters", tags=["members"])
+
+_COMMUNITY_ID_RE = re.compile(r"^\d{1,20}$")
+
+
+def _start_of_today_utc() -> datetime:
+    now = datetime.now(timezone.utc)
+    return datetime(now.year, now.month, now.day)
 
 @router.get("", response_model=list[CharacterOut])
 def list_characters(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -102,3 +115,40 @@ def restore_default_profile(cid: int, user: User = Depends(get_current_user),
     db.commit()
     db.refresh(c)
     return character_out(c)
+
+@router.post("/sync", response_model=CommunitySyncOut)
+async def create_sync_task(body: CommunitySyncIn, user: User = Depends(get_current_user),
+                           db: Session = Depends(get_db)):
+    if not _COMMUNITY_ID_RE.fullmatch(body.communityId):
+        raise HTTPException(400, "社区ID格式不正确")
+    running = db.query(CommunitySyncTask).filter(
+        CommunitySyncTask.user_id == user.id,
+        CommunitySyncTask.status.in_(("pending", "running")),
+    ).order_by(CommunitySyncTask.id.desc()).first()
+    if running:
+        return CommunitySyncOut(taskId=running.id)  # 幂等
+    today_ok = db.query(CommunitySyncTask).filter(
+        CommunitySyncTask.user_id == user.id,
+        CommunitySyncTask.status == "success",
+        CommunitySyncTask.created_at >= _start_of_today_utc(),
+    ).first()
+    if today_ok:
+        raise HTTPException(400, "今日已同步，请明天再试")
+    task = CommunitySyncTask(user_id=user.id, community_id=body.communityId, status="pending")
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    task_id = task.id
+    asyncio.create_task(run_sync_task(task_id))
+    return CommunitySyncOut(taskId=task_id)
+
+@router.get("/sync/latest", response_model=CommunitySyncTaskOut)
+def latest_sync_task(user: User = Depends(get_current_user),
+                     db: Session = Depends(get_db)):
+    task = db.query(CommunitySyncTask).filter(
+        CommunitySyncTask.user_id == user.id).order_by(CommunitySyncTask.id.desc()).first()
+    if task is None:
+        raise HTTPException(404, "还没有同步记录")
+    return CommunitySyncTaskOut(taskId=task.id, status=task.status,
+                                communityId=task.community_id, message=task.message,
+                                result=task.result, createdAt=task.created_at.isoformat())
