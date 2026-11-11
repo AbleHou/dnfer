@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { DnfIconButton } from '@dnftools/ui'
+import { DnfIconButton, DnfMarquee } from '@dnftools/ui'
 import { characterProfile, jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Character } from '../types'
 
@@ -44,7 +44,8 @@ const line2 = computed(() => props.character.class_type === '输出'
     <div class="poster-info">
       <img :src="jobIcon(character.job_name)" class="job-icon" alt="" @error="onIconError">
       <div class="name-col">
-        <span class="line1"><b class="poster-name">{{ character.name }}</b><span class="meta">{{ line1 }}</span></span>
+        <span class="line1"><b class="poster-name">{{ character.name }}</b>
+          <DnfMarquee class="meta" :duration="10">{{ line1 }}</DnfMarquee></span>
         <span class="line2">{{ line2 }}</span>
       </div>
     </div>
@@ -69,9 +70,9 @@ const line2 = computed(() => props.character.class_type === '输出'
 .job-icon { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
 .name-col { line-height: 1.3; min-width: 0; flex: 1; }
 .line1, .line2 { display: block; }
-.poster-name, .meta, .line2 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.poster-name, .line2 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .poster-name { font-size: 13px; font-weight: bold; }
-.meta { font-size: 10px; opacity: .85; }
+.meta { font-size: 10px; opacity: .85; }   /* 冒险团名可能很长 → DnfMarquee 滚动展示，不截断 */
 .line2 { font-size: 10px; opacity: .75; }
 .poster-delete { position: absolute; top: 6px; right: 6px; z-index: 2; }
 </style>

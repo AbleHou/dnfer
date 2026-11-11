@@ -108,4 +108,10 @@ describe('CharacterPoster', () => {
     expect(img.compareDocumentPosition(info) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(w.find('.grad').exists()).toBe(false)   // 不再叠加渐变遮罩
   })
+
+  it('第二行（名望·战斗力·冒险团）用 DnfMarquee 滚动展示', () => {
+    const w = mount(CharacterPoster, { props: { character: mkChar({ adventure_party_name: '超长冒险团名称' }) } })
+    expect(w.find('.meta').classes()).toContain('dnf-marquee')  // meta 落在 DnfMarquee 根节点上
+    expect(w.find('.line1').text()).toContain('超长冒险团名称')
+  })
 })
