@@ -1,5 +1,5 @@
 import { normalizeImageType } from '../lib/image'
-import type { JobCategory } from '../types'
+import type { JobCategory, SyncTask } from '../types'
 
 const TOKEN_KEY = 'dnfer_token'
 
@@ -47,4 +47,7 @@ export const api = {
     return request<T>('POST', url, form, true)
   },
   getJobs: () => request<JobCategory[]>('GET', '/api/jobs'),
+  syncCreate: (body: { communityId: string }) =>
+    request<{ taskId: number }>('POST', '/api/me/characters/sync', body),
+  syncLatest: () => request<SyncTask>('GET', '/api/me/characters/sync/latest'),
 }

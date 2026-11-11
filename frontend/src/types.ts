@@ -46,3 +46,15 @@ export interface VoteListItem { id: number; title: string; multi_choice: boolean
 export interface VoteDetail { id: number; title: string; description: string; multi_choice: boolean;
   open: boolean; created_at: string; closed_at: string | null; options: VoteOptionItem[];
   total_voters: number; my_option_ids: number[]; my_voted: boolean }
+export type SyncAction = 'created' | 'updated' | 'skipped' | 'failed'
+export interface SyncRoleResult {
+  roleName: string; job: string | null; jobName: string | null;
+  level: number | null; fame: number | null; server: string | null;
+  action: SyncAction; reason: string | null; characterId: number | null;
+  profileImported: boolean
+}
+export interface SyncTask {
+  taskId: number; status: 'pending' | 'running' | 'success' | 'failed';
+  communityId: string; message: string | null;
+  result: { roles: SyncRoleResult[] } | null; createdAt: string
+}
