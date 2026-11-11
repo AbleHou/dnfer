@@ -33,7 +33,8 @@ def query_friend_characters(
         raise HTTPException(400, str(e))
     items = [
         MemberCharacterRow(**character_out(c).model_dump(),
-                           owner_id=c.owner.id, owner_nickname=c.owner.nickname)
+                           owner_id=c.owner.id, owner_nickname=c.owner.nickname,
+                           owner_avatar=c.owner.avatar)
         for c in rows
     ]
     return MemberCharacterQueryResult(items=items, total=total)

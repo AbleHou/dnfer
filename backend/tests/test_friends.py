@@ -1,5 +1,5 @@
 """「我的群友」成员角色查询端点（/api/characters/query）测试。"""
-from app.models import Character
+from app.models import Character, User
 
 from .helpers import register_user
 
@@ -29,6 +29,25 @@ def test_friend_query_returns_characters_with_nickname(client, db):
     assert item["combat_power"] == 1460962
     # 成员查询不暴露登录用户名
     assert "owner_username" not in item
+
+
+def test_friend_query_returns_owner_avatar(client, db):
+    """领奖台依赖 owner_avatar 展示真实头像，缺失会回退到昵称首字符占位。"""
+    h, u = register_user(client, "f5", "甲")
+    _add_char(db, u["id"], name="剑魂")
+    db.get(User, u["id"]).avatar = "https://cdn.example.com/avatar.png"
+    db.commit()
+    r = client.get("/api/characters/query", headers=h)
+    assert r.status_code == 200
+    assert r.json()["items"][0]["owner_avatar"] == "https://cdn.example.com/avatar.png"
+
+
+def test_friend_query_owner_avatar_none_by_default(client, db):
+    h, u = register_user(client, "f6", "乙")
+    _add_char(db, u["id"], name="剑魂")
+    r = client.get("/api/characters/query", headers=h)
+    assert r.status_code == 200
+    assert r.json()["items"][0]["owner_avatar"] is None
 
 
 def test_friend_query_sees_other_users(client, db):

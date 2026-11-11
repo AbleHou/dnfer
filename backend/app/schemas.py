@@ -366,9 +366,10 @@ class CharacterQueryResult(BaseModel):
     total: int
 
 class MemberCharacterRow(CharacterOut):
-    """「我的群友」查询行：仅暴露归属昵称，不暴露登录用户名（隐私）。"""
+    """「我的群友」查询行：仅暴露归属昵称与头像，不暴露登录用户名（隐私）。"""
     owner_id: int
     owner_nickname: str
+    owner_avatar: str | None = None
 
 class MemberCharacterQueryResult(BaseModel):
     items: list[MemberCharacterRow]
