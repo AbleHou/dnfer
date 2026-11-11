@@ -2,15 +2,30 @@
 
 本项目所有值得记录的版本变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [v2.3] - 2026-11-11
+
+### 新增
+
+- **社区ID 同步角色**：玩家在「我的角色」页输入 DNF 助手「社区ID」即可自动同步全部角色——独立容器服务（`community-sync`）封装 dnfbbz 协议，后端异步任务执行（每用户每天一次，遇换绑限流自动等待重试），完成后自动创建/更新角色并导入形象图；同名角色仅更新名望与形象、其余字段保留；职业自动映射（男女双版默认男版、未收录职业跳过）；同步在后台进行，稍后重开弹窗查看结果表格
+- **我的群友领奖台**：「我的群友」表格上方按领奖台展示当前查询结果前三名角色卡片（第1名居中、更宽更高，顺序 2/1/3），卡片上方为用户头像+昵称；表格不再重复展示前三名
+- **形象/头像上传支持 APNG**：APNG（animated PNG——`.apng` 文件浏览器报 `image/apng`，或 `.png` 命名的 APNG）现可上传「我的角色」形象与用户头像，归一化为 `image/png` 存储（支持 APNG 的浏览器照常播动画，旧 Safari 显示首帧）；同时新增字节级 magic 内容校验，内容与声称格式不符返回 400「图片内容与格式不符」（此前仅按 MIME 白名单拦截，伪造 MIME/非图片字节也能入库）
 
 ### 变更
 
-- **形象/头像上传支持 APNG**：APNG（animated PNG——`.apng` 文件浏览器报 `image/apng`，或 `.png` 命名的 APNG）现可上传「我的角色」形象与用户头像，归一化为 `image/png` 存储（支持 APNG 的浏览器照常播动画，旧 Safari 显示首帧）；同时新增字节级 magic 内容校验，内容与声称格式不符返回 400「图片内容与格式不符」（此前仅按 MIME 白名单拦截，伪造 MIME/非图片字节也能入库）
+- **角色卡片改版**：「我的角色」卡片从「信息叠加在形象上」改为「上形象 + 下固定文本条」——3:4 固定比例、文本不再压图；第二行（名望·战斗力·冒险团）含易长的团名改用 `DnfMarquee` 滚动展示，其余行省略号截断，长信息不改变卡片尺寸
+- **同步社区交互**：同步面板改为弹窗；提交后立即关闭并提示「同步工作后台进行，稍后查看结果」，重开弹窗若任务进行中自动续轮询到完成
+- **暗夜使者·刺客 更名「隐夜·暗星」**：职业名对齐官方（影响职业筛选/查询展示）
+
+### 修复
+
+- **Safari `.apng` 上传空 MIME**：Safari 不把 `.apng` 映射为 `image/apng`，`File.type` 为空/octet-stream 导致后端 MIME 白名单 400（表现为上传无反应）；前端按扩展名推断 MIME 后再上传（`normalizeImageType`，经 `api.upload` 统一生效），后端仍按 magic 字节二次校验
+- **角色形象上传成功提示文案**：「头像已更新」→「形象已更新」（与「自定义形象」按钮一致）
 
 ### 工程
 
-- 后端新增 `services/images.py` 纯函数助手（`detect_image`/`is_apng`/`image_content_type`），头像（auth.py）与形象（members.py）上传端点共用——白名单加 `image/apng`、读字节后按 magic 校验内容一致、S3 存储 ContentType 归一化；前端两处 file input `accept` 补 `.apng` 兜底 Safari 文件选择器过滤；全量后端测试 382 例、前端测试 409 例通过、`npm run build`（vue-tsc + vite）通过
+- 后端：`CommunitySyncTask` 表 + 社区同步异步任务执行器（429 限流重试、逐角色 upsert、形象 best-effort、空角色置 failed）+ `POST /api/me/characters/sync`（每用户每天一次、进行中幂等）+ `GET /api/me/characters/sync/latest` + lifespan 残留任务置 failed 兜底；`/api/characters/query` 返回 `owner_avatar`；`services/images.py` 纯函数助手（`detect_image`/`is_apng`/`image_content_type`）供头像/形象上传共用；全量后端测试 396 例通过
+- 前端：`CommunitySyncPanel`（弹窗/轮询/结果表格）、`CharacterPoster` 卡片改版（`hideDelete` prop）、`CharacterQuerySection` 领奖台（`showPodium`，仅「我的群友」启用）；全量前端测试 425 例通过、`npm run build`（vue-tsc + vite）通过
+- 部署：独立容器服务 `dnfer-community-sync`（封装 dnfbbz 协议，内网仅供后端 worker 调用）——sibling 项目含 Dockerfile；docker-compose 新增 `community-sync` 服务（不对外暴露端口），后端经 `http://community-sync:8100` 内网调用，`DNFBBZ_USER`/`DNFBBZ_PASS` 可 `.env` 覆盖
 
 ## [v2.2.1] - 2026-11-06
 
