@@ -17,9 +17,19 @@ services:
       DNFER_S3_REGION: ${DNFER_S3_REGION:-}
       DNFER_S3_PUBLIC_BASE: ${DNFER_S3_PUBLIC_BASE:-}
       DNFER_DATABASE_URL: sqlite:////data/dnfer.db
+      # 社区同步：后端 worker 经 compose 内网调用 community-sync 服务
+      DNFER_COMMUNITY_SYNC_BASE: http://community-sync:8100
     volumes:
       - dnfer-data:/data
       - ./images:/app/images:ro
+    restart: unless-stopped
+
+  # 社区查询服务：封装 dnfbbz 协议，内网仅供后端 worker 调用（不对外暴露端口）
+  community-sync:
+    build: ../dnfer-community-sync
+    environment:
+      DNFBBZ_USER: ${DNFBBZ_USER:-1010268482}
+      DNFBBZ_PASS: ${DNFBBZ_PASS:-123456}
     restart: unless-stopped
 
   nginx:
