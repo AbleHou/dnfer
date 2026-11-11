@@ -89,3 +89,104 @@ def fetch_portrait(community_id: str, role_id: str | None, original_role_id: str
     if status != 200:
         raise CommunitySyncError(_detail_text(raw, status))
     return raw
+
+
+def _base_result(role: dict) -> dict:
+    return {"roleName": role.get("roleName") or "", "job": role.get("job") or None,
+            "level": role.get("level"), "fame": role.get("fame"), "server": role.get("server")}
+
+
+def _import_profile(db, user: User, char: Character, role: dict, community_id: str) -> bool:
+    original_role_id = role.get("originalRoleId")
+    if not original_role_id:
+        return False
+    try:
+        data = fetch_portrait(community_id, role.get("roleId"), original_role_id)
+        if not data:
+            return False
+        url = upload_profile(user.id, char.id, "png", data, "image/png")
+        if char.profile:
+            delete_profile(char.profile)
+        char.profile = url
+        return True
+    except Exception:
+        return False
+
+
+def _process_one(db, user: User, community_id: str, role: dict) -> dict:
+    role_name = role.get("roleName") or ""
+    fame = role.get("fame")
+    job_name = resolve_job(role.get("job") or "")
+    if job_name is None:
+        return {**_base_result(role), "jobName": None, "action": "skipped",
+                "reason": "职业未收录", "characterId": None, "profileImported": False}
+    c = db.query(Character).filter(Character.user_id == user.id,
+                                   Character.name == role_name).order_by(Character.id).first()
+    if c is None:
+        c = Character(user_id=user.id, name=role_name, job_name=job_name,
+                      class_type=job_data.class_type_for(job_name),
+                      fame=fame if fame is not None else 100000,
+                      adventure_party_id=ensure_default_party(db, user).id)
+        db.add(c)
+        db.flush()
+        action = "created"
+    else:
+        if fame is not None:
+            c.fame = fame
+        action = "updated"
+    profile_ok = _import_profile(db, user, c, role, community_id)
+    return {**_base_result(role), "jobName": job_name, "action": action,
+            "characterId": c.id, "profileImported": profile_ok}
+
+
+def _process_roles(db, user_id: int, community_id: str, roles: list[dict]) -> list[dict]:
+    user = db.get(User, user_id)
+    if user is None:
+        raise CommunitySyncError("用户不存在")
+    results: list[dict] = []
+    for role in roles:
+        try:
+            r = _process_one(db, user, community_id, role)
+        except Exception as e:
+            r = {**_base_result(role), "jobName": None, "action": "failed",
+                 "reason": str(e), "characterId": None, "profileImported": False}
+        results.append(r)
+        db.commit()  # 逐角色提交，单个失败不丢前面已建角色
+    return results
+
+
+async def run_sync_task(task_id: int) -> None:
+    """异步执行器：调 web 服务 → 限流重试 → 逐角色 upsert + 形象 best-effort。"""
+    db = SessionLocal()
+    try:
+        task = db.get(CommunitySyncTask, task_id)
+        if task is None:
+            return
+        task.status = "running"
+        db.commit()
+        community_id = task.community_id
+        max_retry = settings.community_sync_max_retry
+        for attempt in range(1, max_retry + 1):
+            try:
+                roles = await asyncio.to_thread(sync_roles, community_id)
+                break
+            except CommunitySyncRateLimited as e:
+                task.message = f"换绑限流，等待 {e.retry_after_sec} 秒后重试"
+                db.commit()
+                if attempt >= max_retry:
+                    task.status = "failed"
+                    task.message = "多次换绑限流，请稍后再试"
+                    db.commit()
+                    return
+                await asyncio.sleep(e.retry_after_sec)
+            except CommunitySyncError as e:
+                task.status = "failed"
+                task.message = str(e)
+                db.commit()
+                return
+        results = _process_roles(db, task.user_id, community_id, roles)
+        task.status = "success"
+        task.result = {"roles": results}
+        db.commit()
+    finally:
+        db.close()
