@@ -184,6 +184,11 @@ async def run_sync_task(task_id: int) -> None:
                 task.message = str(e)
                 db.commit()
                 return
+        if not roles:
+            task.status = "failed"
+            task.message = "该社区ID下没有角色"
+            db.commit()
+            return
         results = _process_roles(db, task.user_id, community_id, roles)
         task.status = "success"
         task.result = {"roles": results}

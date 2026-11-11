@@ -148,6 +148,17 @@ def test_run_fails_on_service_error(client, db, monkeypatch):
     assert task.status == "failed" and "同步服务不可用" in task.message
 
 
+def test_run_fails_on_empty_roles(client, db, monkeypatch):
+    h, u = register_user(client, "csF2", "同步空")
+    monkeypatch.setattr("app.services.community_sync.sync_roles", lambda cid: [])
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    task = db.get(CommunitySyncTask, task_id)
+    assert task.status == "failed" and "没有角色" in task.message
+
+
 def test_sync_create_task_and_idempotent(client, db, monkeypatch):
     h, u = register_user(client, "csG", "同步庚")
     async def noop(task_id): pass
