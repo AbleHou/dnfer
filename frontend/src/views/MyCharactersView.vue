@@ -138,7 +138,7 @@ async function restoreProfile() {
       </div>
     </DnfDialog>
 
-    <CommunitySyncPanel v-if="syncPanelOpen" @changed="load" />
+    <CommunitySyncPanel :open="syncPanelOpen" @close="syncPanelOpen = false" @changed="load" />
 
     <AdventurePartyModal :open="partyModalOpen"
                          @close="partyModalOpen = false"

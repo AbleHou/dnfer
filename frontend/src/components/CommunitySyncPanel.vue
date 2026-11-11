@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { DnfButton, DnfFrame, DnfInput } from '@dnftools/ui'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { DnfButton, DnfDialog, DnfFrame, DnfInput } from '@dnftools/ui'
 import { api } from '../api/client'
 import { notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { SyncRoleResult, SyncTask } from '../types'
 
-const emit = defineEmits<{ (e: 'changed'): void }>()
+const props = defineProps<{ open: boolean }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'changed'): void }>()
 
 const communityId = ref('')
 const task = ref<SyncTask | null>(null)
@@ -16,6 +17,11 @@ let timer: number | undefined
 const roles = computed(() => task.value?.result?.roles ?? [])
 
 function stopPolling() { if (timer !== undefined) { clearInterval(timer); timer = undefined } }
+
+function startPolling() {
+  stopPolling()
+  timer = window.setInterval(() => { void pollTick() }, 5000)
+}
 
 async function loadLatest(): Promise<SyncTask | null> {
   try {
@@ -30,7 +36,7 @@ async function loadLatest(): Promise<SyncTask | null> {
   }
 }
 
-async function tick(): Promise<SyncTask | null> {
+async function pollTick(): Promise<SyncTask | null> {
   const t = await loadLatest()
   if (t && (t.status === 'success' || t.status === 'failed')) {
     stopPolling()
@@ -40,17 +46,22 @@ async function tick(): Promise<SyncTask | null> {
   return t
 }
 
+// 打开时加载最近同步；若任务仍在进行中则续轮询（重开弹窗也能等到完成）；关闭即停
+watch(() => props.open, (open) => {
+  if (!open) { stopPolling(); return }
+  void loadLatest().then((t) => {
+    if (t && (t.status === 'pending' || t.status === 'running')) startPolling()
+  })
+}, { immediate: true })
+
 async function submit() {
   const cid = communityId.value.trim()
   if (!cid) { notifyError('请输入社区ID'); return }
   submitting.value = true
   try {
     await api.syncCreate({ communityId: cid })
-    const t = await tick()  // 真正等待 loadLatest 完成，避免用旧 task.value 判断轮询
-    if (t && (t.status === 'pending' || t.status === 'running')) {
-      stopPolling()
-      timer = window.setInterval(() => { void tick() }, 5000)
-    }
+    const t = await pollTick()  // 真正等待 loadLatest 完成，避免用旧 task.value 判断轮询
+    if (t && (t.status === 'pending' || t.status === 'running')) startPolling()
   } catch (e: any) {
     if (e.message === '今日已同步，请明天再试') notifyWarning(e.message)
     else notifyError('查询失败，请联系管理员')
@@ -70,12 +81,12 @@ function profileText(r: SyncRoleResult): string {
   return r.profileImported ? '已导入' : '导入失败'
 }
 
-onMounted(() => { void loadLatest() })
 onUnmounted(stopPolling)
 </script>
 
 <template>
-  <div class="dnf-panel" data-test="sync-panel" style="margin:12px 0;padding:14px">
+  <DnfDialog :open="open" title="同步社区角色" width="min(640px,92vw)" modal close-on-outside
+             @update:open="(s: boolean) => { if (!s) emit('close') }">
     <div style="display:flex;align-items:center;gap:8px">
       <DnfInput v-model="communityId" data-act="community-id-input"
                 placeholder="DNF助手社区ID（纯数字）" style="flex:1" />
@@ -86,7 +97,7 @@ onUnmounted(stopPolling)
       {{ task.message ? '换绑限流等待中，约数分钟后继续…' : '同步中…' }}</p>
     <p v-if="task?.status === 'failed'" class="form-error" style="margin:6px 0 0">查询失败，请联系管理员</p>
 
-    <DnfFrame v-if="roles.length" surface="panel" style="margin-top:12px;padding:12px">
+    <DnfFrame v-if="roles.length" surface="panel" style="margin-top:12px;padding:12px;max-height:50vh;overflow:auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
           <tr style="color:var(--dnf-text-muted);text-align:left">
@@ -109,5 +120,5 @@ onUnmounted(stopPolling)
       </table>
     </DnfFrame>
     <p v-if="noRecord" style="color:var(--dnf-text-faint);margin:8px 0 0">还没有同步记录</p>
-  </div>
+  </DnfDialog>
 </template>

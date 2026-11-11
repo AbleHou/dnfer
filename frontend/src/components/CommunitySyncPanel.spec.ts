@@ -22,10 +22,17 @@ function mkTask(status: SyncTask['status'], result: SyncTask['result'] = null): 
 
 beforeEach(() => { vi.clearAllMocks() })
 
+function mountPanel() {
+  return mount(CommunitySyncPanel, {
+    props: { open: true },
+    global: { stubs: { teleport: true } },
+  })
+}
+
 describe('CommunitySyncPanel', () => {
-  it('挂载加载最近同步；无记录显示空态', async () => {
+  it('打开时加载最近同步；无记录显示空态', async () => {
     apiMock.syncLatest.mockRejectedValue(new Error('还没有同步记录'))
-    const w = mount(CommunitySyncPanel)
+    const w = mountPanel()
     await flushPromises()
     expect(w.text()).toContain('还没有同步记录')
   })
@@ -36,7 +43,7 @@ describe('CommunitySyncPanel', () => {
                 fame: 133227, server: '山西一区', action: 'created', reason: null,
                 characterId: 1, profileImported: true }],
     }))
-    const w = mount(CommunitySyncPanel)
+    const w = mountPanel()
     await flushPromises()
     expect(w.text()).toContain('剑魂')
     expect(w.text()).toContain('已创建')
@@ -46,7 +53,7 @@ describe('CommunitySyncPanel', () => {
   it('提交→轮询到 success→通知+emit changed', async () => {
     apiMock.syncCreate.mockResolvedValue({ taskId: 1 })
     apiMock.syncLatest.mockResolvedValue(mkTask('success', { roles: [] }))
-    const w = mount(CommunitySyncPanel)
+    const w = mountPanel()
     await flushPromises()
     await w.find('[data-act="community-id-input"]').setValue('329230843')
     await w.find('[data-act="sync-submit"]').trigger('click')
@@ -58,7 +65,7 @@ describe('CommunitySyncPanel', () => {
 
   it('今日已同步→notifyWarning', async () => {
     apiMock.syncCreate.mockRejectedValue(new Error('今日已同步，请明天再试'))
-    const w = mount(CommunitySyncPanel)
+    const w = mountPanel()
     await flushPromises()
     await w.find('[data-act="community-id-input"]').setValue('1')
     await w.find('[data-act="sync-submit"]').trigger('click')
@@ -69,7 +76,7 @@ describe('CommunitySyncPanel', () => {
   it('failed 状态→统一失败文案', async () => {
     apiMock.syncCreate.mockResolvedValue({ taskId: 1 })
     apiMock.syncLatest.mockResolvedValue(mkTask('failed'))
-    const w = mount(CommunitySyncPanel)
+    const w = mountPanel()
     await flushPromises()
     await w.find('[data-act="community-id-input"]').setValue('1')
     await w.find('[data-act="sync-submit"]').trigger('click')
@@ -77,17 +84,17 @@ describe('CommunitySyncPanel', () => {
     expect(notifyMock.notifyError).toHaveBeenCalledWith('查询失败，请联系管理员')
   })
 
-  it('卸载停止轮询', async () => {
+  it('关闭时停止轮询', async () => {
     vi.useFakeTimers()
     apiMock.syncCreate.mockResolvedValue({ taskId: 1 })
     apiMock.syncLatest.mockResolvedValue(mkTask('running'))
-    const w = mount(CommunitySyncPanel)
+    const w = mountPanel()
     await flushPromises()
     await w.find('[data-act="community-id-input"]').setValue('1')
     await w.find('[data-act="sync-submit"]').trigger('click')
     await flushPromises()
     const callsBefore = apiMock.syncLatest.mock.calls.length
-    w.unmount()
+    await w.setProps({ open: false })
     await vi.advanceTimersByTimeAsync(6000)
     expect(apiMock.syncLatest.mock.calls.length).toBe(callsBefore)
     vi.useRealTimers()

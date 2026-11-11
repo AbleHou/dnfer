@@ -358,20 +358,21 @@ describe('MyCharactersView profile section', () => {
 })
 
 describe('MyCharactersView community sync entry', () => {
-  it('点「同步社区」切换内联面板', async () => {
+  it('点「同步社区」开合同步弹窗', async () => {
     const wrapper = mount(MyCharactersView, {
       global: {
         stubs: { teleport: true,
-                 CommunitySyncPanel: { template: '<div data-test="sync-panel" />' } },
+                 CommunitySyncPanel: { name: 'CommunitySyncPanel', template: '<div />', props: ['open'] } },
       },
     })
     await flushPromises()
-    expect(wrapper.find('[data-test="sync-panel"]').exists()).toBe(false)
+    const panel = () => wrapper.findComponent({ name: 'CommunitySyncPanel' })
+    expect(panel().props('open')).toBe(false)
     await wrapper.find('[data-act="sync-community"]').trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-test="sync-panel"]').exists()).toBe(true)
+    expect(panel().props('open')).toBe(true)
     await wrapper.find('[data-act="sync-community"]').trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-test="sync-panel"]').exists()).toBe(false)
+    expect(panel().props('open')).toBe(false)
   })
 })
