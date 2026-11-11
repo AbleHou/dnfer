@@ -5,6 +5,7 @@ import { api } from '../api/client'
 import CharacterForm from '../components/CharacterForm.vue'
 import CharacterPoster from '../components/CharacterPoster.vue'
 import AdventurePartyModal from '../components/AdventurePartyModal.vue'
+import CommunitySyncPanel from '../components/CommunitySyncPanel.vue'
 import { characterProfile } from '../lib/job'
 import { confirmDialog, notifyError, notifySuccess } from '../lib/notify'
 import type { Character, JobCategory } from '../types'
@@ -15,6 +16,7 @@ const showForm = ref(false)
 const editing = ref<Character | null>(null)
 const error = ref('')
 const partyModalOpen = ref(false)
+const syncPanelOpen = ref(false)
 
 type SortMode = 'type' | 'fame' | 'party'
 const sortMode = ref<SortMode>('type')
@@ -105,6 +107,8 @@ async function restoreProfile() {
         <DnfButton tone="gold" class="dnf-btn-sm" @click="startCreate">＋ 添加角色</DnfButton>
         <DnfButton class="dnf-btn-sm" data-act="manage-parties"
                    @click="partyModalOpen = true">冒险团管理</DnfButton>
+        <DnfButton class="dnf-btn-sm" data-act="sync-community" @click="syncPanelOpen = !syncPanelOpen">
+          同步社区</DnfButton>
         <DnfSelect :model-value="sortMode" :options="sortOptions" label="排序"
                    data-act="sort-select" style="width:130px"
                    @update:model-value="(v) => sortMode = v as SortMode" />
@@ -133,6 +137,8 @@ async function restoreProfile() {
           恢复默认</DnfButton>
       </div>
     </DnfDialog>
+
+    <CommunitySyncPanel v-if="syncPanelOpen" @changed="load" />
 
     <AdventurePartyModal :open="partyModalOpen"
                          @close="partyModalOpen = false"

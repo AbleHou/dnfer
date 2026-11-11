@@ -356,3 +356,22 @@ describe('MyCharactersView profile section', () => {
     expect(apiMock.upload).toHaveBeenCalledWith('/api/me/characters/1/profile', expect.anything())
   })
 })
+
+describe('MyCharactersView community sync entry', () => {
+  it('点「同步社区」切换内联面板', async () => {
+    const wrapper = mount(MyCharactersView, {
+      global: {
+        stubs: { teleport: true,
+                 CommunitySyncPanel: { template: '<div data-test="sync-panel" />' } },
+      },
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-test="sync-panel"]').exists()).toBe(false)
+    await wrapper.find('[data-act="sync-community"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-test="sync-panel"]').exists()).toBe(true)
+    await wrapper.find('[data-act="sync-community"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-test="sync-panel"]').exists()).toBe(false)
+  })
+})
