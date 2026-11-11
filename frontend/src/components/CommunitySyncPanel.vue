@@ -30,14 +30,14 @@ async function loadLatest(): Promise<SyncTask | null> {
   }
 }
 
-function tick() {
-  void loadLatest().then((t) => {
-    if (t && (t.status === 'success' || t.status === 'failed')) {
-      stopPolling()
-      if (t.status === 'success') { notifySuccess('同步完成'); emit('changed') }
-      else notifyError('查询失败，请联系管理员')
-    }
-  })
+async function tick(): Promise<SyncTask | null> {
+  const t = await loadLatest()
+  if (t && (t.status === 'success' || t.status === 'failed')) {
+    stopPolling()
+    if (t.status === 'success') { notifySuccess('同步完成'); emit('changed') }
+    else notifyError('查询失败，请联系管理员')
+  }
+  return t
 }
 
 async function submit() {
@@ -46,8 +46,8 @@ async function submit() {
   submitting.value = true
   try {
     await api.syncCreate({ communityId: cid })
-    await tick()
-    if (task.value && (task.value.status === 'pending' || task.value.status === 'running')) {
+    const t = await tick()  // 真正等待 loadLatest 完成，避免用旧 task.value 判断轮询
+    if (t && (t.status === 'pending' || t.status === 'running')) {
       stopPolling()
       timer = window.setInterval(() => { void tick() }, 5000)
     }
