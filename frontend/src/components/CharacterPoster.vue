@@ -41,7 +41,6 @@ const line2 = computed(() => props.character.class_type === '输出'
         <img :src="jobIcon(character.job_name)" class="fallback-icon" alt="" @error="onIconError">
       </div>
     </div>
-    <div class="grad"></div>
     <div class="poster-info">
       <img :src="jobIcon(character.job_name)" class="job-icon" alt="" @error="onIconError">
       <div class="name-col">
@@ -54,23 +53,25 @@ const line2 = computed(() => props.character.class_type === '输出'
 </template>
 
 <style scoped>
-.char-poster { position: relative; aspect-ratio: 3/4; border-radius: 8px; overflow: hidden;
-  cursor: pointer; background: var(--dnf-panel); border: 1px solid var(--dnf-edge);
-  box-shadow: 0 2px 8px rgba(0,0,0,.4); transition: border-color .15s, box-shadow .15s; }
+/* 上形象 + 下固定文本条：3:4 固定比例保证卡片统一尺寸，文本逐行省略号截断 */
+.char-poster { position: relative; aspect-ratio: 3/4; display: flex; flex-direction: column;
+  border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--dnf-panel);
+  border: 1px solid var(--dnf-edge); box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  transition: border-color .15s, box-shadow .15s; }
 .char-poster:hover { border-color: var(--dnf-accent); box-shadow: 0 0 10px rgba(255,213,74,.35); }
-.poster-img { position: absolute; inset: 0; }
-.poster-img .cover { width: 100%; height: 100%; object-fit: cover; display: block; }
+.poster-img { position: relative; flex: 1; min-height: 0; }
+.poster-img .cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   background: var(--dnf-panel); }
 .fallback-icon { width: 60%; height: 60%; object-fit: contain; opacity: .6; }
-.grad { position: absolute; inset: auto 0 0 0; height: 55%; pointer-events: none;
-  background: linear-gradient(to top, rgba(0,0,0,.88), transparent); }
-.poster-info { position: absolute; left: 8px; right: 8px; bottom: 8px; color: #fff;
-  display: flex; align-items: flex-start; gap: 6px; pointer-events: none; }
+.poster-info { flex-shrink: 0; height: 58px; padding: 5px 8px; border-top: 1px solid var(--dnf-border,#3a3f4b);
+  display: flex; align-items: flex-start; gap: 6px; color: var(--dnf-text); background: var(--dnf-panel); }
 .job-icon { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
-.name-col { line-height: 1.3; min-width: 0; }
-.line1 { font-size: 13px; font-weight: bold; }
-.line1 .meta { display: block; font-weight: normal; font-size: 10px; opacity: .85; }
-.line2 { display: block; font-size: 10px; opacity: .75; }
+.name-col { line-height: 1.3; min-width: 0; flex: 1; }
+.line1, .line2 { display: block; }
+.poster-name, .meta, .line2 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.poster-name { font-size: 13px; font-weight: bold; }
+.meta { font-size: 10px; opacity: .85; }
+.line2 { font-size: 10px; opacity: .75; }
 .poster-delete { position: absolute; top: 6px; right: 6px; z-index: 2; }
 </style>

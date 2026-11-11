@@ -100,4 +100,12 @@ describe('CharacterPoster', () => {
     expect(w.emitted('delete')).toHaveLength(1)
     expect(w.emitted('click')).toHaveLength(1)   // delete 不冒泡
   })
+
+  it('信息条与形象分离：poster-info 紧随 poster-img 之后、无渐变覆盖层', () => {
+    const w = mount(CharacterPoster, { props: { character: mkChar() } })
+    const img = w.find('.poster-img').element
+    const info = w.find('.poster-info').element
+    expect(img.compareDocumentPosition(info) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(w.find('.grad').exists()).toBe(false)   // 不再叠加渐变遮罩
+  })
 })
