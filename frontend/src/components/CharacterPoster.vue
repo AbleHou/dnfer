@@ -4,7 +4,7 @@ import { DnfIconButton, DnfMarquee } from '@dnftools/ui'
 import { characterProfile, jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { Character } from '../types'
 
-const props = defineProps<{ character: Character }>()
+const props = withDefaults(defineProps<{ character: Character; hideDelete?: boolean }>(), { hideDelete: false })
 const emit = defineEmits<{ (e: 'click'): void; (e: 'delete'): void }>()
 
 const customSrc = computed(() => props.character.profile)
@@ -49,7 +49,8 @@ const line2 = computed(() => props.character.class_type === '输出'
         <span class="line2">{{ line2 }}</span>
       </div>
     </div>
-    <DnfIconButton class="poster-delete" label="删除角色" icon="npc-close" @click.stop="emit('delete')" />
+    <DnfIconButton v-if="!hideDelete" class="poster-delete" label="删除角色" icon="npc-close"
+                   @click.stop="emit('delete')" />
   </div>
 </template>
 

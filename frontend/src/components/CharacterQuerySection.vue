@@ -3,19 +3,33 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { DnfButton, DnfFrame, DnfIcon, DnfInput, DnfSelect, DnfTable } from '@dnftools/ui'
 import type { DnfColumn } from '@dnftools/ui'
 import { api } from '../api/client'
+import CharacterPoster from './CharacterPoster.vue'
+import UserAvatar from './UserAvatar.vue'
 import { jobGenderTitle, jobIcon, handleIconError as onIconError } from '../lib/job'
 import type { AdminCharacterRow, CharacterQueryResult, JobCategory } from '../types'
 
 // 「角色查询」共享区：管理端（用户管理）与「我的群友」复用。
 // ownerManage=true 时归属玩家列为按钮（emit open-owner），否则纯文本。
+// showPodium=true 时表格上方按领奖台展示当前结果前三名（仅「我的群友」）。
 const props = withDefaults(defineProps<{
   queryUrl: string
   ownerManage?: boolean
-}>(), { ownerManage: false })
+  showPodium?: boolean
+}>(), { ownerManage: false, showPodium: false })
 const emit = defineEmits<{ (e: 'open-owner', row: AdminCharacterRow): void }>()
 
 const queryItems = ref<AdminCharacterRow[]>([])
 const total = ref(0)
+
+// 领奖台：当前结果前三名（第1名居中，DOM 顺序 2/1/3）
+const podiumOrder = computed(() => {
+  const top = queryItems.value.slice(0, 3)
+  return [
+    { rank: 2, rankLabel: '第2名', row: top[1] },
+    { rank: 1, rankLabel: '第1名', row: top[0] },
+    { rank: 3, rankLabel: '第3名', row: top[2] },
+  ].filter((p) => p.row)
+})
 const classType = ref('')
 const jobName = ref('')
 const keyword = ref('')
@@ -122,6 +136,17 @@ defineExpose({ refresh: loadQuery })
       <span v-if="queryLoading" style="color:var(--dnf-text-faint)">加载中…</span>
     </div>
     <p v-if="queryError" class="form-error">{{ queryError }}</p>
+    <div v-if="showPodium && podiumOrder.length" class="podium" data-test="podium">
+      <div v-for="p in podiumOrder" :key="p.row.id" :class="['podium-col', 'rank-' + p.rank]"
+           :data-rank="p.rank">
+        <div class="podium-head">
+          <UserAvatar :nickname="p.row.owner_nickname" :avatar="p.row.owner_avatar" :size="32" />
+          <span class="podium-name">{{ p.row.owner_nickname }}</span>
+        </div>
+        <span class="podium-rank">{{ p.rankLabel }}</span>
+        <CharacterPoster :character="p.row" hide-delete class="podium-card" />
+      </div>
+    </div>
     <DnfTable label="角色查询结果" :columns="queryCols" :rows="queryItems" :row-key="(r) => r.id">
       <template #cell-name="{ row }">{{ row.name }}</template>
       <template #cell-job_title="{ row }">
@@ -149,3 +174,15 @@ defineExpose({ refresh: loadQuery })
     <p style="color:var(--dnf-text-faint)">共 {{ total }} 个角色</p>
   </DnfFrame>
 </template>
+
+<style scoped>
+/* 领奖台：第1名更宽更高居中，第2/3名矮一些在两侧，底边对齐 */
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 16px; margin: 12px 0; }
+.podium-col { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 128px; }
+.podium-col.rank-1 { width: 150px; }
+.podium-col.rank-3 { width: 118px; }
+.podium-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.podium-name { font-size: 12px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium-card { width: 100%; }
+.podium-rank { font-size: 12px; font-weight: bold; color: var(--dnf-accent,#ffd54a); }
+</style>

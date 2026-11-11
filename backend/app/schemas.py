@@ -352,6 +352,7 @@ class AdminCharacterRow(CharacterOut):
     owner_id: int
     owner_nickname: str
     owner_username: str
+    owner_avatar: str | None = None
     owner_is_banned: bool
 
 class AdminCreateUserOut(BaseModel):

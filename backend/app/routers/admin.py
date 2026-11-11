@@ -128,7 +128,8 @@ def query_characters(
     items = [
         AdminCharacterRow(**character_out(c).model_dump(),
                           owner_id=c.owner.id, owner_nickname=c.owner.nickname,
-                          owner_username=c.owner.username, owner_is_banned=c.owner.is_banned)
+                          owner_username=c.owner.username, owner_avatar=c.owner.avatar,
+                          owner_is_banned=c.owner.is_banned)
         for c in rows
     ]
     return CharacterQueryResult(items=items, total=total)

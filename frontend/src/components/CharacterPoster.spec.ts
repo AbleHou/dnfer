@@ -114,4 +114,12 @@ describe('CharacterPoster', () => {
     expect(w.find('.meta').classes()).toContain('dnf-marquee')  // meta 落在 DnfMarquee 根节点上
     expect(w.find('.line1').text()).toContain('超长冒险团名称')
   })
+
+  it('hide-delete 时隐藏删除按钮', async () => {
+    const w = mount(CharacterPoster, { props: { character: mkChar(), hideDelete: true } })
+    expect(w.find('.poster-delete').exists()).toBe(false)
+    await w.find('.char-poster').trigger('click')   // 点击仍可冒泡给父级（如跳转）
+    expect(w.emitted('click')).toHaveLength(1)
+    expect(w.emitted('delete')).toBeUndefined()
+  })
 })

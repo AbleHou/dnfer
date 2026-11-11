@@ -4,7 +4,8 @@ export type Duty = '主C' | '辅C' | '主奶' | '太阳奶' | '划水'
 export interface User { id: number; username: string; nickname: string; is_admin: boolean; avatar: string | null; is_banned: boolean; is_guest: boolean }
 export interface AdminUser extends User { character_count: number }
 export interface AdminCharacterRow extends Character {
-  owner_id: number; owner_nickname: string; owner_username: string; owner_is_banned: boolean
+  owner_id: number; owner_nickname: string; owner_username: string;
+  owner_avatar: string | null; owner_is_banned: boolean
 }
 export interface CharacterQueryResult { items: AdminCharacterRow[]; total: number }
 export type SlackMetric = 'fame' | 'simulated_damage' | 'sustained_dps' | 'buff_amount' | 'sun_buff'
