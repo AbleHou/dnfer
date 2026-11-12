@@ -202,7 +202,7 @@ a { color: var(--dnf-gold-hi); }
 
 /* 登录/注册 */
 .auth-wrap { max-width: 360px; margin: 64px auto; padding: 0 16px; }
-.auth-card { padding: 28px; }
+.auth-card { padding: 28px; --dnf-field-width: 100%; } /* 输入框撑满卡片，与全宽按钮对齐 */
 
 /* 移动端 */
 @media (max-width: 767px) {
