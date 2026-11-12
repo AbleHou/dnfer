@@ -200,3 +200,67 @@ def test_sync_latest_404_and_visible_only_to_self(client, db):
     assert r.status_code == 200 and r.json()["status"] == "success"
     assert r.json()["result"] == {"roles": []}
     assert "communityId" in r.json()
+
+
+def test_run_trims_role_name_whitespace(client, db, monkeypatch):
+    h, u = register_user(client, "csTrim", "同步空边")
+    monkeypatch.setattr("app.services.community_sync.sync_roles",
+                        lambda cid: [{"roleName": "  剑魂  ", "job": "极诣·剑魂", "fame": 100}])
+    monkeypatch.setattr("app.services.community_sync.fetch_portrait", lambda cid, rid, oid: None)
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    char = db.query(Character).filter(Character.user_id == u["id"]).first()
+    assert char.name == "剑魂"
+    task = db.get(CommunitySyncTask, task_id)
+    assert task.result["roles"][0]["action"] == "created"
+    assert task.result["roles"][0]["roleName"] == "剑魂"
+
+
+def test_run_trims_fullwidth_space(client, db, monkeypatch):
+    h, u = register_user(client, "csTrimFw", "同步全角")
+    monkeypatch.setattr("app.services.community_sync.sync_roles",
+                        lambda cid: [{"roleName": "\u3000剑魂\u3000", "job": "极诣·剑魂", "fame": 100}])
+    monkeypatch.setattr("app.services.community_sync.fetch_portrait", lambda cid, rid, oid: None)
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    char = db.query(Character).filter(Character.user_id == u["id"]).first()
+    assert char.name == "剑魂"
+
+
+def test_run_skips_empty_name(client, db, monkeypatch):
+    h, u = register_user(client, "csTrimEmpty", "同步空名")
+    monkeypatch.setattr("app.services.community_sync.sync_roles",
+                        lambda cid: [{"roleName": "   ", "job": "极诣·剑魂", "fame": 100}])
+    monkeypatch.setattr("app.services.community_sync.fetch_portrait", lambda cid, rid, oid: None)
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    task = db.get(CommunitySyncTask, task_id)
+    assert task.status == "success"
+    assert task.result["roles"][0]["action"] == "skipped"
+    assert task.result["roles"][0]["reason"] == "角色名为空"
+    assert db.query(Character).filter(Character.user_id == u["id"]).count() == 0
+
+
+def test_run_trims_matches_updated(client, db, monkeypatch):
+    h, u = register_user(client, "csTrimUpd", "同步更新")
+    db.add(Character(user_id=u["id"], name="剑魂", job_name="crusader_female",
+                     class_type="辅助", fame=100))
+    db.commit()
+    monkeypatch.setattr("app.services.community_sync.sync_roles",
+                        lambda cid: [{"roleName": " 剑魂 ", "job": "极诣·剑魂", "fame": 200}])
+    monkeypatch.setattr("app.services.community_sync.fetch_portrait", lambda cid, rid, oid: None)
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    chars = db.query(Character).filter(Character.user_id == u["id"]).all()
+    assert len(chars) == 1          # 去空后命中既有角色，不重复新建
+    assert chars[0].fame == 200
+    task = db.get(CommunitySyncTask, task_id)
+    assert task.result["roles"][0]["action"] == "updated"

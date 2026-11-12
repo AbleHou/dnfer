@@ -91,8 +91,13 @@ def fetch_portrait(community_id: str, role_id: str | None, original_role_id: str
     return raw
 
 
-def _base_result(role: dict) -> dict:
-    return {"roleName": role.get("roleName") or "", "job": role.get("job") or None,
+def _trim_role_name(role_name: str) -> str:
+    """社区角色名去首尾空白（含全角空格等 Unicode 空白），不动中间。"""
+    return re.sub(r"^\s+|\s+$", "", role_name)
+
+
+def _base_result(role: dict, role_name: str) -> dict:
+    return {"roleName": role_name, "job": role.get("job") or None,
             "level": role.get("level"), "fame": role.get("fame"), "server": role.get("server")}
 
 
@@ -114,11 +119,14 @@ def _import_profile(db, user: User, char: Character, role: dict, community_id: s
 
 
 def _process_one(db, user: User, community_id: str, role: dict) -> dict:
-    role_name = role.get("roleName") or ""
+    role_name = _trim_role_name(role.get("roleName") or "")
     fame = role.get("fame")
+    if not role_name:
+        return {**_base_result(role, role_name), "jobName": None, "action": "skipped",
+                "reason": "角色名为空", "characterId": None, "profileImported": False}
     job_name = resolve_job(role.get("job") or "")
     if job_name is None:
-        return {**_base_result(role), "jobName": None, "action": "skipped",
+        return {**_base_result(role, role_name), "jobName": None, "action": "skipped",
                 "reason": "职业未收录", "characterId": None, "profileImported": False}
     c = db.query(Character).filter(Character.user_id == user.id,
                                    Character.name == role_name).order_by(Character.id).first()
@@ -135,7 +143,7 @@ def _process_one(db, user: User, community_id: str, role: dict) -> dict:
             c.fame = fame
         action = "updated"
     profile_ok = _import_profile(db, user, c, role, community_id)
-    return {**_base_result(role), "jobName": job_name, "action": action,
+    return {**_base_result(role, role_name), "jobName": job_name, "action": action,
             "characterId": c.id, "profileImported": profile_ok}
 
 
@@ -148,8 +156,9 @@ def _process_roles(db, user_id: int, community_id: str, roles: list[dict]) -> li
         try:
             r = _process_one(db, user, community_id, role)
         except Exception as e:
-            r = {**_base_result(role), "jobName": None, "action": "failed",
-                 "reason": str(e), "characterId": None, "profileImported": False}
+            r = {**_base_result(role, _trim_role_name(role.get("roleName") or "")),
+                 "jobName": None, "action": "failed", "reason": str(e),
+                 "characterId": None, "profileImported": False}
         results.append(r)
         db.commit()  # 逐角色提交，单个失败不丢前面已建角色
     return results
