@@ -24,15 +24,17 @@ DNF 游戏昵称体系历史允许昵称中包含空格，因此「同步社区�
 
 ## 改动点
 
-`backend/app/services/community_sync.py` → `_process_one`（约 4 行）：
+`backend/app/services/community_sync.py` → `_process_one`：
 
 ```
 role_name = re.sub(r"^\s+|\s+$", "", role.get("roleName") or "")
 if not role_name:
-    return {roleName: role_name, job, jobName: None, action: "skipped",
-            reason: "角色名为空", characterId: None, profileImported: False}
+    return {**_base_result(role, role_name), "jobName": None, "action": "skipped",
+            "reason": "角色名为空", "characterId": None, "profileImported": False}
 # 之后 resolve_job → 匹配 → 创建/更新 全部用去空后的 role_name
 ```
+
+**结果形状**：`_base_result(role)`（~line 95）返回原始 `roleName`，需把去空后的值透传——`_base_result` 签名改为 `_base_result(role, role_name)`（缺省回退 `role.get("roleName") or ""`），「角色名为空」跳过、「职业未收录」跳过、created/updated、failed 所有结果行的 `roleName` 统一为去空后的值，并保持各行字段形状一致（含 `level`/`fame`/`server`）。
 
 ## 测试（后端 `tests/test_community_sync.py` 新增）
 
