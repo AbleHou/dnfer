@@ -11,5 +11,9 @@ dist/
 *.tsbuildinfo
 images/
 
+# 用户使用文档配图目录：保留占位结构（覆盖上面的 images/ 规则）
+!docs/usage/images/
+!docs/usage/images/**/
+
 # worktrees
 .worktrees/
