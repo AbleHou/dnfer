@@ -245,6 +245,33 @@ def test_run_trims_fullwidth_space(client, db, monkeypatch):
     assert char.name == "剑魂"
 
 
+def test_run_fullwidth_prefix_matches_and_imports_portrait(client, db, monkeypatch):
+    """复现线上问题：社区角色名多个全角空格开头+两汉字，应命中系统无空格角色并导入形象。"""
+    h, u = register_user(client, "csFwMatch", "同步全角匹配")
+    db.add(Character(user_id=u["id"], name="剑魂", job_name="crusader_female",
+                     class_type="辅助", fame=100))
+    db.commit()
+    monkeypatch.setattr("app.services.community_sync.sync_roles",
+                        lambda cid: [{"roleName": "\u3000\u3000剑魂", "job": "极诣·剑魂", "fame": 200,
+                                      "roleId": "1", "originalRoleId": "9"}])
+    monkeypatch.setattr("app.services.community_sync.fetch_portrait",
+                        lambda cid, rid, oid: b"\x89PNG\r\n\x1a\npayload")
+    monkeypatch.setattr("app.services.community_sync.upload_profile",
+                        lambda uid, cid, ext, data, ct: "https://cdn.example.com/p.png")
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    chars = db.query(Character).filter(Character.user_id == u["id"]).all()
+    assert len(chars) == 1                      # 命中既有角色，不重复新建
+    assert chars[0].name == "剑魂"
+    assert chars[0].fame == 200
+    assert chars[0].profile == "https://cdn.example.com/p.png"   # 形象导入到无空格角色
+    task = db.get(CommunitySyncTask, task_id)
+    assert task.result["roles"][0]["action"] == "updated"
+    assert task.result["roles"][0]["profileImported"] is True
+
+
 def test_run_skips_empty_name(client, db, monkeypatch):
     h, u = register_user(client, "csTrimEmpty", "同步空名")
     monkeypatch.setattr("app.services.community_sync.sync_roles",
