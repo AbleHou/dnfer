@@ -64,7 +64,7 @@ async function submit() {
     emit('close')  // 后台异步进行，关闭弹窗稍后查看
     notifySuccess('同步工作后台进行，稍后查看结果')
   } catch (e: any) {
-    if (e.message === '今日已同步，请明天再试') notifyWarning(e.message)
+    if (e.message === '同步频繁，请 3 小时后再试') notifyWarning(e.message)
     else notifyError('查询失败，请联系管理员')
   } finally {
     submitting.value = false

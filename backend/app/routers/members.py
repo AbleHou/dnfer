@@ -1,6 +1,6 @@
 import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
@@ -23,9 +23,9 @@ router = APIRouter(prefix="/api/me/characters", tags=["members"])
 _COMMUNITY_ID_RE = re.compile(r"^\d{1,20}$")
 
 
-def _start_of_today_utc() -> datetime:
-    now = datetime.now(timezone.utc)
-    return datetime(now.year, now.month, now.day)
+def _sync_cooldown_until() -> datetime:
+    """最近一次成功同步的冷却窗口起点：3 小时内的成功任务视为已同步，阻止重复触发。"""
+    return datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=3)
 
 @router.get("", response_model=list[CharacterOut])
 def list_characters(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -127,13 +127,13 @@ async def create_sync_task(body: CommunitySyncIn, user: User = Depends(get_curre
     ).order_by(CommunitySyncTask.id.desc()).first()
     if running:
         return CommunitySyncOut(taskId=running.id)  # 幂等
-    today_ok = db.query(CommunitySyncTask).filter(
+    recent_ok = db.query(CommunitySyncTask).filter(
         CommunitySyncTask.user_id == user.id,
         CommunitySyncTask.status == "success",
-        CommunitySyncTask.created_at >= _start_of_today_utc(),
+        CommunitySyncTask.created_at >= _sync_cooldown_until(),
     ).first()
-    if today_ok:
-        raise HTTPException(400, "今日已同步，请明天再试")
+    if recent_ok:
+        raise HTTPException(400, "同步频繁，请 3 小时后再试")
     task = CommunitySyncTask(user_id=user.id, community_id=body.communityId, status="pending")
     db.add(task)
     db.commit()

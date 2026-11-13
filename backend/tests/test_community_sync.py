@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 
 from app.config import settings
 from app.services.community_sync import (CommunitySyncError, CommunitySyncRateLimited,
@@ -172,14 +173,27 @@ def test_sync_create_task_and_idempotent(client, db, monkeypatch):
     assert r2.status_code == 200 and r2.json()["taskId"] == task.id
 
 
-def test_sync_daily_limit(client, db, monkeypatch):
+def test_sync_cooldown_blocks_within_3h(client, db, monkeypatch):
     h, u = register_user(client, "csH", "同步辛")
     async def noop(task_id): pass
     monkeypatch.setattr("app.routers.members.run_sync_task", noop)
     db.add(CommunitySyncTask(user_id=u["id"], community_id="1", status="success"))
     db.commit()
     r = client.post("/api/me/characters/sync", headers=h, json={"communityId": "2"})
-    assert r.status_code == 400 and "今日已同步" in r.json()["detail"]
+    assert r.status_code == 400 and "3 小时" in r.json()["detail"]
+
+
+def test_sync_allows_after_cooldown(client, db, monkeypatch):
+    h, u = register_user(client, "csH2", "同步冷却")
+    async def noop(task_id): pass
+    monkeypatch.setattr("app.routers.members.run_sync_task", noop)
+    # 上次成功同步在 3 小时前 → 冷却已过，允许再次触发
+    old = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4)
+    db.add(CommunitySyncTask(user_id=u["id"], community_id="1", status="success",
+                             created_at=old))
+    db.commit()
+    r = client.post("/api/me/characters/sync", headers=h, json={"communityId": "2"})
+    assert r.status_code == 200
 
 
 def test_sync_bad_community_id(client, db, monkeypatch):

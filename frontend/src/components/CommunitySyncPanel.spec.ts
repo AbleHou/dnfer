@@ -65,14 +65,14 @@ describe('CommunitySyncPanel', () => {
     expect(w.emitted('close')).toBeTruthy()
   })
 
-  it('今日已同步→notifyWarning', async () => {
-    apiMock.syncCreate.mockRejectedValue(new Error('今日已同步，请明天再试'))
+  it('同步频繁→notifyWarning', async () => {
+    apiMock.syncCreate.mockRejectedValue(new Error('同步频繁，请 3 小时后再试'))
     const w = mountPanel()
     await flushPromises()
     await w.find('[data-act="community-id-input"]').setValue('1')
     await w.find('[data-act="sync-submit"]').trigger('click')
     await flushPromises()
-    expect(notifyMock.notifyWarning).toHaveBeenCalledWith('今日已同步，请明天再试')
+    expect(notifyMock.notifyWarning).toHaveBeenCalledWith('同步频繁，请 3 小时后再试')
   })
 
   it('打开显示 failed 任务→统一失败文案', async () => {
