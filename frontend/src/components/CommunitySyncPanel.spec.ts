@@ -16,8 +16,9 @@ const notifyMock = vi.hoisted(() => ({
 }))
 vi.mock('../lib/notify', () => notifyMock)
 
-function mkTask(status: SyncTask['status'], result: SyncTask['result'] = null): SyncTask {
-  return { taskId: 1, status, communityId: '329230843', message: null, result, createdAt: 'x' }
+function mkTask(status: SyncTask['status'], result: SyncTask['result'] = null,
+                message: string | null = null): SyncTask {
+  return { taskId: 1, status, communityId: '329230843', message, result, createdAt: 'x' }
 }
 
 beforeEach(() => {
@@ -75,11 +76,33 @@ describe('CommunitySyncPanel', () => {
     expect(notifyMock.notifyWarning).toHaveBeenCalledWith('同步频繁，请 3 小时后再试')
   })
 
-  it('打开显示 failed 任务→统一失败文案', async () => {
+  it('打开显示 failed 任务→展示后端 message', async () => {
+    apiMock.syncLatest.mockResolvedValue(mkTask('failed', null, '多次换绑限流，请联系管理员'))
+    const w = mountPanel()
+    await flushPromises()
+    expect(w.text()).toContain('多次换绑限流，请联系管理员')
+    expect(w.text()).not.toContain('查询失败，请联系管理员')
+  })
+
+  it('打开显示 failed 任务 message 为空→fallback 文案', async () => {
     apiMock.syncLatest.mockResolvedValue(mkTask('failed'))
     const w = mountPanel()
     await flushPromises()
     expect(w.text()).toContain('查询失败，请联系管理员')
+  })
+
+  it('轮询到 failed→notifyError(后端 message) 并停止轮询', async () => {
+    vi.useFakeTimers()
+    apiMock.syncLatest.mockResolvedValueOnce(mkTask('running'))
+      .mockResolvedValueOnce(mkTask('failed', null, '该社区ID下没有角色'))
+    const w = mountPanel()
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(notifyMock.notifyError).toHaveBeenCalledWith('该社区ID下没有角色')
+    const after = apiMock.syncLatest.mock.calls.length
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(apiMock.syncLatest.mock.calls.length).toBe(after)  // 终态已停轮询
+    vi.useRealTimers()
   })
 
   it('打开时任务进行中→自动轮询；关闭停止', async () => {

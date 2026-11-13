@@ -134,7 +134,7 @@ def test_run_fails_after_max_retry(client, db, monkeypatch):
     asyncio.run(run_sync_task(task_id))
     db.expire_all()
     task = db.get(CommunitySyncTask, task_id)
-    assert task.status == "failed" and "多次换绑限流" in task.message
+    assert task.status == "failed" and task.message == "请联系管理员"
 
 
 def test_run_fails_on_service_error(client, db, monkeypatch):
@@ -158,6 +158,36 @@ def test_run_fails_on_empty_roles(client, db, monkeypatch):
     db.expire_all()
     task = db.get(CommunitySyncTask, task_id)
     assert task.status == "failed" and "没有角色" in task.message
+
+
+def test_run_fails_on_process_error_not_stuck(client, db, monkeypatch):
+    """_process_roles 抛可预期错误（如用户不存在）→ 标记 failed，避免僵尸 running。"""
+    h, u = register_user(client, "csF3", "同步处理错误")
+    monkeypatch.setattr("app.services.community_sync.sync_roles",
+                        lambda cid: [{"roleName": "剑魂", "job": "极诣·剑魂", "fame": 1}])
+    monkeypatch.setattr("app.services.community_sync._process_roles",
+                        lambda db, uid, cid, roles: (_ for _ in ()).throw(CommunitySyncError("用户不存在")))
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    task = db.get(CommunitySyncTask, task_id)
+    assert task.status == "failed" and "用户不存在" in task.message
+
+
+def test_run_fails_on_unexpected_error(client, db, monkeypatch):
+    """未预期异常兜底 → failed「请联系管理员」，不卡 running。"""
+    h, u = register_user(client, "csF4", "同步意外")
+    monkeypatch.setattr("app.services.community_sync.sync_roles",
+                        lambda cid: [{"roleName": "剑魂", "job": "极诣·剑魂", "fame": 1}])
+    monkeypatch.setattr("app.services.community_sync._process_roles",
+                        lambda db, uid, cid, roles: (_ for _ in ()).throw(RuntimeError("boom")))
+    _executor(db)
+    task_id = _mk_task(db, u["id"])
+    asyncio.run(run_sync_task(task_id))
+    db.expire_all()
+    task = db.get(CommunitySyncTask, task_id)
+    assert task.status == "failed" and task.message == "请联系管理员"
 
 
 def test_sync_create_task_and_idempotent(client, db, monkeypatch):
