@@ -184,7 +184,7 @@ async def run_sync_task(task_id: int) -> None:
                 db.commit()
                 if attempt >= max_retry:
                     task.status = "failed"
-                    task.message = "多次换绑限流，请稍后再试"
+                    task.message = "请联系管理员"
                     db.commit()
                     return
                 await asyncio.sleep(e.retry_after_sec)
@@ -198,7 +198,19 @@ async def run_sync_task(task_id: int) -> None:
             task.message = "该社区ID下没有角色"
             db.commit()
             return
-        results = _process_roles(db, task.user_id, community_id, roles)
+        try:
+            results = _process_roles(db, task.user_id, community_id, roles)
+        except CommunitySyncError as e:
+            task.status = "failed"
+            task.message = str(e)
+            db.commit()
+            return
+        except Exception:
+            db.rollback()
+            task.status = "failed"
+            task.message = "请联系管理员"
+            db.commit()
+            return
         task.status = "success"
         task.result = {"roles": results}
         db.commit()

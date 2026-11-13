@@ -41,7 +41,7 @@ async function pollTick(): Promise<SyncTask | null> {
   if (t && (t.status === 'success' || t.status === 'failed')) {
     stopPolling()
     if (t.status === 'success') { notifySuccess('同步完成'); emit('changed') }
-    else notifyError('查询失败，请联系管理员')
+    else notifyError(t.message || '查询失败，请联系管理员')
   }
   return t
 }
@@ -96,7 +96,7 @@ onUnmounted(stopPolling)
     </div>
     <p v-if="task?.status === 'running'" class="sync-status">
       {{ task.message ? '换绑限流等待中，约数分钟后继续…' : '同步中…' }}</p>
-    <p v-if="task?.status === 'failed'" class="form-error" style="margin:6px 0 0">查询失败，请联系管理员</p>
+    <p v-if="task?.status === 'failed'" class="form-error" style="margin:6px 0 0">{{ task.message || '查询失败，请联系管理员' }}</p>
 
     <DnfFrame v-if="roles.length" surface="panel" style="margin-top:12px;padding:12px;max-height:50vh;overflow:auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
