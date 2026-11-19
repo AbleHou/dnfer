@@ -23,6 +23,7 @@ function mkTask(status: SyncTask['status'], result: SyncTask['result'] = null,
 
 beforeEach(() => {
   vi.clearAllMocks()
+  localStorage.clear()
   apiMock.syncLatest.mockResolvedValue(mkTask('success', { roles: [] }))
 })
 
@@ -64,6 +65,43 @@ describe('CommunitySyncPanel', () => {
     expect(apiMock.syncCreate).toHaveBeenCalledWith({ communityId: '329230843' })
     expect(notifyMock.notifySuccess).toHaveBeenCalledWith('同步工作后台进行，稍后查看结果')
     expect(w.emitted('close')).toBeTruthy()
+  })
+
+  it('提交成功→缓存社区ID并出现历史下拉', async () => {
+    apiMock.syncCreate.mockResolvedValue({ taskId: 1 })
+    const w = mountPanel()
+    await flushPromises()
+    await w.find('[data-act="community-id-input"]').setValue('329230843')
+    await w.find('[data-act="sync-submit"]').trigger('click')
+    await flushPromises()
+    expect(JSON.parse(localStorage.getItem('dnfer-community-id-history') || '[]'))
+      .toEqual(['329230843'])
+    expect(w.find('[data-act="history-select"]').exists()).toBe(true)
+  })
+
+  it('无历史社区ID时不显示历史下拉', async () => {
+    const w = mountPanel()
+    await flushPromises()
+    expect(w.find('[data-act="history-select"]').exists()).toBe(false)
+  })
+
+  it('有历史社区ID时显示历史下拉', async () => {
+    localStorage.setItem('dnfer-community-id-history', JSON.stringify(['329230843', '111']))
+    const w = mountPanel()
+    await flushPromises()
+    expect(w.find('[data-act="history-select"]').exists()).toBe(true)
+  })
+
+  it('从历史下拉选择→填充输入框', async () => {
+    localStorage.setItem('dnfer-community-id-history', JSON.stringify(['329230843']))
+    const w = mountPanel()
+    await flushPromises()
+    const select = w.findComponent({ name: 'DnfSelect' })
+    expect(select.exists()).toBe(true)
+    select.vm.$emit('update:modelValue', '329230843')
+    await flushPromises()
+    expect((w.find('[data-act="community-id-input"]').element as HTMLInputElement).value)
+      .toBe('329230843')
   })
 
   it('同步频繁→notifyWarning', async () => {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { DnfButton, DnfDialog, DnfFrame, DnfInput } from '@dnftools/ui'
+import { DnfButton, DnfDialog, DnfFrame, DnfInput, DnfSelect } from '@dnftools/ui'
 import { api } from '../api/client'
+import { loadCommunityIdHistory, rememberCommunityId } from '../lib/community-id-history'
 import { notifyError, notifySuccess, notifyWarning } from '../lib/notify'
 import type { SyncRoleResult, SyncTask } from '../types'
 
@@ -9,6 +10,11 @@ const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'changed'): void }>()
 
 const communityId = ref('')
+const history = ref<string[]>(loadCommunityIdHistory())
+const historyOptions = computed(() => history.value.map((id) => ({ label: id, value: id })))
+function onPickHistory(v: string | number | undefined) {
+  if (v !== undefined) communityId.value = String(v)
+}
 const task = ref<SyncTask | null>(null)
 const submitting = ref(false)
 const noRecord = ref(false)
@@ -60,6 +66,7 @@ async function submit() {
   submitting.value = true
   try {
     await api.syncCreate({ communityId: cid })
+    history.value = rememberCommunityId(cid)
     stopPolling()
     emit('close')  // 后台异步进行，关闭弹窗稍后查看
     notifySuccess('同步工作后台进行，稍后查看结果')
@@ -88,6 +95,10 @@ onUnmounted(stopPolling)
 <template>
   <DnfDialog :open="open" title="同步社区角色" width="min(640px,92vw)" modal close-on-outside
              @update:open="(s: boolean) => { if (!s) emit('close') }">
+    <DnfSelect v-if="historyOptions.length" :options="historyOptions"
+               :model-value="communityId || undefined" placeholder="历史社区ID"
+               data-act="history-select" style="margin-bottom:8px"
+               @update:model-value="onPickHistory" />
     <div style="display:flex;align-items:center;gap:8px">
       <DnfInput v-model="communityId" data-act="community-id-input"
                 placeholder="DNF助手社区ID（纯数字）" style="flex:1" />
